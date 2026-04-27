@@ -1,0 +1,10 @@
+^C:\USERS\CAIO\DESKTOP\FOCUS\BUILD\WINDOWS\X64\CMAKEFILES\ACFCA018DD6A10552C24E625EC606018\GENERATE.STAMP.RULE
+setlocal
+"C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -SC:/Users/Caio/Desktop/focus/windows -BC:/Users/Caio/Desktop/focus/build/windows/x64 --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file C:/Users/Caio/Desktop/focus/build/windows/x64/focus.slnx
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

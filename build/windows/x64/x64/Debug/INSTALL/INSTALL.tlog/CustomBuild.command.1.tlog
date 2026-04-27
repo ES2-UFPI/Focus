@@ -1,0 +1,10 @@
+^C:\USERS\CAIO\DESKTOP\FOCUS\BUILD\WINDOWS\X64\CMAKEFILES\ACFCA018DD6A10552C24E625EC606018\INSTALL_FORCE.RULE
+setlocal
+cd .
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
