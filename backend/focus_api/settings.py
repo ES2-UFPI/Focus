@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'avaliacoes_academicas',
+    'metas_semanais',
 ]
 
 MIDDLEWARE = [
