@@ -1,0 +1,11 @@
+# Python
+backend/venv/
+__pycache__/
+*.pyc
+
+# Django
+db.sqlite3
+
+# Flutter
+frontend/.dart_tool/
+frontend/build/
