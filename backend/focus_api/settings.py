@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'avaliacoes_academicas',
     'metas_semanais',
+    'ciclos_estudo',
 ]
 
 MIDDLEWARE = [
