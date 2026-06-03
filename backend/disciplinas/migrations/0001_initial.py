@@ -1,4 +1,5 @@
 import uuid
+import django.db.models.deletion
 from django.db import migrations, models
 
 
@@ -7,6 +8,7 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
+        ('alunos', '0001_initial'),
     ]
 
     operations = [
@@ -14,6 +16,7 @@ class Migration(migrations.Migration):
             name='Disciplina',
             fields=[
                 ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
+                ('aluno', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='disciplinas', to='alunos.aluno')),
                 ('nome', models.CharField(max_length=255)),
                 ('codigo', models.CharField(max_length=50, unique=True)),
                 ('descricao', models.TextField(blank=True, null=True)),
