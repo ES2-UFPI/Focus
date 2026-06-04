@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 
 import 'providers/agenda_provider.dart';
+import 'providers/materiais_provider.dart';
 import 'screens/home_screen.dart';
 
 void main() {
@@ -16,13 +18,22 @@ class FocusApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AgendaProvider()),
+        ChangeNotifierProvider(create: (_) => MateriaisProvider()),
       ],
-      child: MaterialApp(
+      child: ShadApp(
         title: 'Focus – Agenda Acadêmica',
         debugShowCheckedModeBanner: false,
-        theme: ThemeData(
+        theme: ShadThemeData(
+          brightness: Brightness.light,
+          colorScheme: const ShadSlateColorScheme.light(),
+        ),
+        darkTheme: ShadThemeData(
+          brightness: Brightness.dark,
+          colorScheme: const ShadSlateColorScheme.dark(),
+        ),
+        materialThemeBuilder: (context, theme) => theme.copyWith(
           colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF5C6BC0), // indigo
+            seedColor: const Color(0xFF5C6BC0),
             brightness: Brightness.light,
           ),
           useMaterial3: true,
