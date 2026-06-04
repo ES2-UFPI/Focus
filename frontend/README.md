@@ -1,17 +1,59 @@
-# frontend
+# Frontend
 
-A new Flutter project.
+Aplicativo Flutter do projeto Focus.
 
-## Getting Started
+## Pré-requisitos
 
-This project is a starting point for a Flutter application.
+- Flutter SDK instalado.
+- Dart compatível com o SDK definido em `pubspec.yaml`.
+- Backend Django iniciado, caso a aplicação passe a consumir a API local.
 
-A few resources to get you started if this is your first Flutter project:
+Verifique o ambiente Flutter:
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+```powershell
+flutter doctor
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Instalação
+
+Na pasta `frontend/`, baixe as dependências:
+
+```powershell
+flutter pub get
+```
+
+## Execução
+
+Para listar os dispositivos disponíveis:
+
+```powershell
+flutter devices
+```
+
+Para executar no dispositivo selecionado:
+
+```powershell
+flutter run
+```
+
+Para executar no navegador Chrome:
+
+```powershell
+flutter run -d chrome
+```
+
+## Relação com o backend
+
+O backend do projeto fica na pasta `../backend` e, em ambiente local, normalmente é iniciado em:
+
+```text
+http://127.0.0.1:8000/
+```
+
+A API REST fica em:
+
+```text
+http://127.0.0.1:8000/api/
+```
+
+Consulte o `readme.md` da raiz do projeto para o passo a passo completo de inicialização.

@@ -45,6 +45,9 @@ INSTALLED_APPS = [
     'metas_semanais',
     'ciclos_estudo',
     'materiais_estudo',
+    'sessoes_estudo',
+    'feedbacks_sessao',
+    'recompensas',
 ]
 
 MIDDLEWARE = [
