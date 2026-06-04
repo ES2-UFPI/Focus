@@ -1,46 +1,28 @@
 import 'dart:convert';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import '../models/disciplina.dart';
 import '../models/material_estudo.dart';
 
+// TODO: substituir pelo token real quando a tela de login for implementada
+const _demoToken = 'cdc454f2c8b69920a120b5fa76a953fd7490d32c';
+
 class ApiService {
-  static const String _baseUrl = 'http://10.0.2.2:8000/api';
-  static const _storage = FlutterSecureStorage();
+  static const String _baseUrl = 'http://localhost:8000/api';
 
-  Future<String?> getToken() => _storage.read(key: 'auth_token');
+  String? _token = _demoToken;
 
-  Future<void> saveToken(String token) =>
-      _storage.write(key: 'auth_token', value: token);
+  void setToken(String token) => _token = token;
+  void clearToken() => _token = null;
 
-  Future<void> clearToken() => _storage.delete(key: 'auth_token');
-
-  Future<Map<String, String>> _headers() async {
-    final token = await getToken();
-    return {
-      'Content-Type': 'application/json',
-      if (token != null) 'Authorization': 'Token $token',
-    };
-  }
-
-  Future<String?> login(String email, String password) async {
-    final response = await http.post(
-      Uri.parse('http://10.0.2.2:8000/api/auth/token/'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'username': email, 'password': password}),
-    );
-    if (response.statusCode == 200) {
-      final token = jsonDecode(response.body)['token'] as String;
-      await saveToken(token);
-      return token;
-    }
-    return null;
-  }
+  Map<String, String> _headers() => {
+    'Content-Type': 'application/json',
+    if (_token != null) 'Authorization': 'Token $_token',
+  };
 
   Future<List<Disciplina>> getDisciplinas() async {
     final response = await http.get(
       Uri.parse('$_baseUrl/disciplinas/'),
-      headers: await _headers(),
+      headers: _headers(),
     );
     if (response.statusCode == 200) {
       final List<dynamic> data = jsonDecode(response.body);
@@ -59,8 +41,9 @@ class ApiService {
     if (tipo != null) params['tipo'] = tipo;
     if (search != null && search.isNotEmpty) params['search'] = search;
 
-    final uri = Uri.parse('$_baseUrl/materiais-estudo/').replace(queryParameters: params.isEmpty ? null : params);
-    final response = await http.get(uri, headers: await _headers());
+    final uri = Uri.parse('$_baseUrl/materiais-estudo/')
+        .replace(queryParameters: params.isEmpty ? null : params);
+    final response = await http.get(uri, headers: _headers());
 
     if (response.statusCode == 200) {
       final List<dynamic> data = jsonDecode(response.body);
@@ -72,7 +55,7 @@ class ApiService {
   Future<MaterialEstudo?> createMaterial(Map<String, dynamic> data) async {
     final response = await http.post(
       Uri.parse('$_baseUrl/materiais-estudo/'),
-      headers: await _headers(),
+      headers: _headers(),
       body: jsonEncode(data),
     );
     if (response.statusCode == 201) {
@@ -84,7 +67,7 @@ class ApiService {
   Future<MaterialEstudo?> updateMaterial(String id, Map<String, dynamic> data) async {
     final response = await http.patch(
       Uri.parse('$_baseUrl/materiais-estudo/$id/'),
-      headers: await _headers(),
+      headers: _headers(),
       body: jsonEncode(data),
     );
     if (response.statusCode == 200) {
@@ -96,7 +79,7 @@ class ApiService {
   Future<bool> deleteMaterial(String id) async {
     final response = await http.delete(
       Uri.parse('$_baseUrl/materiais-estudo/$id/'),
-      headers: await _headers(),
+      headers: _headers(),
     );
     return response.statusCode == 204;
   }

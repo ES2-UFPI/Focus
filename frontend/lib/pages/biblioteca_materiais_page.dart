@@ -151,14 +151,13 @@ class _BibliotecaMateriaisPageState extends State<BibliotecaMateriaisPage> {
 
   Widget _buildMainContent() {
     final provider = context.watch<MateriaisProvider>();
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildHeader(provider),
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(20),
             child: provider.isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : provider.error != null
@@ -174,30 +173,35 @@ class _BibliotecaMateriaisPageState extends State<BibliotecaMateriaisPage> {
 
   Widget _buildHeader(MateriaisProvider provider) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
       color: const Color(0xFFF8F9FC),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
             'Biblioteca de Materiais',
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
           ),
-          const Spacer(),
-          SizedBox(
-            width: 260,
-            child: ShadInput(
-              controller: _searchController,
-              placeholder: const Text('Buscar materiais...'),
-              leading: const Icon(LucideIcons.search, size: 16),
-              onChanged: (v) => provider.setSearch(v),
-            ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: ShadInput(
+                  controller: _searchController,
+                  placeholder: const Text('Buscar materiais...'),
+                  leading: const Icon(LucideIcons.search, size: 16),
+                  onChanged: (v) => provider.setSearch(v),
+                ),
+              ),
+              const SizedBox(width: 12),
+              ShadButton(
+                onPressed: () => _openForm(),
+                leading: const Icon(LucideIcons.plus, size: 16),
+                child: const Text('Adicionar material'),
+              ),
+            ],
           ),
-          const SizedBox(width: 12),
-          ShadButton(
-            onPressed: () => _openForm(),
-            leading: const Icon(LucideIcons.plus, size: 16),
-            child: const Text('Adicionar material'),
-          ),
+          const SizedBox(height: 16),
         ],
       ),
     );
@@ -231,11 +235,11 @@ class _BibliotecaMateriaisPageState extends State<BibliotecaMateriaisPage> {
       child: ShadTable.list(
         columnSpanExtent: (i) {
           switch (i) {
-            case 0: return const FixedTableSpanExtent(280);
-            case 1: return const FixedTableSpanExtent(160);
-            case 2: return const FixedTableSpanExtent(110);
-            case 3: return const FixedTableSpanExtent(110);
-            default: return const FixedTableSpanExtent(60);
+            case 0: return const FixedTableSpanExtent(240);
+            case 1: return const FixedTableSpanExtent(150);
+            case 2: return const FixedTableSpanExtent(100);
+            case 3: return const FixedTableSpanExtent(100);
+            default: return const FixedTableSpanExtent(50);
           }
         },
         header: const [
@@ -250,19 +254,28 @@ class _BibliotecaMateriaisPageState extends State<BibliotecaMateriaisPage> {
             child: Row(
               children: [
                 _tipoIcon(m.tipo),
-                const SizedBox(width: 10),
+                const SizedBox(width: 8),
                 Expanded(
-                  child: Text(m.titulo, style: const TextStyle(fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis),
+                  child: Text(
+                    m.titulo,
+                    style: const TextStyle(fontWeight: FontWeight.w500),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ],
             ),
           ),
-          ShadTableCell(child: Text(m.disciplinaNome, overflow: TextOverflow.ellipsis)),
-          ShadTableCell(child: _tipoBadge(m.tipo)),
-          ShadTableCell(child: Text(fmt.format(m.dataInsercao), style: TextStyle(color: Colors.grey[600], fontSize: 13))),
           ShadTableCell(
-            child: _rowActions(m),
+            child: Text(m.disciplinaNome, overflow: TextOverflow.ellipsis),
           ),
+          ShadTableCell(child: _tipoBadge(m.tipo)),
+          ShadTableCell(
+            child: Text(
+              fmt.format(m.dataInsercao),
+              style: TextStyle(color: Colors.grey[600], fontSize: 13),
+            ),
+          ),
+          ShadTableCell(child: _rowMenu(m)),
         ]).toList(),
       ),
     );
@@ -272,21 +285,11 @@ class _BibliotecaMateriaisPageState extends State<BibliotecaMateriaisPage> {
     IconData icon;
     Color color;
     switch (tipo) {
-      case 'PDF':
-        icon = LucideIcons.fileText;
-        color = Colors.red;
-      case 'Link':
-        icon = LucideIcons.link;
-        color = Colors.blue;
-      case 'Video':
-        icon = LucideIcons.video;
-        color = Colors.orange;
-      case 'Resumo':
-        icon = LucideIcons.penLine;
-        color = Colors.green;
-      default:
-        icon = LucideIcons.file;
-        color = Colors.grey;
+      case 'PDF':   icon = LucideIcons.fileText; color = Colors.red;
+      case 'Link':  icon = LucideIcons.link;     color = Colors.blue;
+      case 'Video': icon = LucideIcons.video;    color = Colors.orange;
+      case 'Resumo': icon = LucideIcons.penLine; color = Colors.green;
+      default:      icon = LucideIcons.file;     color = Colors.grey;
     }
     return Container(
       padding: const EdgeInsets.all(6),
@@ -304,33 +307,35 @@ class _BibliotecaMateriaisPageState extends State<BibliotecaMateriaisPage> {
     );
   }
 
-  Widget _rowActions(MaterialEstudo m) {
-    return ShadPopover(
-      popover: (_) => Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ShadButton.ghost(
-            onPressed: () {
-              Navigator.of(context).pop();
-              _openForm(m);
-            },
-            leading: const Icon(LucideIcons.pencil, size: 14),
-            child: const Text('Editar'),
+  Widget _rowMenu(MaterialEstudo m) {
+    return PopupMenuButton<String>(
+      icon: const Icon(Icons.more_vert, size: 18, color: Colors.grey),
+      onSelected: (action) {
+        if (action == 'edit') _openForm(m);
+        if (action == 'delete') _confirmDelete(m);
+      },
+      itemBuilder: (_) => [
+        const PopupMenuItem(
+          value: 'edit',
+          child: Row(
+            children: [
+              Icon(Icons.edit_outlined, size: 16),
+              SizedBox(width: 8),
+              Text('Editar'),
+            ],
           ),
-          ShadButton.ghost(
-            onPressed: () {
-              Navigator.of(context).pop();
-              _confirmDelete(m);
-            },
-            leading: Icon(LucideIcons.trash2, size: 14, color: Colors.red[600]),
-            child: Text('Remover', style: TextStyle(color: Colors.red[600])),
+        ),
+        PopupMenuItem(
+          value: 'delete',
+          child: Row(
+            children: [
+              Icon(Icons.delete_outline, size: 16, color: Colors.red[600]),
+              const SizedBox(width: 8),
+              Text('Remover', style: TextStyle(color: Colors.red[600])),
+            ],
           ),
-        ],
-      ),
-      child: ShadIconButton.ghost(
-        icon: const Icon(LucideIcons.ellipsisVertical, size: 16),
-      ),
+        ),
+      ],
     );
   }
 }
