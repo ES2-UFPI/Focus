@@ -15,12 +15,11 @@ TIPO_CHOICES = [
 
 class MaterialEstudo(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    aluno = models.ForeignKey(Aluno, on_delete=models.CASCADE, related_name='materiais_estudo')
     disciplina = models.ForeignKey(Disciplina, on_delete=models.CASCADE, related_name='materiais_estudo')
     titulo = models.CharField(max_length=255)
     tipo = models.CharField(max_length=20, choices=TIPO_CHOICES)
-    url = models.CharField(max_length=500, blank=True, null=True)
-    arquivo_path = models.CharField(max_length=500, blank=True, null=True)
+    url = models.URLField(blank=True, null=True)
+    arquivo = models.FileField(upload_to='materiais/',blank=True,null=True)
     data_insercao = models.DateTimeField(auto_now_add=True)
     descricao = models.TextField(blank=True, null=True)
 
