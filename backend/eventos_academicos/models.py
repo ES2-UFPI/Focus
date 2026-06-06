@@ -1,5 +1,7 @@
 import uuid
 from django.db import models
+from django.core.exceptions import ValidationError
+from django.utils import timezone
 from disciplinas.models import Disciplina
 
 
@@ -31,6 +33,36 @@ class EventoAcademico(models.Model):
     data_conclusao = models.DateField(blank=True, null=True)
     data_criacao = models.DateTimeField(auto_now_add=True)
 
+    @property
+    def dias_restantes(self):
+        today = timezone.localdate()
+        return (self.data_evento - today).days
+
+    @property
+    def urgencia(self):
+        dias = self.dias_restantes
+        if dias < 0:
+            return 'ATRASADO'
+        elif dias <= 3:
+            return 'ALTA'
+        elif dias <= 7:
+            return 'MEDIA'
+        else:
+            return 'BAIXA'
+
+    def clean(self):
+        super().clean()
+        if hasattr(self, 'disciplina') and self.disciplina:
+            duplicates = EventoAcademico.objects.filter(
+                disciplina=self.disciplina,
+                titulo=self.titulo,
+                tipo=self.tipo,
+                data_evento=self.data_evento
+            )
+            if self.pk:
+                duplicates = duplicates.exclude(pk=self.pk)
+            if duplicates.exists():
+                raise ValidationError("Este evento acadêmico já está cadastrado para esta disciplina nesta data.")
    
     class Meta:
         verbose_name = 'Evento Acadêmico'
