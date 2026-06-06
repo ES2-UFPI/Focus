@@ -45,9 +45,12 @@ class AgendaView(APIView):
         # Montagem dos itens no formato flat unificado para consumo facilitado no Flutter
         itens = []
         for ev in eventos:
-            # Criar um timestamp consistente para ordenação (evento inicia à meia-noite do respectivo dia)
-            dt_min = datetime.datetime.combine(ev.data_evento, datetime.time.min)
-            timestamp = timezone.make_aware(dt_min, timezone.get_current_timezone())
+            # Criar um timestamp consistente para ordenação (evento inicia no horário definido ou à meia-noite)
+            if ev.hora_inicio:
+                dt = datetime.datetime.combine(ev.data_evento, ev.hora_inicio)
+            else:
+                dt = datetime.datetime.combine(ev.data_evento, datetime.time.min)
+            timestamp = timezone.make_aware(dt, timezone.get_current_timezone())
             
             itens.append({
                 'tipo': 'EVENTO_ACADEMICO',
@@ -56,11 +59,14 @@ class AgendaView(APIView):
                 'data': ev.data_evento.strftime('%Y-%m-%d'),
                 'timestamp': timestamp.isoformat(),
                 'descricao': ev.descricao,
+                'disciplina_id': str(ev.disciplina_id) if ev.disciplina_id else None,
                 'disciplina_nome': ev.disciplina.nome if ev.disciplina else '',
                 'tipo_evento': ev.tipo,
                 'urgencia': ev.urgencia,
                 'dias_restantes': ev.dias_restantes,
-                'concluido': ev.concluido
+                'concluido': ev.concluido,
+                'hora_inicio': ev.hora_inicio.strftime('%H:%M') if ev.hora_inicio else None,
+                'hora_fim': ev.hora_fim.strftime('%H:%M') if ev.hora_fim else None,
             })
 
         for se in sessoes:
@@ -72,6 +78,7 @@ class AgendaView(APIView):
                 'data': local_date.strftime('%Y-%m-%d'),
                 'timestamp': se.inicio.isoformat(),
                 'descricao': se.descricao,
+                'disciplina_id': str(se.disciplina_id) if se.disciplina_id else None,
                 'disciplina_nome': se.disciplina.nome if se.disciplina else '',
                 'inicio': se.inicio.isoformat(),
                 'fim': se.fim.isoformat(),
@@ -85,7 +92,7 @@ class AgendaView(APIView):
         # Lógica de Recomendações (apenas para eventos futuros com recomendação útil)
         recomendacoes = []
         for ev in eventos:
-            if ev.dias_restantes >= 0:
+            if ev.dias_restantes >= 0 and ev.tipo in ['PROVA', 'TRABALHO', 'SEMINARIO', 'APRESENTACAO']:
                 sessoes_disc = sessoes_por_disciplina[ev.disciplina_id]
                 # Filtra apenas sessões futuras do mesmo aluno/disciplina vinculadas à data do evento
                 sessoes_futuras = [
@@ -95,11 +102,20 @@ class AgendaView(APIView):
                 sessoes_count = len(sessoes_futuras)
                 dias = ev.dias_restantes
 
+                # Mapeamento de termos por tipo de evento
+                nomes_tipo = {
+                    'PROVA': ('avaliação próxima', 'antes da avaliação'),
+                    'TRABALHO': ('entrega próxima', 'antes da entrega'),
+                    'SEMINARIO': ('seminário próximo', 'antes do seminário'),
+                    'APRESENTACAO': ('apresentação próxima', 'antes da apresentação'),
+                }
+                termo_prox, termo_antes = nomes_tipo[ev.tipo]
+
                 # Apenas gerar recomendações se houver ação relevante recomendada
                 if dias <= 3 and sessoes_count == 0:
-                    rec = "Você possui uma avaliação próxima e nenhuma sessão de estudo registrada."
+                    rec = f"Você possui uma {termo_prox} e nenhuma sessão de estudo registrada."
                 elif dias <= 7 and sessoes_count <= 1:
-                    rec = "Considere agendar mais sessões de estudo antes da avaliação."
+                    rec = f"Considere agendar mais sessões de estudo {termo_antes}."
                 else:
                     rec = None
 
@@ -113,4 +129,5 @@ class AgendaView(APIView):
         return Response({
             'itens': itens,
             'recomendacoes': recomendacoes
-        })
+        })
+

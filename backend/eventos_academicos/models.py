@@ -27,6 +27,9 @@ class EventoAcademico(models.Model):
     tipo = models.CharField(max_length=20, choices=TipoEvento.choices)
     descricao = models.TextField(blank=True, null=True)
     data_evento = models.DateField()
+    hora_inicio = models.TimeField(blank=True, null=True)
+    hora_fim = models.TimeField(blank=True, null=True)
+
 
     
     concluido = models.BooleanField(default=False)
@@ -52,6 +55,11 @@ class EventoAcademico(models.Model):
 
     def clean(self):
         super().clean()
+        if self.hora_fim and not self.hora_inicio:
+            raise ValidationError("Defina o horário de início antes de definir o horário de término.")
+        if self.hora_inicio and self.hora_fim and self.hora_fim <= self.hora_inicio:
+            raise ValidationError("O horário de término deve ser posterior ao horário de início.")
+            
         if hasattr(self, 'disciplina') and self.disciplina:
             duplicates = EventoAcademico.objects.filter(
                 disciplina=self.disciplina,
