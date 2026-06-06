@@ -26,6 +26,9 @@ class AgendaProvider extends ChangeNotifier {
   String? _errorMessage;
   String _selectedFilter = 'TODOS';
 
+  /// Data de referência (foco) para visualização do calendário semanal.
+  DateTime _dataFocal = DateTime.now();
+
   // ---------------------------------------------------------------------------
   // Getters
   // ---------------------------------------------------------------------------
@@ -35,8 +38,22 @@ class AgendaProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   String get selectedFilter => _selectedFilter;
+  DateTime get dataFocal => _dataFocal;
 
-  /// Itens filtrados de acordo com o filtro ativo.
+  /// Retorna a segunda-feira da semana contendo a [dataFocal].
+  DateTime get inicioDaSemanaFocal {
+    final diaSemana = _dataFocal.weekday;
+    final dataSemHora = DateTime(_dataFocal.year, _dataFocal.month, _dataFocal.day);
+    // Em Dart, Segunda = 1, Domingo = 7. Subtraímos (weekday - 1) dias para chegar na Segunda.
+    return dataSemHora.subtract(Duration(days: diaSemana - 1));
+  }
+
+  /// Retorna o domingo da semana contendo a [dataFocal].
+  DateTime get fimDaSemanaFocal {
+    return inicioDaSemanaFocal.add(const Duration(days: 6, hours: 23, minutes: 59, seconds: 59));
+  }
+
+  /// Itens filtrados de acordo com o filtro ativo (Todos / Eventos / Sessões).
   List<AgendaItem> get itensFiltrados {
     switch (_selectedFilter) {
       case 'EVENTOS':
@@ -49,10 +66,6 @@ class AgendaProvider extends ChangeNotifier {
   }
 
   /// Itens filtrados e agrupados por data (`YYYY-MM-DD`).
-  ///
-  /// Retorna um [Map] ordenado cronologicamente onde a chave é a data textual
-  /// e o valor é a lista de itens daquele dia, já na ordem original fornecida
-  /// pela API (ordenados por `timestamp`).
   Map<String, List<AgendaItem>> get itensAgrupadosPorData {
     final map = <String, List<AgendaItem>>{};
     for (final item in itensFiltrados) {
@@ -61,15 +74,97 @@ class AgendaProvider extends ChangeNotifier {
     return map;
   }
 
+  // ── Getters para o MODO LISTA ──────────────────────────────────────────────
+
+  /// Retorna os itens pendentes (não concluídos) de acordo com o tipo correspondente.
+  List<AgendaItem> get itensPendentes {
+    return itensFiltrados.where((item) {
+      if (item.isEvento) {
+        return item.concluido != true;
+      } else {
+        return item.status != 'CONCLUIDO';
+      }
+    }).toList();
+  }
+
+  /// Retorna os itens concluídos de acordo com o tipo correspondente.
+  List<AgendaItem> get itensConcluidos {
+    return itensFiltrados.where((item) {
+      if (item.isEvento) {
+        return item.concluido == true;
+      } else {
+        return item.status == 'CONCLUIDO';
+      }
+    }).toList();
+  }
+
+  /// Retorna os itens cujas datas estão nos próximos 30 dias (a partir de hoje).
+  List<AgendaItem> get itensProximos30Dias {
+    final hoje = DateTime.now();
+    final hojeSemHora = DateTime(hoje.year, hoje.month, hoje.day);
+    final limite30Dias = hojeSemHora.add(const Duration(days: 30, hours: 23, minutes: 59, seconds: 59));
+
+    return itensFiltrados.where((item) {
+      final itemDate = DateTime(item.timestamp.year, item.timestamp.month, item.timestamp.day);
+      return !itemDate.isBefore(hojeSemHora) && !itemDate.isAfter(limite30Dias);
+    }).toList();
+  }
+
+  // ── Getters para o MODO CALENDÁRIO ─────────────────────────────────────────
+
+  /// Retorna os itens filtrados que pertencem à semana da [dataFocal] (Segunda a Domingo).
+  List<AgendaItem> get itensDaSemanaFocal {
+    final inicio = inicioDaSemanaFocal;
+    final fim = fimDaSemanaFocal;
+
+    return itensFiltrados.where((item) {
+      // Usar a propriedade timestamp do item para verificação
+      return !item.timestamp.isBefore(inicio) && !item.timestamp.isAfter(fim);
+    }).toList();
+  }
+
+  /// Retorna os itens da semana focal agrupados por data ISO (`YYYY-MM-DD`).
+  Map<String, List<AgendaItem>> get itensDaSemanaFocalAgrupadosPorData {
+    final map = <String, List<AgendaItem>>{};
+    for (final item in itensDaSemanaFocal) {
+      map.putIfAbsent(item.data, () => []).add(item);
+    }
+    return map;
+  }
+
   // ---------------------------------------------------------------------------
-  // Ações
+  // Ações de Navegação Temporal
+  // ---------------------------------------------------------------------------
+
+  /// Avança a semana focal em 7 dias.
+  void avancarSemana() {
+    _dataFocal = _dataFocal.add(const Duration(days: 7));
+    notifyListeners();
+  }
+
+  /// Retrocede a semana focal em 7 dias.
+  void retrocederSemana() {
+    _dataFocal = _dataFocal.subtract(const Duration(days: 7));
+    notifyListeners();
+  }
+
+  /// Define a semana focal para a semana atual (hoje).
+  void irParaHoje() {
+    final hoje = DateTime.now();
+    if (_dataFocal.year == hoje.year &&
+        _dataFocal.month == hoje.month &&
+        _dataFocal.day == hoje.day) {
+      return;
+    }
+    _dataFocal = hoje;
+    notifyListeners();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Ações de Carregamento
   // ---------------------------------------------------------------------------
 
   /// Busca os dados da agenda na API.
-  ///
-  /// Quando [isRefresh] é `true` (Pull-To-Refresh), o estado de carregamento
-  /// **não** é ativado para evitar flashes visuais na interface — o
-  /// [RefreshIndicator] nativo já fornece feedback ao usuário.
   Future<void> fetchAgenda({bool isRefresh = false}) async {
     if (!isRefresh) {
       _isLoading = true;
@@ -94,7 +189,9 @@ class AgendaProvider extends ChangeNotifier {
 
   /// Altera o filtro ativo e reconstrói a UI.
   void setFilter(String novoFiltro) {
-    if (_selectedFilter == novoFiltro) return;
+    if (_selectedFilter == novoFiltro) {
+      return;
+    }
     _selectedFilter = novoFiltro;
     notifyListeners();
   }

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'providers/agenda_provider.dart';
-import 'screens/agenda_screen.dart';
+import 'screens/home_screen.dart';
 
 void main() {
   runApp(const FocusApp());
@@ -28,7 +28,7 @@ class FocusApp extends StatelessWidget {
           useMaterial3: true,
           fontFamily: 'Roboto',
         ),
-        home: const AgendaScreen(),
+        home: const HomeScreen(),
       ),
     );
   }

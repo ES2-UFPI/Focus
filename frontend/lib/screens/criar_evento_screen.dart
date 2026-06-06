@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../models/agenda_model.dart';
 import '../models/disciplina_model.dart';
 import '../services/disciplina_service.dart';
 import '../services/evento_service.dart';
@@ -6,7 +7,8 @@ import '../services/agenda_service.dart';
 import '../widgets/criar_disciplina_dialog.dart';
 
 class CriarEventoScreen extends StatefulWidget {
-  const CriarEventoScreen({super.key});
+  final AgendaItem? eventoExistente;
+  const CriarEventoScreen({super.key, this.eventoExistente});
 
   @override
   State<CriarEventoScreen> createState() => _CriarEventoScreenState();
@@ -20,11 +22,15 @@ class _CriarEventoScreenState extends State<CriarEventoScreen> {
   final _tituloController = TextEditingController();
   final _descricaoController = TextEditingController();
   final _dataController = TextEditingController();
+  final _horaInicioController = TextEditingController();
+  final _horaFimController = TextEditingController();
 
   List<Disciplina> _disciplinas = [];
   String? _disciplinaSelecionadaId;
   String _tipoSelecionado = 'PROVA';
   DateTime? _dataSelecionada;
+  TimeOfDay? _horaInicio;
+  TimeOfDay? _horaFim;
 
   bool _isLoadingDisciplinas = true;
   bool _isSaving = false;
@@ -41,6 +47,31 @@ class _CriarEventoScreenState extends State<CriarEventoScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.eventoExistente != null) {
+      final ev = widget.eventoExistente!;
+      _tituloController.text = ev.titulo;
+      _descricaoController.text = ev.descricao ?? '';
+      _tipoSelecionado = ev.tipoEvento ?? 'PROVA';
+      _dataSelecionada = ev.timestamp;
+      _disciplinaSelecionadaId = ev.disciplinaId;
+
+      if (_dataSelecionada != null) {
+        _dataController.text = "${_dataSelecionada!.day.toString().padLeft(2, '0')}/"
+            "${_dataSelecionada!.month.toString().padLeft(2, '0')}/"
+            "${_dataSelecionada!.year}";
+      }
+
+      if (ev.horaInicio != null) {
+        final parts = ev.horaInicio!.split(':');
+        _horaInicio = TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
+        _horaInicioController.text = ev.horaInicio!;
+      }
+      if (ev.horaFim != null) {
+        final parts = ev.horaFim!.split(':');
+        _horaFim = TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
+        _horaFimController.text = ev.horaFim!;
+      }
+    }
     _carregarDisciplinas();
   }
 
@@ -49,6 +80,8 @@ class _CriarEventoScreenState extends State<CriarEventoScreen> {
     _tituloController.dispose();
     _descricaoController.dispose();
     _dataController.dispose();
+    _horaInicioController.dispose();
+    _horaFimController.dispose();
     super.dispose();
   }
 
@@ -112,6 +145,34 @@ class _CriarEventoScreenState extends State<CriarEventoScreen> {
     }
   }
 
+  Future<void> _selecionarHoraInicio() async {
+    final TimeOfDay? selecionada = await showTimePicker(
+      context: context,
+      initialTime: _horaInicio ?? TimeOfDay.now(),
+    );
+
+    if (selecionada != null) {
+      setState(() {
+        _horaInicio = selecionada;
+        _horaInicioController.text = "${selecionada.hour.toString().padLeft(2, '0')}:${selecionada.minute.toString().padLeft(2, '0')}";
+      });
+    }
+  }
+
+  Future<void> _selecionarHoraFim() async {
+    final TimeOfDay? selecionada = await showTimePicker(
+      context: context,
+      initialTime: _horaFim ?? TimeOfDay.now(),
+    );
+
+    if (selecionada != null) {
+      setState(() {
+        _horaFim = selecionada;
+        _horaFimController.text = "${selecionada.hour.toString().padLeft(2, '0')}:${selecionada.minute.toString().padLeft(2, '0')}";
+      });
+    }
+  }
+
   Future<void> _salvar() async {
     if (!_formKey.currentState!.validate()) return;
     if (_disciplinaSelecionadaId == null) {
@@ -127,24 +188,64 @@ class _CriarEventoScreenState extends State<CriarEventoScreen> {
       return;
     }
 
+    if (_horaFim != null && _horaInicio == null) {
+      setState(() {
+        _errorMessage = 'Selecione o horário de início antes de definir o horário de término.';
+      });
+      return;
+    }
+
+    if (_horaInicio != null && _horaFim != null) {
+      final minInicio = _horaInicio!.hour * 60 + _horaInicio!.minute;
+      final minFim = _horaFim!.hour * 60 + _horaFim!.minute;
+      if (minFim <= minInicio) {
+        setState(() {
+          _errorMessage = 'O horário de término deve ser posterior ao horário de início.';
+        });
+        return;
+      }
+    }
+
     setState(() {
       _isSaving = true;
       _errorMessage = null;
     });
 
     try {
-      await _eventoService.criarEvento(
-        disciplinaId: _disciplinaSelecionadaId!,
-        titulo: _tituloController.text.trim(),
-        tipo: _tipoSelecionado,
-        dataEvento: _dataSelecionada!,
-        descricao: _descricaoController.text.trim().isEmpty ? null : _descricaoController.text.trim(),
-      );
+      final String? horaInicioVal = _horaInicioController.text.trim().isEmpty ? null : _horaInicioController.text.trim();
+      final String? horaFimVal = _horaFimController.text.trim().isEmpty ? null : _horaFimController.text.trim();
+      final String? descricaoVal = _descricaoController.text.trim().isEmpty ? null : _descricaoController.text.trim();
+
+      if (widget.eventoExistente != null) {
+        await _eventoService.editarEvento(
+          eventoId: widget.eventoExistente!.id,
+          disciplinaId: _disciplinaSelecionadaId!,
+          titulo: _tituloController.text.trim(),
+          tipo: _tipoSelecionado,
+          dataEvento: _dataSelecionada!,
+          horaInicio: horaInicioVal,
+          horaFim: horaFimVal,
+          descricao: descricaoVal,
+          concluido: widget.eventoExistente!.concluido ?? false,
+        );
+      } else {
+        await _eventoService.criarEvento(
+          disciplinaId: _disciplinaSelecionadaId!,
+          titulo: _tituloController.text.trim(),
+          tipo: _tipoSelecionado,
+          dataEvento: _dataSelecionada!,
+          horaInicio: horaInicioVal,
+          horaFim: horaFimVal,
+          descricao: descricaoVal,
+        );
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Evento criado com sucesso! 🎉'),
+          SnackBar(
+            content: Text(widget.eventoExistente != null
+                ? 'Evento atualizado com sucesso! 🎉'
+                : 'Evento criado com sucesso! 🎉'),
             backgroundColor: Colors.green,
           ),
         );
@@ -167,7 +268,7 @@ class _CriarEventoScreenState extends State<CriarEventoScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Novo Evento Acadêmico'),
+        title: Text(widget.eventoExistente != null ? 'Editar Evento Acadêmico' : 'Novo Evento Acadêmico'),
         elevation: 0,
       ),
       body: _isLoadingDisciplinas
@@ -273,7 +374,7 @@ class _CriarEventoScreenState extends State<CriarEventoScreen> {
                                   }).toList(),
                             validator: (val) {
                               if (val == null && _disciplinas.isNotEmpty) {
-                                return 'Selecione uma disciplina';
+                                  return 'Selecione uma disciplina';
                               }
                               if (_disciplinas.isEmpty) {
                                 return 'Crie uma disciplina antes';
@@ -325,6 +426,64 @@ class _CriarEventoScreenState extends State<CriarEventoScreen> {
                     ),
                     const SizedBox(height: 20),
 
+                    // Campos de Horário Opcionais
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _horaInicioController,
+                            readOnly: true,
+                            onTap: _selecionarHoraInicio,
+                            decoration: InputDecoration(
+                              labelText: 'Início (Opcional)',
+                              hintText: '00:00',
+                              border: const OutlineInputBorder(),
+                              prefixIcon: const Icon(Icons.access_time),
+                              suffixIcon: _horaInicioController.text.isNotEmpty
+                                  ? IconButton(
+                                      icon: const Icon(Icons.clear),
+                                      onPressed: () {
+                                        setState(() {
+                                          _horaInicio = null;
+                                          _horaInicioController.clear();
+                                          _horaFim = null;
+                                          _horaFimController.clear();
+                                        });
+                                      },
+                                    )
+                                  : null,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: TextFormField(
+                            controller: _horaFimController,
+                            readOnly: true,
+                            onTap: _selecionarHoraFim,
+                            decoration: InputDecoration(
+                              labelText: 'Término (Opcional)',
+                              hintText: '00:00',
+                              border: const OutlineInputBorder(),
+                              prefixIcon: const Icon(Icons.access_time_filled),
+                              suffixIcon: _horaFimController.text.isNotEmpty
+                                  ? IconButton(
+                                      icon: const Icon(Icons.clear),
+                                      onPressed: () {
+                                        setState(() {
+                                          _horaFim = null;
+                                          _horaFimController.clear();
+                                        });
+                                      },
+                                    )
+                                  : null,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+
                     // Descrição
                     TextFormField(
                       controller: _descricaoController,
@@ -349,7 +508,10 @@ class _CriarEventoScreenState extends State<CriarEventoScreen> {
                         onPressed: _isSaving ? null : _salvar,
                         child: _isSaving
                             ? const CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Colors.white))
-                            : const Text('SALVAR EVENTO', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                            : Text(
+                                widget.eventoExistente != null ? 'SALVAR ALTERAÇÕES' : 'SALVAR EVENTO',
+                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                              ),
                       ),
                     ),
                   ],

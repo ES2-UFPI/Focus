@@ -23,6 +23,7 @@ class AgendaItem {
   final DateTime timestamp;
 
   final String? descricao;
+  final String? disciplinaId;
   final String disciplinaNome;
 
   // -- Campos exclusivos de EVENTO_ACADEMICO (nullable) ---------------------
@@ -35,6 +36,9 @@ class AgendaItem {
 
   final int? diasRestantes;
   final bool? concluido;
+
+  final String? horaInicio;
+  final String? horaFim;
 
   // -- Campos exclusivos de SESSAO_ESTUDO (nullable) ------------------------
 
@@ -54,11 +58,14 @@ class AgendaItem {
     required this.data,
     required this.timestamp,
     this.descricao,
+    this.disciplinaId,
     required this.disciplinaNome,
     this.tipoEvento,
     this.urgencia,
     this.diasRestantes,
     this.concluido,
+    this.horaInicio,
+    this.horaFim,
     this.inicio,
     this.fim,
     this.status,
@@ -74,11 +81,14 @@ class AgendaItem {
       data: json['data'] as String,
       timestamp: DateTime.parse(json['timestamp'] as String),
       descricao: json['descricao'] as String?,
+      disciplinaId: json['disciplina_id'] as String?,
       disciplinaNome: json['disciplina_nome'] as String? ?? '',
       tipoEvento: json['tipo_evento'] as String?,
       urgencia: json['urgencia'] as String?,
       diasRestantes: json['dias_restantes'] as int?,
       concluido: json['concluido'] as bool?,
+      horaInicio: json['hora_inicio'] as String?,
+      horaFim: json['hora_fim'] as String?,
       inicio: json['inicio'] != null
           ? DateTime.parse(json['inicio'] as String)
           : null,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../models/agenda_model.dart';
 import '../models/disciplina_model.dart';
 import '../services/disciplina_service.dart';
 import '../services/sessao_estudo_service.dart';
@@ -6,7 +7,8 @@ import '../services/agenda_service.dart';
 import '../widgets/criar_disciplina_dialog.dart';
 
 class CriarSessaoScreen extends StatefulWidget {
-  const CriarSessaoScreen({super.key});
+  final AgendaItem? sessaoExistente;
+  const CriarSessaoScreen({super.key, this.sessaoExistente});
 
   @override
   State<CriarSessaoScreen> createState() => _CriarSessaoScreenState();
@@ -36,6 +38,25 @@ class _CriarSessaoScreenState extends State<CriarSessaoScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.sessaoExistente != null) {
+      final se = widget.sessaoExistente!;
+      _descricaoController.text = se.descricao ?? '';
+      _disciplinaSelecionadaId = se.disciplinaId;
+
+      if (se.inicio != null) {
+        _dataSelecionada = se.inicio;
+        _dataController.text = "${se.inicio!.day.toString().padLeft(2, '0')}/"
+            "${se.inicio!.month.toString().padLeft(2, '0')}/"
+            "${se.inicio!.year}";
+        _horaInicio = TimeOfDay.fromDateTime(se.inicio!);
+        _horaInicioController.text = "${_horaInicio!.hour.toString().padLeft(2, '0')}:${_horaInicio!.minute.toString().padLeft(2, '0')}";
+      }
+
+      if (se.fim != null) {
+        _horaFim = TimeOfDay.fromDateTime(se.fim!);
+        _horaFimController.text = "${_horaFim!.hour.toString().padLeft(2, '0')}:${_horaFim!.minute.toString().padLeft(2, '0')}";
+      }
+    }
     _carregarDisciplinas();
   }
 
@@ -93,7 +114,7 @@ class _CriarSessaoScreenState extends State<CriarSessaoScreen> {
     final DateTime? selecionada = await showDatePicker(
       context: context,
       initialDate: dataInicial,
-      firstDate: DateTime.now().subtract(const Duration(days: 7)),
+      firstDate: DateTime.now().subtract(const Duration(days: 30)),
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
 
@@ -180,17 +201,33 @@ class _CriarSessaoScreenState extends State<CriarSessaoScreen> {
     });
 
     try {
-      await _sessaoService.criarSessao(
-        disciplinaId: _disciplinaSelecionadaId!,
-        inicio: inicio,
-        fim: fim,
-        descricao: _descricaoController.text.trim().isEmpty ? null : _descricaoController.text.trim(),
-      );
+      final String? descricaoVal = _descricaoController.text.trim().isEmpty ? null : _descricaoController.text.trim();
+
+      if (widget.sessaoExistente != null) {
+        await _sessaoService.editarSessao(
+          sessaoId: widget.sessaoExistente!.id,
+          disciplinaId: _disciplinaSelecionadaId!,
+          inicio: inicio,
+          fim: fim,
+          descricao: descricaoVal,
+          status: widget.sessaoExistente!.status ?? 'AGENDADO',
+          duracaoRealizada: widget.sessaoExistente!.duracaoRealizada ?? 0,
+        );
+      } else {
+        await _sessaoService.criarSessao(
+          disciplinaId: _disciplinaSelecionadaId!,
+          inicio: inicio,
+          fim: fim,
+          descricao: descricaoVal,
+        );
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Sessão de estudo agendada com sucesso! 📚'),
+          SnackBar(
+            content: Text(widget.sessaoExistente != null
+                ? 'Sessão de estudo atualizada com sucesso! 📚'
+                : 'Sessão de estudo agendada com sucesso! 📚'),
             backgroundColor: Colors.green,
           ),
         );
@@ -213,7 +250,7 @@ class _CriarSessaoScreenState extends State<CriarSessaoScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Nova Sessão de Estudo'),
+        title: Text(widget.sessaoExistente != null ? 'Editar Sessão de Estudo' : 'Nova Sessão de Estudo'),
         elevation: 0,
       ),
       body: _isLoadingDisciplinas
@@ -393,7 +430,10 @@ class _CriarSessaoScreenState extends State<CriarSessaoScreen> {
                         onPressed: _isSaving ? null : _salvar,
                         child: _isSaving
                             ? const CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Colors.white))
-                            : const Text('AGENDAR SESSÃO', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                            : Text(
+                                widget.sessaoExistente != null ? 'SALVAR ALTERAÇÕES' : 'AGENDAR SESSÃO',
+                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                              ),
                       ),
                     ),
                   ],

@@ -14,6 +14,7 @@ import 'package:provider/provider.dart';
 import '../providers/agenda_provider.dart';
 import '../widgets/agenda_timeline.dart';
 import '../widgets/recomendacoes_section.dart';
+import '../widgets/weekly_calendar_grid.dart';
 import 'criar_evento_screen.dart';
 import 'criar_sessao_screen.dart';
 
@@ -89,41 +90,59 @@ class _AgendaScreenState extends State<AgendaScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Agenda Acadêmica'),
-        centerTitle: true,
-        elevation: 0,
-        scrolledUnderElevation: 2,
-      ),
-      body: Consumer<AgendaProvider>(
-        builder: (context, provider, _) {
-          // ── Estado de carregamento inicial ──────────────────────────────
-          if (provider.isLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Agenda Acadêmica'),
+          centerTitle: true,
+          elevation: 0,
+          scrolledUnderElevation: 2,
+          bottom: const TabBar(
+            tabs: [
+              Tab(icon: Icon(Icons.list_alt_rounded), text: 'Lista & Linha'),
+              Tab(icon: Icon(Icons.calendar_view_week_rounded), text: 'Grade Semanal'),
+            ],
+          ),
+        ),
+        body: Consumer<AgendaProvider>(
+          builder: (context, provider, _) {
+            // ── Estado de carregamento inicial ──────────────────────────────
+            if (provider.isLoading) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-          // ── Estado de erro ─────────────────────────────────────────────
-          if (provider.errorMessage != null) {
-            return _ErrorState(
-              message: provider.errorMessage!,
-              onRetry: () => provider.fetchAgenda(),
+            // ── Estado de erro ─────────────────────────────────────────────
+            if (provider.errorMessage != null) {
+              return _ErrorState(
+                message: provider.errorMessage!,
+                onRetry: () => provider.fetchAgenda(),
+              );
+            }
+
+            // ── Conteúdo principal (TabBarView) ────────────────────────────
+            return TabBarView(
+              physics: const NeverScrollableScrollPhysics(), // Evita conflito com o scroll horizontal da grade
+              children: [
+                RefreshIndicator(
+                  onRefresh: () => provider.fetchAgenda(isRefresh: true),
+                  child: _AgendaContent(provider: provider),
+                ),
+                RefreshIndicator(
+                  onRefresh: () => provider.fetchAgenda(isRefresh: true),
+                  child: const WeeklyCalendarGrid(),
+                ),
+              ],
             );
-          }
-
-          // ── Conteúdo principal ─────────────────────────────────────────
-          return RefreshIndicator(
-            onRefresh: () => provider.fetchAgenda(isRefresh: true),
-            child: _AgendaContent(provider: provider),
-          );
-        },
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _abrirOpcoesCadastro(context),
-        label: const Text('Registrar'),
-        icon: const Icon(Icons.add),
-        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-        foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
+          },
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () => _abrirOpcoesCadastro(context),
+          label: const Text('Registrar'),
+          icon: const Icon(Icons.add),
+          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+          foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
+        ),
       ),
     );
   }
