@@ -14,6 +14,8 @@ import 'package:provider/provider.dart';
 import '../providers/agenda_provider.dart';
 import '../widgets/agenda_timeline.dart';
 import '../widgets/recomendacoes_section.dart';
+import 'criar_evento_screen.dart';
+import 'criar_sessao_screen.dart';
 
 class AgendaScreen extends StatefulWidget {
   const AgendaScreen({super.key});
@@ -29,6 +31,60 @@ class _AgendaScreenState extends State<AgendaScreen> {
     // Captura a referência ao provider de forma síncrona antes do gap assíncrono.
     final provider = context.read<AgendaProvider>();
     Future.microtask(() => provider.fetchAgenda());
+  }
+
+  void _abrirOpcoesCadastro(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (bottomSheetContext) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 16.0),
+                child: Text(
+                  'O que você deseja registrar?',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(Icons.event, color: Color(0xFF5C6BC0)),
+                title: const Text('Cadastrar Evento Acadêmico'),
+                subtitle: const Text('Provas, trabalhos, seminários, etc.'),
+                onTap: () async {
+                  Navigator.pop(bottomSheetContext);
+                  final criado = await Navigator.push<bool>(
+                    context,
+                    MaterialPageRoute(builder: (context) => const CriarEventoScreen()),
+                  );
+                  if (criado == true && context.mounted) {
+                    context.read<AgendaProvider>().fetchAgenda();
+                  }
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.menu_book, color: Color(0xFF4CAF50)),
+                title: const Text('Cadastrar Sessão de Estudo'),
+                subtitle: const Text('Tempo dedicado para focar na disciplina'),
+                onTap: () async {
+                  Navigator.pop(bottomSheetContext);
+                  final criado = await Navigator.push<bool>(
+                    context,
+                    MaterialPageRoute(builder: (context) => const CriarSessaoScreen()),
+                  );
+                  if (criado == true && context.mounted) {
+                    context.read<AgendaProvider>().fetchAgenda();
+                  }
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -61,6 +117,13 @@ class _AgendaScreenState extends State<AgendaScreen> {
             child: _AgendaContent(provider: provider),
           );
         },
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _abrirOpcoesCadastro(context),
+        label: const Text('Registrar'),
+        icon: const Icon(Icons.add),
+        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+        foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
       ),
     );
   }
@@ -100,8 +163,8 @@ class _AgendaContent extends StatelessWidget {
             child: AgendaTimeline(itensAgrupadosPorData: agrupados),
           ),
 
-        // Espaço inferior para não cortar o último card
-        const SliverToBoxAdapter(child: SizedBox(height: 24)),
+        // Espaço inferior para não cortar o último card (espaço para o FAB também)
+        const SliverToBoxAdapter(child: SizedBox(height: 80)),
       ],
     );
   }
@@ -172,18 +235,19 @@ class _EmptyState extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              'Sua agenda está livre!',
+              'Nenhum compromisso encontrado.',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 color: Colors.grey[600],
                 fontWeight: FontWeight.w600,
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 8),
             Text(
-              'Nenhuma atividade encontrada para o filtro selecionado.',
+              'Cadastre um evento ou uma sessão de estudo para começar.',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Colors.grey[450],
+                color: Colors.grey[500],
+                fontSize: 14,
               ),
             ),
           ],

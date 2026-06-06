@@ -1,7 +1,7 @@
 /// Card unificado para exibir um item de agenda.
 ///
 /// Renderiza variações visuais conforme [AgendaItem.tipo]:
-/// - `EVENTO_ACADEMICO` → barra de urgência, badge de tipo, dias restantes.
+/// - `EVENTO_ACADEMICO` → barra de urgência, badge de tipo com ícone, dias restantes.
 /// - `SESSAO_ESTUDO`    → barra de status, horário início/fim, duração.
 library;
 
@@ -74,6 +74,30 @@ class AgendaItemCard extends StatelessWidget {
   Widget _buildEvento(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
 
+    IconData iconData;
+    String labelIcon = '';
+    switch (item.tipoEvento) {
+      case 'PROVA':
+        iconData = Icons.edit_note;
+        labelIcon = '📝';
+        break;
+      case 'TRABALHO':
+        iconData = Icons.description;
+        labelIcon = '📄';
+        break;
+      case 'SEMINARIO':
+        iconData = Icons.groups;
+        labelIcon = '📌';
+        break;
+      case 'APRESENTACAO':
+        iconData = Icons.co_present;
+        labelIcon = '🎤';
+        break;
+      default:
+        iconData = Icons.assignment;
+        labelIcon = '📋';
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -81,7 +105,7 @@ class AgendaItemCard extends StatelessWidget {
         Row(
           children: [
             _badge(
-              label: AgendaLabels.tipoEvento(item.tipoEvento),
+              label: '$labelIcon ${AgendaLabels.tipoEvento(item.tipoEvento)}',
               color: _barColor(),
             ),
             const Spacer(),
@@ -97,46 +121,64 @@ class AgendaItemCard extends StatelessWidget {
         ),
         const SizedBox(height: 8),
 
-        // Título
-        Text(
-          item.titulo,
-          style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
+        // Título com ícone correspondente
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(iconData, size: 20, color: _barColor()),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                item.titulo,
+                style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
         ),
 
         // Disciplina
         if (item.disciplinaNome.isNotEmpty) ...[
-          const SizedBox(height: 4),
-          Text(
-            item.disciplinaNome,
-            style: textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+          const SizedBox(height: 6),
+          Padding(
+            padding: const EdgeInsets.only(left: 28),
+            child: Text(
+              item.disciplinaNome,
+              style: textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+            ),
           ),
         ],
 
         // Descrição
         if (item.descricao != null && item.descricao!.isNotEmpty) ...[
           const SizedBox(height: 4),
-          Text(
-            item.descricao!,
-            style: textTheme.bodySmall?.copyWith(color: Colors.grey[500]),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
+          Padding(
+            padding: const EdgeInsets.only(left: 28),
+            child: Text(
+              item.descricao!,
+              style: textTheme.bodySmall?.copyWith(color: Colors.grey[500]),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
         ],
 
         // Indicador de concluído
         if (item.concluido == true) ...[
           const SizedBox(height: 6),
-          Row(
-            children: [
-              Icon(Icons.check_circle_outline, size: 16, color: Colors.grey[500]),
-              const SizedBox(width: 4),
-              Text(
-                'Concluído',
-                style: textTheme.bodySmall?.copyWith(color: Colors.grey[500]),
-              ),
-            ],
+          Padding(
+            padding: const EdgeInsets.only(left: 28),
+            child: Row(
+              children: [
+                Icon(Icons.check_circle_outline, size: 16, color: Colors.grey[500]),
+                const SizedBox(width: 4),
+                Text(
+                  'Concluído',
+                  style: textTheme.bodySmall?.copyWith(color: Colors.grey[500]),
+                ),
+              ],
+            ),
           ),
         ],
       ],
@@ -157,7 +199,7 @@ class AgendaItemCard extends StatelessWidget {
         Row(
           children: [
             _badge(
-              label: AgendaLabels.statusSessao(item.status),
+              label: '📚 ${AgendaLabels.statusSessao(item.status)}',
               color: _barColor(),
             ),
             const Spacer(),
@@ -174,45 +216,63 @@ class AgendaItemCard extends StatelessWidget {
         const SizedBox(height: 8),
 
         // Título
-        Text(
-          item.titulo,
-          style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.menu_book, size: 20, color: _barColor()),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                item.titulo,
+                style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
         ),
 
         // Disciplina
         if (item.disciplinaNome.isNotEmpty) ...[
-          const SizedBox(height: 4),
-          Text(
-            item.disciplinaNome,
-            style: textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+          const SizedBox(height: 6),
+          Padding(
+            padding: const EdgeInsets.only(left: 28),
+            child: Text(
+              item.disciplinaNome,
+              style: textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+            ),
           ),
         ],
 
         // Descrição
         if (item.descricao != null && item.descricao!.isNotEmpty) ...[
           const SizedBox(height: 4),
-          Text(
-            item.descricao!,
-            style: textTheme.bodySmall?.copyWith(color: Colors.grey[500]),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
+          Padding(
+            padding: const EdgeInsets.only(left: 28),
+            child: Text(
+              item.descricao!,
+              style: textTheme.bodySmall?.copyWith(color: Colors.grey[500]),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
         ],
 
         // Duração realizada (se concluído)
         if (item.status == 'CONCLUIDO' && item.duracaoRealizada != null) ...[
           const SizedBox(height: 6),
-          Row(
-            children: [
-              Icon(Icons.timer_outlined, size: 16, color: Colors.grey[500]),
-              const SizedBox(width: 4),
-              Text(
-                'Foco: ${item.duracaoRealizada} min',
-                style: textTheme.bodySmall?.copyWith(color: Colors.grey[500]),
-              ),
-            ],
+          Padding(
+            padding: const EdgeInsets.only(left: 28),
+            child: Row(
+              children: [
+                Icon(Icons.timer_outlined, size: 16, color: Colors.grey[500]),
+                const SizedBox(width: 4),
+                Text(
+                  'Foco: ${item.duracaoRealizada} min',
+                  style: textTheme.bodySmall?.copyWith(color: Colors.grey[500]),
+                ),
+              ],
+            ),
           ),
         ],
       ],
