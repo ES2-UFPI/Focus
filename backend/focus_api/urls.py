@@ -6,7 +6,7 @@ from alunos.views import AlunoViewSet
 from disciplinas.views import DisciplinaViewSet
 from tarefas_disciplina.views import TarefaDisciplinaViewSet
 from materiais_estudo.views import MaterialEstudoViewSet
-from eventos_academicos.views import EventoAcademicoViewSet
+from eventos_academicos.views import EventoAcademicoViewSet, AgendaView
 from sessao_estudo.views import SessaoEstudoViewSet
 from feedback_sessao_estudo.views import FeedbackSessaoEstudoViewSet
 
@@ -24,5 +24,6 @@ router.register(r'feedbacks-sessao', FeedbackSessaoEstudoViewSet)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('api/agenda/', AgendaView.as_view(), name='agenda'),
     path('api/', include(router.urls)),
 ]

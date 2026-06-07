@@ -1,5 +1,6 @@
 import uuid
 from django.db import models
+from django.core.exceptions import ValidationError
 from disciplinas.models import Disciplina
 
 
@@ -33,6 +34,37 @@ class SessaoEstudo(models.Model):
 
     data_criacao = models.DateTimeField(auto_now_add=True)
 
+    def clean(self):
+        super().clean()
+        if self.inicio and self.fim:
+            # 1. Validar período
+            if self.fim <= self.inicio:
+                raise ValidationError("A data/hora de término deve ser posterior à data/hora de início.")
+            
+            # 2. Sessão duplicada
+            if hasattr(self, 'disciplina') and self.disciplina:
+                duplicates = SessaoEstudo.objects.filter(
+                    disciplina=self.disciplina,
+                    inicio=self.inicio,
+                    fim=self.fim
+                )
+                if self.pk:
+                    duplicates = duplicates.exclude(pk=self.pk)
+                if duplicates.exists():
+                    raise ValidationError("Já existe uma sessão de estudo cadastrada com estes mesmos horários para esta disciplina.")
+                
+                # 3. Sobreposição de horários para o mesmo aluno
+                aluno = self.disciplina.aluno
+                overlapping = SessaoEstudo.objects.filter(
+                    disciplina__aluno=aluno,
+                    inicio__lt=self.fim,
+                    fim__gt=self.inicio
+                )
+                if self.pk:
+                    overlapping = overlapping.exclude(pk=self.pk)
+                if overlapping.exists():
+                    raise ValidationError("Conflito de agenda: Esta sessão de estudo coincide com outra sessão de estudo do aluno.")
+
     class Meta:
         verbose_name = 'Sessão de Estudo'
         verbose_name_plural = 'Sessões de Estudo'
@@ -43,5 +75,3 @@ class SessaoEstudo(models.Model):
         disciplina_txt = str(self.disciplina) if self.disciplina else "Sem Disciplina"
         status_txt = self.StatusSessao(self.status).label
         return f"{disciplina_txt} - Foco: {self.duracao_realizada}min [{status_txt}]"
-  
- 
