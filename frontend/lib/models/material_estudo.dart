@@ -27,7 +27,7 @@ class MaterialEstudo {
       titulo: json['titulo'] as String,
       tipo: json['tipo'] as String,
       url: json['url'] as String?,
-      arquivoPath: json['arquivo_path'] as String?,
+      arquivoPath: json['arquivo'] as String?,
       descricao: json['descricao'] as String?,
       disciplinaId: json['disciplina'] as String,
       disciplinaNome: json['disciplina_nome'] as String? ?? '',
@@ -40,7 +40,7 @@ class MaterialEstudo {
       'titulo': titulo,
       'tipo': tipo,
       if (url != null) 'url': url,
-      if (arquivoPath != null) 'arquivo_path': arquivoPath,
+      if (arquivoPath != null) 'arquivo': arquivoPath,
       if (descricao != null) 'descricao': descricao,
       'disciplina': disciplinaId,
     };

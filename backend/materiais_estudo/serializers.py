@@ -8,7 +8,7 @@ class MaterialEstudoSerializer(serializers.ModelSerializer):
     class Meta:
         model = MaterialEstudo
         fields = [
-            'id', 'titulo', 'tipo', 'url', 'arquivo_path',
+            'id', 'titulo', 'tipo', 'url', 'arquivo',
             'descricao', 'disciplina', 'disciplina_nome', 'data_insercao',
         ]
         read_only_fields = ['id', 'data_insercao', 'disciplina_nome']
