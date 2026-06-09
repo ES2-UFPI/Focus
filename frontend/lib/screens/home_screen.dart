@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 
 import 'agenda_screen.dart';
 import 'materiais_screen.dart';
-import 'relatorios_screen.dart';
+import 'consistencia_screen.dart';
+import 'ciclo_estudos_screen.dart';
 import 'configuracoes_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -15,7 +16,6 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
 
-  // Telas vinculadas a cada aba do Hub
   late final List<Widget> _screens;
 
   @override
@@ -24,7 +24,8 @@ class _HomeScreenState extends State<HomeScreen> {
     _screens = [
       const AgendaScreen(),
       const MateriaisScreen(),
-      const RelatoriosScreen(),
+      const ConsistenciaScreen(),
+      const CicloEstudosScreen(),
       const ConfiguracoesScreen(),
     ];
   }
@@ -32,7 +33,6 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // IndexedStack preserva o estado de rolagem e dados de cada tela ao navegar pelas abas
       body: IndexedStack(
         index: _currentIndex,
         children: _screens,
@@ -58,9 +58,14 @@ class _HomeScreenState extends State<HomeScreen> {
             label: 'Materiais',
           ),
           NavigationDestination(
-            icon: Icon(Icons.bar_chart_outlined),
-            selectedIcon: Icon(Icons.analytics_rounded),
-            label: 'Relatórios',
+            icon: Icon(Icons.track_changes_outlined),
+            selectedIcon: Icon(Icons.track_changes_rounded),
+            label: 'Consistência',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.view_week_outlined),
+            selectedIcon: Icon(Icons.view_week_rounded),
+            label: 'Ciclos',
           ),
           NavigationDestination(
             icon: Icon(Icons.settings_outlined),

@@ -272,7 +272,7 @@ class WeeklyCalendarGrid extends StatelessWidget {
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
-                color: isHoje ? Colors.white : Colors.grey[800],
+                color: isHoje ? theme.colorScheme.onPrimary : Colors.grey[800],
               ),
             ),
           ),
