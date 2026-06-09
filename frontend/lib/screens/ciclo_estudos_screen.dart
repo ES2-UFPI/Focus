@@ -195,10 +195,10 @@ class _CicloEstudosScreenState extends State<CicloEstudosScreen> {
               minimumSize: Size.zero,
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
-            child: Text('Hoje',
+            child: const Text('Hoje',
                 style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.primary)),
+                    color: Color(0xFF5C6BC0))),
           ),
           IconButton(
             icon: const Icon(Icons.chevron_right),
@@ -235,6 +235,14 @@ class _CicloEstudosScreenState extends State<CicloEstudosScreen> {
               visualDensity: VisualDensity.compact,
               textStyle: WidgetStateProperty.all(
                   const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+              foregroundColor: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.selected)) return Colors.white;
+                return const Color(0xFF374151);
+              }),
+              backgroundColor: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.selected)) return const Color(0xFF5C6BC0);
+                return Colors.white;
+              }),
             ),
           ),
         ],

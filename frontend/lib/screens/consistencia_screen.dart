@@ -204,7 +204,7 @@ class _ConsistenciaScreenState extends State<ConsistenciaScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('Índice de Consistência',
-              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF1A1A2E))),
           const SizedBox(height: 2),
           Text('Baseado nas metas de horas semanais',
               style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey[500])),
@@ -359,7 +359,7 @@ class _ConsistenciaScreenState extends State<ConsistenciaScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('Consistência por Dia',
-              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF1A1A2E))),
           const SizedBox(height: 14),
           ..._mockDias.map(_buildDiaItem),
         ],
@@ -421,7 +421,7 @@ class _ConsistenciaScreenState extends State<ConsistenciaScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('Distribuição por Disciplina',
-              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF1A1A2E))),
           const SizedBox(height: 2),
           Text('${total}h registradas nesta semana',
               style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey[500])),
