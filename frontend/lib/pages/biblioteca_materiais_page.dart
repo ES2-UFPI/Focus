@@ -15,6 +15,7 @@ class BibliotecaMateriaisPage extends StatefulWidget {
 
 class _BibliotecaMateriaisPageState extends State<BibliotecaMateriaisPage> {
   final _searchController = TextEditingController();
+  bool _showSearch = false;
 
   @override
   void initState() {
@@ -66,275 +67,328 @@ class _BibliotecaMateriaisPageState extends State<BibliotecaMateriaisPage> {
   Widget build(BuildContext context) {
     return ShadToaster(
       child: Scaffold(
-        backgroundColor: const Color(0xFFF8F9FC),
-        body: Row(
-          children: [
-            _buildCategoryPanel(),
-            Expanded(child: _buildMainContent()),
+        appBar: AppBar(
+          title: _showSearch
+              ? TextField(
+                  controller: _searchController,
+                  autofocus: true,
+                  decoration: const InputDecoration(
+                    hintText: 'Buscar materiais...',
+                    border: InputBorder.none,
+                  ),
+                  onChanged: (v) => context.read<MateriaisProvider>().setSearch(v),
+                )
+              : const Text('Biblioteca de Materiais'),
+          centerTitle: false,
+          elevation: 0,
+          scrolledUnderElevation: 2,
+          actions: [
+            IconButton(
+              icon: Icon(_showSearch ? Icons.close : Icons.search),
+              onPressed: () {
+                setState(() {
+                  _showSearch = !_showSearch;
+                  if (!_showSearch) {
+                    _searchController.clear();
+                    context.read<MateriaisProvider>().setSearch('');
+                  }
+                });
+              },
+            ),
           ],
+        ),
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildFilterChips(),
+            Expanded(child: _buildContent()),
+          ],
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () => _openForm(),
+          icon: const Icon(Icons.add),
+          label: const Text('Adicionar'),
+          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+          foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
         ),
       ),
     );
   }
 
-  Widget _buildCategoryPanel() {
+  // ---------------------------------------------------------------------------
+  // Filtros por disciplina
+  // ---------------------------------------------------------------------------
+
+  Widget _buildFilterChips() {
     final provider = context.watch<MateriaisProvider>();
     final disciplinas = provider.disciplinas;
     final selected = provider.selectedDisciplinaId;
 
-    return Container(
-      width: 200,
-      color: Colors.white,
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      child: Row(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
-            child: Text(
-              'Categorias',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey[500],
-                letterSpacing: 0.5,
-              ),
-            ),
-          ),
-          _categoryItem(null, 'Todos', selected),
-          ...disciplinas.map((d) => _categoryItem(d.id, d.nome, selected)),
+          _chip(null, 'Todos', selected),
+          ...disciplinas.map((d) => _chip(d.id, d.nome, selected)),
         ],
       ),
     );
   }
 
-  Widget _categoryItem(String? id, String label, String? selected) {
+  Widget _chip(String? id, String label, String? selected) {
     final isSelected = id == selected;
-    return GestureDetector(
-      onTap: () => context.read<MateriaisProvider>().setDisciplinaFilter(id),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        margin: const EdgeInsets.only(bottom: 2),
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFEEF2FF) : Colors.transparent,
-          borderRadius: BorderRadius.circular(6),
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: ChoiceChip(
+        label: Text(label),
+        selected: isSelected,
+        onSelected: (_) => context.read<MateriaisProvider>().setDisciplinaFilter(id),
+        showCheckmark: false,
+        selectedColor: Theme.of(context).colorScheme.primaryContainer,
+        labelStyle: TextStyle(
+          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+          color: isSelected
+              ? Theme.of(context).colorScheme.primary
+              : Colors.grey[600],
         ),
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Conteúdo principal
+  // ---------------------------------------------------------------------------
+
+  Widget _buildContent() {
+    final provider = context.watch<MateriaisProvider>();
+
+    if (provider.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (provider.error != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.wifi_off_rounded, size: 56, color: Colors.grey[400]),
+              const SizedBox(height: 16),
+              Text(
+                provider.error!,
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey[600]),
+              ),
+              const SizedBox(height: 20),
+              FilledButton.tonal(
+                onPressed: () => context.read<MateriaisProvider>().init(),
+                child: const Text('Tentar novamente'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (provider.materiais.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.folder_open_rounded, size: 64, color: Colors.grey[300]),
+              const SizedBox(height: 16),
+              Text(
+                'Nenhum material encontrado.',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Toque em "Adicionar" para cadastrar seu primeiro material.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey[500], fontSize: 14),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+      itemCount: provider.materiais.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 8),
+      itemBuilder: (_, i) => _MaterialCard(
+        material: provider.materiais[i],
+        onEdit: () => _openForm(provider.materiais[i]),
+        onDelete: () => _confirmDelete(provider.materiais[i]),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Card de material
+// ---------------------------------------------------------------------------
+
+class _MaterialCard extends StatelessWidget {
+  final MaterialEstudo material;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  const _MaterialCard({
+    required this.material,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final fmt = DateFormat('dd/MM/yyyy');
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.grey[200]!),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (isSelected)
-              Container(
-                width: 3,
-                height: 14,
-                margin: const EdgeInsets.only(right: 8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF6366f1),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
+            _TipoIcon(tipo: material.tipo),
+            const SizedBox(width: 14),
             Expanded(
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                  color: isSelected ? const Color(0xFF6366f1) : Colors.grey[700],
-                ),
-                overflow: TextOverflow.ellipsis,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    material.titulo,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    material.disciplinaNome,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      _TipoBadge(tipo: material.tipo),
+                      const SizedBox(width: 8),
+                      Icon(Icons.calendar_today_outlined,
+                          size: 12, color: Colors.grey[400]),
+                      const SizedBox(width: 4),
+                      Text(
+                        fmt.format(material.dataInsercao),
+                        style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                      ),
+                    ],
+                  ),
+                ],
               ),
+            ),
+            PopupMenuButton<String>(
+              icon: Icon(Icons.more_vert, size: 20, color: Colors.grey[500]),
+              onSelected: (action) {
+                if (action == 'edit') onEdit();
+                if (action == 'delete') onDelete();
+              },
+              itemBuilder: (_) => [
+                const PopupMenuItem(
+                  value: 'edit',
+                  child: Row(children: [
+                    Icon(Icons.edit_outlined, size: 16),
+                    SizedBox(width: 10),
+                    Text('Editar'),
+                  ]),
+                ),
+                PopupMenuItem(
+                  value: 'delete',
+                  child: Row(children: [
+                    Icon(Icons.delete_outline, size: 16, color: Colors.red[600]),
+                    const SizedBox(width: 10),
+                    Text('Remover', style: TextStyle(color: Colors.red[600])),
+                  ]),
+                ),
+              ],
             ),
           ],
         ),
       ),
     );
   }
+}
 
-  Widget _buildMainContent() {
-    final provider = context.watch<MateriaisProvider>();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildHeader(provider),
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: provider.isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : provider.error != null
-                    ? Center(child: Text(provider.error!, style: const TextStyle(color: Colors.red)))
-                    : provider.materiais.isEmpty
-                        ? _buildEmpty()
-                        : _buildTable(provider.materiais),
-          ),
-        ),
-      ],
-    );
-  }
+// ---------------------------------------------------------------------------
+// Widgets auxiliares
+// ---------------------------------------------------------------------------
 
-  Widget _buildHeader(MateriaisProvider provider) {
+class _TipoIcon extends StatelessWidget {
+  final String tipo;
+  const _TipoIcon({required this.tipo});
+
+  @override
+  Widget build(BuildContext context) {
+    final (icon, color) = switch (tipo) {
+      'PDF' => (Icons.picture_as_pdf_outlined, Colors.red[600]!),
+      'Link' => (Icons.link_rounded, Colors.blue[600]!),
+      'Video' => (Icons.play_circle_outline_rounded, Colors.orange[700]!),
+      'Resumo' => (Icons.edit_note_rounded, Colors.green[700]!),
+      _ => (Icons.insert_drive_file_outlined, Colors.grey[600]!),
+    };
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-      color: const Color(0xFFF8F9FC),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Biblioteca de Materiais',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: ShadInput(
-                  controller: _searchController,
-                  placeholder: const Text('Buscar materiais...'),
-                  leading: const Icon(LucideIcons.search, size: 16),
-                  onChanged: (v) => provider.setSearch(v),
-                ),
-              ),
-              const SizedBox(width: 12),
-              ShadButton(
-                onPressed: () => _openForm(),
-                leading: const Icon(LucideIcons.plus, size: 16),
-                child: const Text('Adicionar material'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEmpty() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(LucideIcons.folderOpen, size: 48, color: Colors.grey[300]),
-          const SizedBox(height: 12),
-          Text(
-            'Nenhum material encontrado.',
-            style: TextStyle(color: Colors.grey[500], fontSize: 15),
-          ),
-          const SizedBox(height: 8),
-          ShadButton.outline(
-            onPressed: () => _openForm(),
-            child: const Text('Adicionar primeiro material'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTable(List<MaterialEstudo> materiais) {
-    final fmt = DateFormat('dd/MM/yyyy');
-    return ShadCard(
-      padding: EdgeInsets.zero,
-      child: ShadTable.list(
-        columnSpanExtent: (i) {
-          switch (i) {
-            case 0: return const FixedTableSpanExtent(240);
-            case 1: return const FixedTableSpanExtent(150);
-            case 2: return const FixedTableSpanExtent(100);
-            case 3: return const FixedTableSpanExtent(100);
-            default: return const FixedTableSpanExtent(50);
-          }
-        },
-        header: const [
-          ShadTableCell.header(child: Text('Material')),
-          ShadTableCell.header(child: Text('Disciplina')),
-          ShadTableCell.header(child: Text('Tipo')),
-          ShadTableCell.header(child: Text('Data')),
-          ShadTableCell.header(child: Text('')),
-        ],
-        children: materiais.map((m) => [
-          ShadTableCell(
-            child: Row(
-              children: [
-                _tipoIcon(m.tipo),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    m.titulo,
-                    style: const TextStyle(fontWeight: FontWeight.w500),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          ShadTableCell(
-            child: Text(m.disciplinaNome, overflow: TextOverflow.ellipsis),
-          ),
-          ShadTableCell(child: _tipoBadge(m.tipo)),
-          ShadTableCell(
-            child: Text(
-              fmt.format(m.dataInsercao),
-              style: TextStyle(color: Colors.grey[600], fontSize: 13),
-            ),
-          ),
-          ShadTableCell(child: _rowMenu(m)),
-        ]).toList(),
-      ),
-    );
-  }
-
-  Widget _tipoIcon(String tipo) {
-    IconData icon;
-    Color color;
-    switch (tipo) {
-      case 'PDF':   icon = LucideIcons.fileText; color = Colors.red;
-      case 'Link':  icon = LucideIcons.link;     color = Colors.blue;
-      case 'Video': icon = LucideIcons.video;    color = Colors.orange;
-      case 'Resumo': icon = LucideIcons.penLine; color = Colors.green;
-      default:      icon = LucideIcons.file;     color = Colors.grey;
-    }
-    return Container(
-      padding: const EdgeInsets.all(6),
+      width: 44,
+      height: 44,
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(6),
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(10),
       ),
-      child: Icon(icon, size: 14, color: color),
+      child: Icon(icon, size: 22, color: color),
     );
   }
+}
 
-  Widget _tipoBadge(String tipo) {
-    return ShadBadge.secondary(
-      child: Text(tipo, style: const TextStyle(fontSize: 11)),
-    );
-  }
+class _TipoBadge extends StatelessWidget {
+  final String tipo;
+  const _TipoBadge({required this.tipo});
 
-  Widget _rowMenu(MaterialEstudo m) {
-    return PopupMenuButton<String>(
-      icon: const Icon(Icons.more_vert, size: 18, color: Colors.grey),
-      onSelected: (action) {
-        if (action == 'edit') _openForm(m);
-        if (action == 'delete') _confirmDelete(m);
-      },
-      itemBuilder: (_) => [
-        const PopupMenuItem(
-          value: 'edit',
-          child: Row(
-            children: [
-              Icon(Icons.edit_outlined, size: 16),
-              SizedBox(width: 8),
-              Text('Editar'),
-            ],
-          ),
+  @override
+  Widget build(BuildContext context) {
+    final color = switch (tipo) {
+      'PDF' => Colors.red[600]!,
+      'Link' => Colors.blue[600]!,
+      'Video' => Colors.orange[700]!,
+      'Resumo' => Colors.green[700]!,
+      _ => Colors.grey[600]!,
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        tipo,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: color,
         ),
-        PopupMenuItem(
-          value: 'delete',
-          child: Row(
-            children: [
-              Icon(Icons.delete_outline, size: 16, color: Colors.red[600]),
-              const SizedBox(width: 8),
-              Text('Remover', style: TextStyle(color: Colors.red[600])),
-            ],
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
