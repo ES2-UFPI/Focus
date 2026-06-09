@@ -31,14 +31,6 @@ class FocusApp extends StatelessWidget {
           brightness: Brightness.dark,
           colorScheme: const ShadSlateColorScheme.dark(),
         ),
-        materialThemeBuilder: (context, theme) => theme.copyWith(
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF5C6BC0),
-            brightness: Brightness.light,
-          ),
-          useMaterial3: true,
-          fontFamily: 'Roboto',
-        ),
         home: const HomeScreen(),
       ),
     );
