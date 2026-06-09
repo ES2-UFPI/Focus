@@ -179,7 +179,7 @@ class _ConsistenciaScreenState extends State<ConsistenciaScreen> {
             onTap: () => setState(() => _semanaRef = DateTime.now()),
             child: Text(
               _textoPeriodo,
-              style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF374151)),
             ),
           ),
           IconButton(
@@ -339,7 +339,7 @@ class _ConsistenciaScreenState extends State<ConsistenciaScreen> {
           Icon(icon, color: color, size: 22),
           const SizedBox(height: 6),
           Text(valor,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF1A1A2E))),
           const SizedBox(height: 2),
           Text(label,
               style: TextStyle(color: Colors.grey[500], fontSize: 10),
@@ -382,7 +382,7 @@ class _ConsistenciaScreenState extends State<ConsistenciaScreen> {
           SizedBox(
             width: 38,
             child: Text(d.abrev,
-                style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13)),
+                style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: Color(0xFF374151))),
           ),
           Expanded(
             child: ClipRRect(
@@ -465,7 +465,7 @@ class _ConsistenciaScreenState extends State<ConsistenciaScreen> {
                                 const SizedBox(width: 6),
                                 Expanded(
                                   child: Text(d.nome,
-                                      style: const TextStyle(fontSize: 12),
+                                      style: const TextStyle(fontSize: 12, color: Color(0xFF374151)),
                                       overflow: TextOverflow.ellipsis),
                                 ),
                                 Text('${d.horas}h',

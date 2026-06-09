@@ -184,7 +184,7 @@ class _CicloEstudosScreenState extends State<CicloEstudosScreen> {
       child: Row(
         children: [
           IconButton(
-            icon: const Icon(Icons.chevron_left),
+            icon: const Icon(Icons.chevron_left, color: Color(0xFF374151)),
             onPressed: _retroceder,
             visualDensity: VisualDensity.compact,
           ),
@@ -201,7 +201,7 @@ class _CicloEstudosScreenState extends State<CicloEstudosScreen> {
                     color: Color(0xFF5C6BC0))),
           ),
           IconButton(
-            icon: const Icon(Icons.chevron_right),
+            icon: const Icon(Icons.chevron_right, color: Color(0xFF374151)),
             onPressed: _avancar,
             visualDensity: VisualDensity.compact,
           ),
