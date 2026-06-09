@@ -222,7 +222,7 @@ class _FilterChips extends StatelessWidget {
             labelStyle: TextStyle(
               fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
               color: isSelected
-                  ? Theme.of(context).colorScheme.primary
+                  ? Theme.of(context).colorScheme.onPrimaryContainer
                   : Colors.grey[600],
             ),
           );

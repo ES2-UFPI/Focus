@@ -149,7 +149,7 @@ class _BibliotecaMateriaisPageState extends State<BibliotecaMateriaisPage> {
         labelStyle: TextStyle(
           fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
           color: isSelected
-              ? Theme.of(context).colorScheme.primary
+              ? Theme.of(context).colorScheme.onPrimaryContainer
               : Colors.grey[600],
         ),
       ),

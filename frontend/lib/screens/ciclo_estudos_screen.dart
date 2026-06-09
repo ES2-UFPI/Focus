@@ -372,7 +372,7 @@ class _CicloEstudosScreenState extends State<CicloEstudosScreen> {
               style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
-                  color: isHoje ? Colors.white : Colors.grey[800]),
+                  color: isHoje ? theme.colorScheme.onPrimary : Colors.grey[800]),
             ),
           ),
         ],
