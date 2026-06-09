@@ -81,6 +81,22 @@ class _MaterialFormDialogState extends State<MaterialFormDialog> {
     return ShadDialog(
       title: Text(isEdit ? 'Editar material' : 'Adicionar material'),
       description: Text(isEdit ? 'Edite os dados do material.' : 'Preencha os dados do novo material.'),
+      actions: [
+        ShadButton.outline(
+          onPressed: _loading ? null : () => Navigator.of(context).pop(false),
+          child: const Text('Cancelar'),
+        ),
+        ShadButton(
+          onPressed: _loading ? null : _submit,
+          leading: _loading
+              ? const SizedBox.square(
+                  dimension: 14,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                )
+              : null,
+          child: Text(isEdit ? 'Salvar' : 'Adicionar'),
+        ),
+      ],
       child: SizedBox(
         width: 440,
         child: ShadForm(
@@ -124,22 +140,6 @@ class _MaterialFormDialogState extends State<MaterialFormDialog> {
           ),
         ),
       ),
-      actions: [
-        ShadButton.outline(
-          onPressed: _loading ? null : () => Navigator.of(context).pop(false),
-          child: const Text('Cancelar'),
-        ),
-        ShadButton(
-          onPressed: _loading ? null : _submit,
-          leading: _loading
-              ? const SizedBox.square(
-                  dimension: 14,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                )
-              : null,
-          child: Text(isEdit ? 'Salvar' : 'Adicionar'),
-        ),
-      ],
     );
   }
 
