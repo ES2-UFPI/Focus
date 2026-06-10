@@ -62,7 +62,9 @@ class _AuthGateState extends State<_AuthGate> {
   @override
   void initState() {
     super.initState();
-    context.read<AuthProvider>().init();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<AuthProvider>().init();
+    });
   }
 
   @override

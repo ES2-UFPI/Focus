@@ -18,16 +18,12 @@ class AuthProvider extends ChangeNotifier {
   AuthProvider(this.apiService);
 
   Future<void> init() async {
-    _carregando = true;
-    notifyListeners();
-
     final token = await AuthService.getToken();
     if (token != null) {
       _aluno = await AuthService.getAluno();
       apiService.setToken(token);
       _logado = true;
     }
-
     _carregando = false;
     notifyListeners();
   }
