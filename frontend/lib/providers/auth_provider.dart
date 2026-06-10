@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../services/api_service.dart';
+import '../core/network/api_client.dart';
 
 class AuthProvider extends ChangeNotifier {
   bool _logado = false;
@@ -20,6 +21,7 @@ class AuthProvider extends ChangeNotifier {
     if (token != null) {
       _aluno = await AuthService.getAluno();
       apiService.setToken(token);
+      setAuthToken(token);
       _logado = true;
     }
   }
@@ -30,6 +32,7 @@ class AuthProvider extends ChangeNotifier {
       _aluno = result['aluno'];
       final token = await AuthService.getToken();
       apiService.setToken(token!);
+      setAuthToken(token);
       _logado = true;
       notifyListeners();
       return null;
@@ -47,6 +50,7 @@ class AuthProvider extends ChangeNotifier {
       _aluno = result['aluno'];
       final token = await AuthService.getToken();
       apiService.setToken(token!);
+      setAuthToken(token);
       _logado = true;
       notifyListeners();
       return null;
@@ -57,6 +61,7 @@ class AuthProvider extends ChangeNotifier {
   Future<void> logout() async {
     await AuthService.logout();
     apiService.clearToken();
+    setAuthToken(null);
     _aluno = null;
     _logado = false;
     notifyListeners();

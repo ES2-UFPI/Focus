@@ -35,7 +35,7 @@ class EventoService {
     try {
       final response = await http.post(
         uri,
-        headers: kDefaultHeaders,
+        headers: defaultHeaders,
         body: json.encode(body),
       );
 
@@ -95,7 +95,7 @@ class EventoService {
     try {
       final response = await http.patch(
         uri,
-        headers: kDefaultHeaders,
+        headers: defaultHeaders,
         body: json.encode(body),
       );
 
@@ -128,7 +128,7 @@ class EventoService {
     try {
       final response = await http.delete(
         uri,
-        headers: kDefaultHeaders,
+        headers: defaultHeaders,
       );
 
       if (response.statusCode == 204) {

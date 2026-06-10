@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../core/theme/app_theme.dart';
+import '../models/agenda_model.dart';
+import '../providers/agenda_provider.dart';
+import 'criar_evento_screen.dart';
 
-enum _TipoAtividade { todos, prova, trabalho, entrega }
+enum _FiltroTipo { todos, prova, trabalho, seminario, apresentacao, outro }
 
 class AtividadesScreen extends StatefulWidget {
   const AtividadesScreen({super.key});
@@ -12,93 +16,91 @@ class AtividadesScreen extends StatefulWidget {
 }
 
 class _AtividadesScreenState extends State<AtividadesScreen> {
-  _TipoAtividade _tipoSelecionado = _TipoAtividade.todos;
+  _FiltroTipo _filtro = _FiltroTipo.todos;
   bool _mostrarConcluidas = false;
 
-  late final List<_AtividadeAcademica> _atividades = [
-    _AtividadeAcademica(
-      titulo: 'Prova de Cálculo I',
-      disciplina: 'Cálculo I',
-      tipo: _TipoAtividade.prova,
-      data: DateTime.now().add(const Duration(days: 1)),
-      descricao: 'Limites, derivadas e aplicações.',
-      concluida: false,
-    ),
-    _AtividadeAcademica(
-      titulo: 'Entrega do modelo ER',
-      disciplina: 'Banco de Dados',
-      tipo: _TipoAtividade.entrega,
-      data: DateTime.now().add(const Duration(days: 3)),
-      descricao: 'Diagrama entidade-relacionamento do projeto final.',
-      concluida: false,
-    ),
-    _AtividadeAcademica(
-      titulo: 'Trabalho de Física',
-      disciplina: 'Física',
-      tipo: _TipoAtividade.trabalho,
-      data: DateTime.now().add(const Duration(days: 7)),
-      descricao: 'Relatório sobre movimento retilíneo uniformemente variado.',
-      concluida: false,
-    ),
-    _AtividadeAcademica(
-      titulo: 'Apresentação de Programação II',
-      disciplina: 'Prog. II',
-      tipo: _TipoAtividade.trabalho,
-      data: DateTime.now().add(const Duration(days: 12)),
-      descricao: 'Demonstração da aplicação e decisões de arquitetura.',
-      concluida: false,
-    ),
-    _AtividadeAcademica(
-      titulo: 'Lista de exercícios de IA',
-      disciplina: 'IA',
-      tipo: _TipoAtividade.entrega,
-      data: DateTime.now().subtract(const Duration(days: 2)),
-      descricao: 'Busca heurística e algoritmos gulosos.',
-      concluida: true,
-    ),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    final provider = context.read<AgendaProvider>();
+    Future.microtask(() => provider.fetchAgenda());
+  }
 
-  List<_AtividadeAcademica> get _atividadesFiltradas {
-    final filtradas = _atividades.where((atividade) {
-      final tipoOk = _tipoSelecionado == _TipoAtividade.todos || atividade.tipo == _tipoSelecionado;
-      final statusOk = _mostrarConcluidas || !atividade.concluida;
+  List<AgendaItem> _filtrar(List<AgendaItem> todos) {
+    final eventos = todos.where((i) => i.isEvento).toList();
+    final filtrados = eventos.where((e) {
+      final tipoOk = _filtro == _FiltroTipo.todos ||
+          (_filtro == _FiltroTipo.prova && e.tipoEvento == 'PROVA') ||
+          (_filtro == _FiltroTipo.trabalho && e.tipoEvento == 'TRABALHO') ||
+          (_filtro == _FiltroTipo.seminario && e.tipoEvento == 'SEMINARIO') ||
+          (_filtro == _FiltroTipo.apresentacao && e.tipoEvento == 'APRESENTACAO') ||
+          (_filtro == _FiltroTipo.outro && e.tipoEvento == 'OUTRO');
+      final statusOk = _mostrarConcluidas || e.concluido != true;
       return tipoOk && statusOk;
     }).toList();
+    filtrados.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+    return filtrados;
+  }
 
-    filtradas.sort((a, b) => a.data.compareTo(b.data));
-    return filtradas;
+  Future<void> _abrirCriarEvento() async {
+    final criado = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => const CriarEventoScreen()),
+    );
+    if (criado == true && mounted) {
+      context.read<AgendaProvider>().fetchAgenda();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final atividades = _atividadesFiltradas;
+    return Consumer<AgendaProvider>(
+      builder: (context, provider, _) {
+        final atividades = _filtrar(provider.itens);
+        final pendentes = provider.itens
+            .where((i) => i.isEvento && i.concluido != true)
+            .length;
+        final urgentes = provider.itens
+            .where((i) => i.isEvento && i.concluido != true &&
+                (i.diasRestantes ?? 999) <= 3)
+            .length;
 
-    return Container(
-      color: AppColors.appBackground,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildHeader(),
-          _buildFilters(),
-          Expanded(
-            child: atividades.isEmpty
-                ? const _EmptyState()
-                : ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                    itemCount: atividades.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 10),
-                    itemBuilder: (_, index) => _AtividadeCard(atividade: atividades[index]),
+        return Container(
+          color: AppColors.appBackground,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(context, pendentes, urgentes),
+              _buildFilters(),
+              if (provider.isLoading)
+                const Expanded(child: Center(child: CircularProgressIndicator()))
+              else if (provider.errorMessage != null)
+                Expanded(child: _ErrorState(
+                  message: provider.errorMessage!,
+                  onRetry: () => provider.fetchAgenda(),
+                ))
+              else if (atividades.isEmpty)
+                Expanded(child: _EmptyState(onAdd: _abrirCriarEvento))
+              else
+                Expanded(
+                  child: RefreshIndicator(
+                    onRefresh: () => provider.fetchAgenda(isRefresh: true),
+                    child: ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+                      itemCount: atividades.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 10),
+                      itemBuilder: (_, i) => _EventoCard(item: atividades[i]),
+                    ),
                   ),
+                ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildHeader() {
-    final pendentes = _atividades.where((atividade) => !atividade.concluida).length;
-    final proximas = _atividades.where((atividade) => !atividade.concluida && atividade.diasRestantes <= 3).length;
-
+  Widget _buildHeader(BuildContext context, int pendentes, int urgentes) {
     return Material(
       color: AppColors.surface,
       child: SafeArea(
@@ -108,17 +110,30 @@ class _AtividadesScreenState extends State<AtividadesScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Atividades Acadêmicas',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.textPrimary,
-                    ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Atividades Acadêmicas',
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.textPrimary,
+                        ),
+                  ),
+                  IconButton(
+                    onPressed: _abrirCriarEvento,
+                    icon: const Icon(Icons.add_circle_outline_rounded),
+                    color: AppColors.subjectIndigo,
+                    tooltip: 'Adicionar atividade',
+                  ),
+                ],
               ),
               const SizedBox(height: 6),
               Text(
-                'Provas, trabalhos e entregas organizados por prazo.',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.textMuted),
+                'Provas, trabalhos e compromissos organizados por prazo.',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: AppColors.textMuted,
+                    ),
               ),
               const SizedBox(height: 16),
               Row(
@@ -135,7 +150,7 @@ class _AtividadesScreenState extends State<AtividadesScreen> {
                   Expanded(
                     child: _SummaryTile(
                       label: 'Até 3 dias',
-                      value: '$proximas',
+                      value: '$urgentes',
                       icon: Icons.priority_high_rounded,
                       color: AppColors.warningStrong,
                     ),
@@ -160,10 +175,12 @@ class _AtividadesScreenState extends State<AtividadesScreen> {
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
-                _buildFilterChip(_TipoAtividade.todos, 'Todas'),
-                _buildFilterChip(_TipoAtividade.prova, 'Provas'),
-                _buildFilterChip(_TipoAtividade.trabalho, 'Trabalhos'),
-                _buildFilterChip(_TipoAtividade.entrega, 'Entregas'),
+                _chip(_FiltroTipo.todos, 'Todas'),
+                _chip(_FiltroTipo.prova, 'Provas'),
+                _chip(_FiltroTipo.trabalho, 'Trabalhos'),
+                _chip(_FiltroTipo.seminario, 'Seminários'),
+                _chip(_FiltroTipo.apresentacao, 'Apresentações'),
+                _chip(_FiltroTipo.outro, 'Outros'),
               ],
             ),
           ),
@@ -173,60 +190,56 @@ class _AtividadesScreenState extends State<AtividadesScreen> {
             dense: true,
             title: const Text('Mostrar concluídas'),
             value: _mostrarConcluidas,
-            onChanged: (value) => setState(() => _mostrarConcluidas = value),
+            onChanged: (v) => setState(() => _mostrarConcluidas = v),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildFilterChip(_TipoAtividade tipo, String label) {
-    final selected = _tipoSelecionado == tipo;
+  Widget _chip(_FiltroTipo tipo, String label) {
+    final selected = _filtro == tipo;
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: ChoiceChip(
         label: Text(label),
         selected: selected,
         showCheckmark: false,
-        onSelected: (_) => setState(() => _tipoSelecionado = tipo),
+        onSelected: (_) => setState(() => _filtro = tipo),
       ),
     );
   }
 }
 
-class _AtividadeAcademica {
-  final String titulo;
-  final String disciplina;
-  final _TipoAtividade tipo;
-  final DateTime data;
-  final String descricao;
-  final bool concluida;
+// ---------------------------------------------------------------------------
+// Card de evento
+// ---------------------------------------------------------------------------
 
-  const _AtividadeAcademica({
-    required this.titulo,
-    required this.disciplina,
-    required this.tipo,
-    required this.data,
-    required this.descricao,
-    required this.concluida,
-  });
+class _EventoCard extends StatelessWidget {
+  final AgendaItem item;
+  const _EventoCard({required this.item});
 
-  int get diasRestantes {
-    final hoje = DateTime.now();
-    final hojeSemHora = DateTime(hoje.year, hoje.month, hoje.day);
-    final dataSemHora = DateTime(data.year, data.month, data.day);
-    return dataSemHora.difference(hojeSemHora).inDays;
-  }
-}
+  static const _tipoColors = {
+    'PROVA': AppColors.dangerSoft,
+    'TRABALHO': AppColors.subjectTeal,
+    'SEMINARIO': Color(0xFF8B5CF6),
+    'APRESENTACAO': Color(0xFF0EA5E9),
+    'OUTRO': AppColors.neutral,
+  };
 
-class _AtividadeCard extends StatelessWidget {
-  final _AtividadeAcademica atividade;
-
-  const _AtividadeCard({required this.atividade});
+  static const _tipoLabels = {
+    'PROVA': 'Prova',
+    'TRABALHO': 'Trabalho',
+    'SEMINARIO': 'Seminário',
+    'APRESENTACAO': 'Apresentação',
+    'OUTRO': 'Outro',
+  };
 
   @override
   Widget build(BuildContext context) {
-    final color = _tipoColor(atividade.tipo);
+    final cor = _tipoColors[item.tipoEvento] ?? AppColors.neutral;
+    final label = _tipoLabels[item.tipoEvento] ?? 'Atividade';
+    final concluido = item.concluido == true;
 
     return Card(
       elevation: 0,
@@ -241,7 +254,7 @@ class _AtividadeCard extends StatelessWidget {
             Container(
               width: 5,
               decoration: BoxDecoration(
-                color: atividade.concluida ? AppColors.neutral : color,
+                color: concluido ? AppColors.neutral : cor,
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(AppRadii.lg),
                   bottomLeft: Radius.circular(AppRadii.lg),
@@ -257,20 +270,22 @@ class _AtividadeCard extends StatelessWidget {
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _TipoBadge(tipo: atividade.tipo),
+                        _Badge(label: label, color: concluido ? AppColors.neutral : cor),
                         const SizedBox(width: 8),
-                        if (atividade.concluida)
-                          const _StatusBadge(label: 'Concluída', color: AppColors.neutral),
+                        if (concluido)
+                          const _Badge(label: 'Concluída', color: AppColors.neutral),
                         const Spacer(),
                         Text(
-                          _formatDate(atividade.data),
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
+                          _formatDate(item.timestamp),
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: AppColors.textMuted,
+                              ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      atividade.titulo,
+                      item.titulo,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w700,
                             color: AppColors.textPrimary,
@@ -278,18 +293,27 @@ class _AtividadeCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      atividade.disciplina,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
+                      item.disciplinaNome,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppColors.textMuted,
+                          ),
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      atividade.descricao,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
-                    ),
+                    if (item.descricao != null && item.descricao!.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        item.descricao!,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                     const SizedBox(height: 12),
                     _PrazoInfo(
-                      diasRestantes: atividade.diasRestantes,
-                      concluida: atividade.concluida,
+                      diasRestantes: item.diasRestantes ?? 0,
+                      concluida: concluido,
+                      urgencia: item.urgencia,
                     ),
                   ],
                 ),
@@ -302,84 +326,16 @@ class _AtividadeCard extends StatelessWidget {
   }
 
   static String _formatDate(DateTime date) {
-    final day = date.day.toString().padLeft(2, '0');
-    final month = date.month.toString().padLeft(2, '0');
-    return '$day/$month/${date.year}';
-  }
-
-  static Color _tipoColor(_TipoAtividade tipo) {
-    return switch (tipo) {
-      _TipoAtividade.prova => AppColors.dangerSoft,
-      _TipoAtividade.trabalho => AppColors.subjectTeal,
-      _TipoAtividade.entrega => AppColors.subjectIndigo,
-      _TipoAtividade.todos => AppColors.neutral,
-    };
+    final d = date.day.toString().padLeft(2, '0');
+    final m = date.month.toString().padLeft(2, '0');
+    return '$d/$m/${date.year}';
   }
 }
 
-class _PrazoInfo extends StatelessWidget {
-  final int diasRestantes;
-  final bool concluida;
-
-  const _PrazoInfo({
-    required this.diasRestantes,
-    required this.concluida,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final (label, color, icon) = _prazoData();
-
-    return Row(
-      children: [
-        Icon(icon, size: 16, color: color),
-        const SizedBox(width: 6),
-        Text(
-          label,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: color,
-                fontWeight: FontWeight.w700,
-              ),
-        ),
-      ],
-    );
-  }
-
-  (String, Color, IconData) _prazoData() {
-    if (concluida) return ('Finalizada', AppColors.neutral, Icons.check_circle_outline_rounded);
-    if (diasRestantes < 0) return ('Atrasada', AppColors.danger, Icons.error_outline_rounded);
-    if (diasRestantes == 0) return ('Hoje', AppColors.dangerSoft, Icons.today_rounded);
-    if (diasRestantes == 1) return ('Amanhã', AppColors.warningStrong, Icons.schedule_rounded);
-    return ('Em $diasRestantes dias', AppColors.subjectIndigo, Icons.event_available_rounded);
-  }
-}
-
-class _TipoBadge extends StatelessWidget {
-  final _TipoAtividade tipo;
-
-  const _TipoBadge({required this.tipo});
-
-  @override
-  Widget build(BuildContext context) {
-    final (label, color) = switch (tipo) {
-      _TipoAtividade.prova => ('Prova', AppColors.dangerSoft),
-      _TipoAtividade.trabalho => ('Trabalho', AppColors.subjectTeal),
-      _TipoAtividade.entrega => ('Entrega', AppColors.subjectIndigo),
-      _TipoAtividade.todos => ('Atividade', AppColors.neutral),
-    };
-
-    return _StatusBadge(label: label, color: color);
-  }
-}
-
-class _StatusBadge extends StatelessWidget {
+class _Badge extends StatelessWidget {
   final String label;
   final Color color;
-
-  const _StatusBadge({
-    required this.label,
-    required this.color,
-  });
+  const _Badge({required this.label, required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -400,6 +356,50 @@ class _StatusBadge extends StatelessWidget {
     );
   }
 }
+
+class _PrazoInfo extends StatelessWidget {
+  final int diasRestantes;
+  final bool concluida;
+  final String? urgencia;
+
+  const _PrazoInfo({
+    required this.diasRestantes,
+    required this.concluida,
+    this.urgencia,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final (label, color, icon) = _prazoData();
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: color),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: color,
+                fontWeight: FontWeight.w700,
+              ),
+        ),
+      ],
+    );
+  }
+
+  (String, Color, IconData) _prazoData() {
+    if (concluida) return ('Finalizada', AppColors.neutral, Icons.check_circle_outline_rounded);
+    if (urgencia == 'ATRASADO' || diasRestantes < 0) {
+      return ('Atrasada', AppColors.danger, Icons.error_outline_rounded);
+    }
+    if (diasRestantes == 0) return ('Hoje', AppColors.dangerSoft, Icons.today_rounded);
+    if (diasRestantes == 1) return ('Amanhã', AppColors.warningStrong, Icons.schedule_rounded);
+    return ('Em $diasRestantes dias', AppColors.subjectIndigo, Icons.event_available_rounded);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Widgets auxiliares
+// ---------------------------------------------------------------------------
 
 class _SummaryTile extends StatelessWidget {
   final String label;
@@ -438,7 +438,9 @@ class _SummaryTile extends StatelessWidget {
               ),
               Text(
                 label,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.textMuted,
+                    ),
               ),
             ],
           ),
@@ -449,7 +451,8 @@ class _SummaryTile extends StatelessWidget {
 }
 
 class _EmptyState extends StatelessWidget {
-  const _EmptyState();
+  final VoidCallback onAdd;
+  const _EmptyState({required this.onAdd});
 
   @override
   Widget build(BuildContext context) {
@@ -463,13 +466,57 @@ class _EmptyState extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               'Nenhuma atividade encontrada.',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
             ),
             const SizedBox(height: 8),
             Text(
-              'Ajuste os filtros para visualizar outras atividades.',
+              'Cadastre provas, trabalhos e outros compromissos.',
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.textMuted),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppColors.textMuted,
+                  ),
+            ),
+            const SizedBox(height: 20),
+            FilledButton.icon(
+              onPressed: onAdd,
+              icon: const Icon(Icons.add),
+              label: const Text('Adicionar atividade'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ErrorState extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+  const _ErrorState({required this.message, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.wifi_off_rounded, size: 56, color: Colors.grey[400]),
+            const SizedBox(height: 16),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Colors.grey[600],
+                  ),
+            ),
+            const SizedBox(height: 20),
+            FilledButton.tonal(
+              onPressed: onRetry,
+              child: const Text('Tentar Novamente'),
             ),
           ],
         ),

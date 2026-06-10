@@ -66,29 +66,19 @@ class _BottomNavigationBar extends StatelessWidget {
       labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
       destinations: const [
         NavigationDestination(
-          icon: Icon(Icons.calendar_today_outlined),
-          selectedIcon: Icon(Icons.calendar_month_rounded),
-          label: 'Agenda',
-        ),
-        NavigationDestination(
           icon: Icon(Icons.assignment_outlined),
           selectedIcon: Icon(Icons.assignment_rounded),
           label: 'Atividades',
         ),
         NavigationDestination(
-          icon: Icon(Icons.folder_open_outlined),
-          selectedIcon: Icon(Icons.folder_rounded),
-          label: 'Materiais',
+          icon: Icon(Icons.calendar_today_outlined),
+          selectedIcon: Icon(Icons.calendar_month_rounded),
+          label: 'Eventos',
         ),
         NavigationDestination(
           icon: Icon(Icons.track_changes_outlined),
           selectedIcon: Icon(Icons.track_changes_rounded),
           label: 'Consistência',
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.view_week_outlined),
-          selectedIcon: Icon(Icons.view_week_rounded),
-          label: 'Ciclos',
         ),
         NavigationDestination(
           icon: Icon(Icons.settings_outlined),

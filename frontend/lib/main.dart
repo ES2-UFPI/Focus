@@ -4,7 +4,6 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 
 import 'providers/agenda_provider.dart';
 import 'providers/app_shell_provider.dart';
-import 'providers/materiais_provider.dart';
 import 'providers/auth_provider.dart';
 import 'services/api_service.dart';
 import 'screens/home_screen.dart';
@@ -39,7 +38,6 @@ class FocusApp extends StatelessWidget {
         Provider<ApiService>.value(value: apiService),
         ChangeNotifierProvider<AuthProvider>.value(value: authProvider),
         ChangeNotifierProvider(create: (_) => AgendaProvider()),
-        ChangeNotifierProvider(create: (_) => MateriaisProvider()),
       ],
       child: ShadApp(
         title: 'Focus – Agenda Acadêmica',

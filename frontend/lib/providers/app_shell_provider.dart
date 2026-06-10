@@ -1,15 +1,13 @@
 import 'package:flutter/foundation.dart';
 
-enum AppPage { agenda, atividades, materiais, consistencia, cicloEstudos, configuracoes }
+enum AppPage { atividades, eventos, consistencia, ajustes }
 
 class AppShellProvider extends ChangeNotifier {
   static const List<AppPage> pages = [
-    AppPage.agenda,
     AppPage.atividades,
-    AppPage.materiais,
+    AppPage.eventos,
     AppPage.consistencia,
-    AppPage.cicloEstudos,
-    AppPage.configuracoes,
+    AppPage.ajustes,
   ];
 
   int _currentIndex = 0;
@@ -20,7 +18,6 @@ class AppShellProvider extends ChangeNotifier {
 
   void selectIndex(int index) {
     if (index < 0 || index >= pages.length || index == _currentIndex) return;
-
     _currentIndex = index;
     notifyListeners();
   }
