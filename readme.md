@@ -48,7 +48,7 @@ python -m pip install -r requirements.txt
 
 ## Como iniciar o frontend
 
-Em outro terminal, a partir da raiz do projeto, execute:
+Em outro terminal, a partir da raiz do projeto, execute com atençao:
 
 ```powershell
 cd frontend
