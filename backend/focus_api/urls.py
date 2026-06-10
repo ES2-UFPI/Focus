@@ -15,10 +15,10 @@ router = DefaultRouter()
 
 
 router.register(r'alunos', AlunoViewSet)
-router.register(r'disciplinas', DisciplinaViewSet)
+router.register(r'disciplinas', DisciplinaViewSet, basename='disciplina')
 router.register(r'tarefas-disciplina', TarefaDisciplinaViewSet)
 router.register(r'materiais-estudo', MaterialEstudoViewSet, basename='materialestudo')
-router.register(r'eventos-academicos', EventoAcademicoViewSet)
+router.register(r'eventos-academicos', EventoAcademicoViewSet, basename='eventoacademico')
 router.register(r'sessoes-estudo', SessaoEstudoViewSet)
 router.register(r'feedbacks-sessao', FeedbackSessaoEstudoViewSet)
 
