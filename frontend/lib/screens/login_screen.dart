@@ -36,6 +36,8 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
     if (erro != null) {
       setState(() { _erro = erro; _carregando = false; });
+    } else {
+      Navigator.pushReplacementNamed(context, '/home');
     }
   }
 

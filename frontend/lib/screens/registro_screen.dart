@@ -41,6 +41,8 @@ class _RegistroScreenState extends State<RegistroScreen> {
     if (!mounted) return;
     if (erro != null) {
       setState(() { _erro = erro; _carregando = false; });
+    } else {
+      Navigator.pushReplacementNamed(context, '/home');
     }
   }
 
