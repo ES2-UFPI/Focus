@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
-enum AppPage { visaoGeral, cicloEstudos, atividades, materiais, consistencia, relatorios, configuracoes }
+import '../providers/app_shell_provider.dart';
+import 'app_profile_footer.dart';
 
 class AppSidebar extends StatelessWidget {
   final AppPage currentPage;
@@ -31,17 +32,21 @@ class AppSidebar extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 8),
               children: [
-                _buildItem(context, AppPage.visaoGeral, LucideIcons.layoutDashboard, 'Visão Geral'),
-                _buildItem(context, AppPage.cicloEstudos, LucideIcons.repeat2, 'Ciclo de Estudos'),
+                _buildItem(context, AppPage.agenda, LucideIcons.calendarDays, 'Agenda'),
                 _buildItem(context, AppPage.atividades, LucideIcons.clipboardList, 'Atividades'),
                 _buildItem(context, AppPage.materiais, LucideIcons.bookOpen, 'Materiais'),
                 _buildItem(context, AppPage.consistencia, LucideIcons.barChart2, 'Consistência'),
-                _buildItem(context, AppPage.relatorios, LucideIcons.fileText, 'Relatórios'),
+                _buildItem(context, AppPage.cicloEstudos, LucideIcons.repeat2, 'Ciclo de Estudos'),
                 _buildItem(context, AppPage.configuracoes, LucideIcons.settings, 'Configurações'),
               ],
             ),
           ),
-          _buildUserFooter(),
+          AppProfileFooter(
+            name: 'Estudante Focus',
+            caption: 'Ver perfil',
+            initials: 'EF',
+            onTap: () => onPageChanged(AppPage.configuracoes),
+          ),
         ],
       ),
     );
@@ -76,7 +81,8 @@ class AppSidebar extends StatelessWidget {
 
   Widget _buildItem(BuildContext context, AppPage page, IconData icon, String label) {
     final isSelected = currentPage == page;
-    return GestureDetector(
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
       onTap: () => onPageChanged(page),
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 2),
@@ -89,42 +95,19 @@ class AppSidebar extends StatelessWidget {
           children: [
             Icon(icon, color: isSelected ? Colors.white : const Color(0xFF94a3b8), size: 18),
             const SizedBox(width: 10),
-            Text(
-              label,
-              style: TextStyle(
-                color: isSelected ? Colors.white : const Color(0xFF94a3b8),
-                fontSize: 14,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+            Expanded(
+              child: Text(
+                label,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: isSelected ? Colors.white : const Color(0xFF94a3b8),
+                  fontSize: 14,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                ),
               ),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildUserFooter() {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 16,
-            backgroundColor: const Color(0xFF6366f1),
-            child: const Text('D', style: TextStyle(color: Colors.white, fontSize: 13)),
-          ),
-          const SizedBox(width: 10),
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text('Diogo Silva', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
-                Text('Ver perfil', style: TextStyle(color: Color(0xFF94a3b8), fontSize: 11)),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }

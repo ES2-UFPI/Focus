@@ -66,50 +66,81 @@ class _BibliotecaMateriaisPageState extends State<BibliotecaMateriaisPage> {
   @override
   Widget build(BuildContext context) {
     return ShadToaster(
-      child: Scaffold(
-        appBar: AppBar(
-          title: _showSearch
-              ? TextField(
-                  controller: _searchController,
-                  autofocus: true,
-                  decoration: const InputDecoration(
-                    hintText: 'Buscar materiais...',
-                    border: InputBorder.none,
-                  ),
-                  onChanged: (v) => context.read<MateriaisProvider>().setSearch(v),
-                )
-              : const Text('Biblioteca de Materiais'),
-          centerTitle: false,
-          elevation: 0,
-          scrolledUnderElevation: 2,
-          actions: [
-            IconButton(
-              icon: Icon(_showSearch ? Icons.close : Icons.search),
-              onPressed: () {
-                setState(() {
-                  _showSearch = !_showSearch;
-                  if (!_showSearch) {
-                    _searchController.clear();
-                    context.read<MateriaisProvider>().setSearch('');
-                  }
-                });
-              },
+      child: Stack(
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(),
+              _buildFilterChips(),
+              Expanded(child: _buildContent()),
+            ],
+          ),
+          Positioned(
+            right: 16,
+            bottom: 16,
+            child: FloatingActionButton.extended(
+              onPressed: () => _openForm(),
+              icon: const Icon(Icons.add),
+              label: const Text('Adicionar'),
+              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+              foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
             ),
-          ],
-        ),
-        body: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildFilterChips(),
-            Expanded(child: _buildContent()),
-          ],
-        ),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: () => _openForm(),
-          icon: const Icon(Icons.add),
-          label: const Text('Adicionar'),
-          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-          foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Material(
+      color: Theme.of(context).colorScheme.surface,
+      elevation: 0,
+      child: SafeArea(
+        bottom: false,
+        child: Container(
+          height: 64,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(color: Theme.of(context).dividerColor.withValues(alpha: 0.35)),
+            ),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: _showSearch
+                    ? TextField(
+                        controller: _searchController,
+                        autofocus: true,
+                        decoration: const InputDecoration(
+                          hintText: 'Buscar materiais...',
+                          border: InputBorder.none,
+                        ),
+                        onChanged: (v) => context.read<MateriaisProvider>().setSearch(v),
+                      )
+                    : Text(
+                        'Biblioteca de Materiais',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                      ),
+              ),
+              IconButton(
+                tooltip: _showSearch ? 'Fechar busca' : 'Buscar materiais',
+                icon: Icon(_showSearch ? Icons.close : Icons.search),
+                onPressed: () {
+                  setState(() {
+                    _showSearch = !_showSearch;
+                    if (!_showSearch) {
+                      _searchController.clear();
+                      context.read<MateriaisProvider>().setSearch('');
+                    }
+                  });
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );

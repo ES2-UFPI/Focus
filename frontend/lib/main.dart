@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
 import 'providers/agenda_provider.dart';
+import 'providers/app_shell_provider.dart';
 import 'providers/materiais_provider.dart';
 import 'screens/home_screen.dart';
 
@@ -17,6 +18,7 @@ class FocusApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => AppShellProvider()),
         ChangeNotifierProvider(create: (_) => AgendaProvider()),
         ChangeNotifierProvider(create: (_) => MateriaisProvider()),
       ],
