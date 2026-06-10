@@ -50,6 +50,7 @@ class FocusApp extends StatelessWidget {
           brightness: Brightness.dark,
           colorScheme: const ShadSlateColorScheme.dark(),
         ),
+        builder: (context, child) => ScaffoldMessenger(child: child!),
         routes: {
           '/login': (_) => const LoginScreen(),
           '/registro': (_) => const RegistroScreen(),

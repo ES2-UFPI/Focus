@@ -244,12 +244,12 @@ class _CriarEventoScreenState extends State<CriarEventoScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(widget.eventoExistente != null
-                ? 'Evento atualizado com sucesso! 🎉'
-                : 'Evento criado com sucesso! 🎉'),
+                ? 'Evento atualizado com sucesso!'
+                : 'Evento criado com sucesso!'),
             backgroundColor: Colors.green,
           ),
         );
-        Navigator.of(context).pop(true); // Retorna true para atualizar a lista
+        Navigator.of(context).pop(true);
       }
     } on AgendaServiceException catch (e) {
       setState(() {
