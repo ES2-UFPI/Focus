@@ -3,6 +3,7 @@ from collections import defaultdict
 from django.utils import timezone
 from rest_framework import viewsets
 from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -12,30 +13,37 @@ from sessao_estudo.models import SessaoEstudo
 
 
 class EventoAcademicoViewSet(viewsets.ModelViewSet):
-    queryset = EventoAcademico.objects.all().select_related('disciplina')
     serializer_class = EventoAcademicoSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return EventoAcademico.objects.filter(
+            disciplina__aluno=self.request.user
+        ).select_related('disciplina')
 
     @action(detail=False, methods=['get'], url_path='proximos')
     def proximos(self, request):
-        # Filtrar eventos dos próximos 7 dias ordenados por data
         today = timezone.localdate()
         seven_days_later = today + datetime.timedelta(days=7)
-        # Filtra apenas eventos cuja data está no intervalo [hoje, hoje + 7 dias]
-        queryset = EventoAcademico.objects.filter(
+        queryset = self.get_queryset().filter(
             data_evento__range=(today, seven_days_later)
-        ).select_related('disciplina').order_by('data_evento')
-        
+        ).order_by('data_evento')
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
 
 class AgendaView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def get(self, request):
         today = timezone.localdate()
 
-        # OTIMIZAÇÃO: 2 queries para carregar todo o conjunto necessário (sem N+1)
-        eventos = list(EventoAcademico.objects.all().select_related('disciplina'))
-        sessoes = list(SessaoEstudo.objects.all().select_related('disciplina'))
+        eventos = list(EventoAcademico.objects.filter(
+            disciplina__aluno=request.user
+        ).select_related('disciplina'))
+        sessoes = list(SessaoEstudo.objects.filter(
+            disciplina__aluno=request.user
+        ).select_related('disciplina'))
 
         # Mapeamento de sessões por disciplina_id para processamento em memória
         sessoes_por_disciplina = defaultdict(list)

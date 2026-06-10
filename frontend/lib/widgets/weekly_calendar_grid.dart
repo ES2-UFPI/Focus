@@ -145,54 +145,58 @@ class WeeklyCalendarGrid extends StatelessWidget {
           bottom: BorderSide(color: Colors.grey[200]!, width: 1),
         ),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Stack(
+        alignment: Alignment.center,
         children: [
-          // Botões de Voltar / Hoje / Avançar
-          Row(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.chevron_left, size: 24),
-                onPressed: provider.retrocederSemana,
-                style: IconButton.styleFrom(
-                  padding: EdgeInsets.zero,
-                  minimumSize: const Size(36, 36),
-                ),
-              ),
-              const SizedBox(width: 4),
-              TextButton(
-                onPressed: provider.irParaHoje,
-                style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                child: Text(
-                  'Hoje',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.primary,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 4),
-              IconButton(
-                icon: const Icon(Icons.chevron_right, size: 24),
-                onPressed: provider.avancarSemana,
-                style: IconButton.styleFrom(
-                  padding: EdgeInsets.zero,
-                  minimumSize: const Size(36, 36),
-                ),
-              ),
-            ],
-          ),
-
-          // Texto do Período
+          // Título centralizado sobre tudo
           Text(
             textoPeriodo,
             style: theme.textTheme.titleSmall?.copyWith(
               fontWeight: FontWeight.bold,
               color: Colors.grey[800],
+            ),
+          ),
+
+          // Botões alinhados à esquerda
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.chevron_left, size: 24),
+                  onPressed: provider.retrocederSemana,
+                  style: IconButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    minimumSize: const Size(36, 36),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                TextButton(
+                  onPressed: provider.irParaHoje,
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: Text(
+                    'Hoje',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                IconButton(
+                  icon: const Icon(Icons.chevron_right, size: 24),
+                  onPressed: provider.avancarSemana,
+                  style: IconButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    minimumSize: const Size(36, 36),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -216,10 +220,14 @@ class WeeklyCalendarGrid extends StatelessWidget {
           const SizedBox(height: 106.0),
           Expanded(
             child: Stack(
+              clipBehavior: Clip.none,
               children: List.generate(totalHoras, (index) {
                 final hora = gridStartHour + index;
+                // Offset -8 alinha o texto com a linha da grade, exceto para o
+                // primeiro horário onde usamos 0 para evitar corte.
+                final topOffset = index == 0 ? 0.0 : (index * hourHeight) - 8.0;
                 return Positioned(
-                  top: (index * hourHeight) - 8.0, // Ajusta o alinhamento central com a linha
+                  top: topOffset,
                   left: 0,
                   right: 8,
                   child: Text(

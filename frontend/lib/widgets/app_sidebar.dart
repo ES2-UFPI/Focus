@@ -32,12 +32,10 @@ class AppSidebar extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 8),
               children: [
-                _buildItem(context, AppPage.agenda, LucideIcons.calendarDays, 'Agenda'),
                 _buildItem(context, AppPage.atividades, LucideIcons.clipboardList, 'Atividades'),
-                _buildItem(context, AppPage.materiais, LucideIcons.bookOpen, 'Materiais'),
+                _buildItem(context, AppPage.eventos, LucideIcons.calendarDays, 'Eventos'),
                 _buildItem(context, AppPage.consistencia, LucideIcons.barChart2, 'Consistência'),
-                _buildItem(context, AppPage.cicloEstudos, LucideIcons.repeat2, 'Ciclo de Estudos'),
-                _buildItem(context, AppPage.configuracoes, LucideIcons.settings, 'Configurações'),
+                _buildItem(context, AppPage.ajustes, LucideIcons.settings, 'Ajustes'),
               ],
             ),
           ),
@@ -45,7 +43,7 @@ class AppSidebar extends StatelessWidget {
             name: 'Estudante Focus',
             caption: 'Ver perfil',
             initials: 'EF',
-            onTap: () => onPageChanged(AppPage.configuracoes),
+            onTap: () => onPageChanged(AppPage.ajustes),
           ),
         ],
       ),
