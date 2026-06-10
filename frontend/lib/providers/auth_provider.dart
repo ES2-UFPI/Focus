@@ -1,0 +1,72 @@
+import 'package:flutter/material.dart';
+import '../services/auth_service.dart';
+import '../services/api_service.dart';
+
+class AuthProvider extends ChangeNotifier {
+  bool _carregando = true;
+  bool _logado = false;
+  Map<String, dynamic>? _aluno;
+
+  bool get carregando => _carregando;
+  bool get logado => _logado;
+  Map<String, dynamic>? get aluno => _aluno;
+  String get nomeAluno => _aluno?['nome'] ?? '';
+  String get emailAluno => _aluno?['email'] ?? '';
+
+  final ApiService apiService;
+
+  AuthProvider(this.apiService);
+
+  Future<void> init() async {
+    _carregando = true;
+    notifyListeners();
+
+    final token = await AuthService.getToken();
+    if (token != null) {
+      _aluno = await AuthService.getAluno();
+      apiService.setToken(token);
+      _logado = true;
+    }
+
+    _carregando = false;
+    notifyListeners();
+  }
+
+  Future<String?> login(String email, String senha) async {
+    final result = await AuthService.login(email, senha);
+    if (result['sucesso'] == true) {
+      _aluno = result['aluno'];
+      final token = await AuthService.getToken();
+      apiService.setToken(token!);
+      _logado = true;
+      notifyListeners();
+      return null;
+    }
+    return result['erro'] as String;
+  }
+
+  Future<String?> registro({
+    required String nome,
+    required String email,
+    required String senha,
+  }) async {
+    final result = await AuthService.registro(nome: nome, email: email, senha: senha);
+    if (result['sucesso'] == true) {
+      _aluno = result['aluno'];
+      final token = await AuthService.getToken();
+      apiService.setToken(token!);
+      _logado = true;
+      notifyListeners();
+      return null;
+    }
+    return result['erro'] as String;
+  }
+
+  Future<void> logout() async {
+    await AuthService.logout();
+    apiService.clearToken();
+    _aluno = null;
+    _logado = false;
+    notifyListeners();
+  }
+}

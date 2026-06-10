@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
 
 class ConfiguracoesScreen extends StatefulWidget {
   const ConfiguracoesScreen({super.key});
@@ -69,46 +71,49 @@ class _ConfiguracoesScreenState extends State<ConfiguracoesScreen> {
                   borderRadius: BorderRadius.circular(16),
                   side: BorderSide(color: Colors.grey[200]!),
                 ),
-                child: const Padding(
-                  padding: EdgeInsets.all(16.0),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
                   child: Row(
                     children: [
-                      CircleAvatar(
-                        radius: 32,
-                        backgroundColor: Color(0xFF673AB7),
-                        child: Text(
-                          'EF',
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                      Consumer<AuthProvider>(
+                        builder: (_, auth, __) {
+                          final inicial = auth.nomeAluno.isNotEmpty
+                              ? auth.nomeAluno[0].toUpperCase()
+                              : 'U';
+                          return CircleAvatar(
+                            radius: 32,
+                            backgroundColor: const Color(0xFF673AB7),
+                            child: Text(
+                              inicial,
+                              style: const TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Consumer<AuthProvider>(
+                          builder: (_, auth, __) => Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                auth.nomeAluno.isNotEmpty ? auth.nomeAluno : 'Usuário',
+                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                auth.emailAluno,
+                                style: const TextStyle(fontSize: 12, color: Colors.grey),
+                              ),
+                            ],
                           ),
                         ),
                       ),
-                      SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Estudante Focus',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            SizedBox(height: 4),
-                            Text(
-                              'estudante@focus.com',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Icon(Icons.edit_outlined, color: Colors.grey),
+                      const Icon(Icons.edit_outlined, color: Colors.grey),
                     ],
                   ),
                 ),
@@ -196,6 +201,34 @@ class _ConfiguracoesScreenState extends State<ConfiguracoesScreen> {
                 leading: const Icon(Icons.help_outline, color: Colors.grey),
                 title: const Text('Central de Ajuda / Feedback'),
                 onTap: () {},
+              ),
+
+              _buildSectionTitle(context, 'Conta'),
+              ListTile(
+                leading: const Icon(Icons.logout_rounded, color: Colors.redAccent),
+                title: const Text('Sair', style: TextStyle(color: Colors.redAccent)),
+                onTap: () async {
+                  final confirmar = await showDialog<bool>(
+                    context: context,
+                    builder: (_) => AlertDialog(
+                      title: const Text('Sair'),
+                      content: const Text('Deseja encerrar sua sessão?'),
+                      actions: [
+                        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, true),
+                          child: const Text('Sair', style: TextStyle(color: Colors.redAccent)),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (confirmar == true && context.mounted) {
+                    await context.read<AuthProvider>().logout();
+                    if (context.mounted) {
+                      Navigator.pushReplacementNamed(context, '/login');
+                    }
+                  }
+                },
               ),
 
               const SizedBox(height: 120),

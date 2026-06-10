@@ -3,13 +3,10 @@ import 'package:http/http.dart' as http;
 import '../models/disciplina.dart';
 import '../models/material_estudo.dart';
 
-// TODO: substituir pelo token real quando a tela de login for implementada
-const _demoToken = 'cdc454f2c8b69920a120b5fa76a953fd7490d32c';
-
 class ApiService {
   static const String _baseUrl = 'http://localhost:8000/api';
 
-  String? _token = _demoToken;
+  String? _token;
 
   void setToken(String token) => _token = token;
   void clearToken() => _token = null;
