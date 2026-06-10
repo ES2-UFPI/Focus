@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
@@ -42,6 +43,15 @@ class FocusApp extends StatelessWidget {
       child: ShadApp(
         title: 'Focus – Agenda Acadêmica',
         debugShowCheckedModeBanner: false,
+        locale: const Locale('pt', 'BR'),
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [
+          Locale('pt', 'BR'),
+        ],
         theme: ShadThemeData(
           brightness: Brightness.light,
           colorScheme: const ShadSlateColorScheme.light(),
