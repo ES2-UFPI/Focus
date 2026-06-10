@@ -256,9 +256,10 @@ class _CriarEventoScreenState extends State<CriarEventoScreen> {
         _errorMessage = e.message;
         _isSaving = false;
       });
-    } catch (e) {
+    } catch (e, st) {
+      debugPrint('Erro inesperado ao salvar evento: ${e.runtimeType}: $e\n$st');
       setState(() {
-        _errorMessage = 'Ocorreu um erro inesperado ao salvar o evento.';
+        _errorMessage = 'Erro inesperado (${e.runtimeType}): $e';
         _isSaving = false;
       });
     }

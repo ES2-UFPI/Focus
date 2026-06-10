@@ -4,6 +4,27 @@ import '../core/network/api_client.dart';
 import 'agenda_service.dart';
 
 class EventoService {
+  static String _extrairMensagemErro(String responseBody) {
+    try {
+      final decoded = json.decode(responseBody);
+      final erros = <String>[];
+      if (decoded is Map) {
+        decoded.forEach((key, value) {
+          if (value is List) {
+            erros.addAll(value.map((e) => e.toString()));
+          } else {
+            erros.add(value.toString());
+          }
+        });
+      } else if (decoded is List) {
+        erros.addAll(decoded.map((e) => e.toString()));
+      }
+      return erros.isNotEmpty ? erros.join('\n') : 'Dados inválidos.';
+    } catch (_) {
+      return 'Erro inesperado do servidor.';
+    }
+  }
+
   /// Cadastra um novo evento acadêmico no backend.
   Future<void> criarEvento({
     required String disciplinaId,
@@ -16,51 +37,37 @@ class EventoService {
   }) async {
     final uri = Uri.parse('$kBaseUrl/api/eventos-academicos/');
 
-    // Formatando data como YYYY-MM-DD
     final dataString = "${dataEvento.year.toString().padLeft(4, '0')}-"
         "${dataEvento.month.toString().padLeft(2, '0')}-"
         "${dataEvento.day.toString().padLeft(2, '0')}";
 
-    final body = {
+    final Map<String, dynamic> body = {
       'disciplina': disciplinaId,
       'titulo': titulo,
       'tipo': tipo,
       'data_evento': dataString,
-      'hora_inicio': horaInicio,
-      'hora_fim': horaFim,
-      'descricao': descricao,
       'concluido': false,
     };
+    if (horaInicio != null) body['hora_inicio'] = horaInicio;
+    if (horaFim != null) body['hora_fim'] = horaFim;
+    if (descricao != null) body['descricao'] = descricao;
 
+    late http.Response response;
     try {
-      final response = await http.post(
+      response = await http.post(
         uri,
         headers: defaultHeaders,
         body: json.encode(body),
       );
-
-      if (response.statusCode == 201) {
-        return;
-      }
-
-      // Tenta extrair a mensagem de erro detalhada retornada pelo Django
-      final Map<String, dynamic> errorData = json.decode(response.body) as Map<String, dynamic>;
-      
-      // Se houver erros não relacionados a campos específicos (non_field_errors) ou erros de campo
-      final List<String> erros = [];
-      errorData.forEach((key, value) {
-        if (value is List) {
-          erros.addAll(value.map((e) => e.toString()));
-        } else {
-          erros.add(value.toString());
-        }
-      });
-
-      throw AgendaServiceException(erros.isNotEmpty ? erros.join('\n') : 'Dados inválidos.');
     } catch (e) {
-      if (e is AgendaServiceException) rethrow;
-      throw AgendaServiceException('Erro ao conectar ao servidor: $e');
+      throw AgendaServiceException('Erro de conexão: $e');
     }
+
+    if (response.statusCode == 201) return;
+
+    throw AgendaServiceException(
+      _extrairMensagemErro(response.body),
+    );
   }
 
   /// Atualiza (PATCH) um evento acadêmico no backend.
@@ -81,7 +88,7 @@ class EventoService {
         "${dataEvento.month.toString().padLeft(2, '0')}-"
         "${dataEvento.day.toString().padLeft(2, '0')}";
 
-    final body = {
+    final Map<String, dynamic> body = {
       'disciplina': disciplinaId,
       'titulo': titulo,
       'tipo': tipo,
@@ -92,52 +99,37 @@ class EventoService {
       'concluido': concluido,
     };
 
+    late http.Response response;
     try {
-      final response = await http.patch(
+      response = await http.patch(
         uri,
         headers: defaultHeaders,
         body: json.encode(body),
       );
-
-      if (response.statusCode == 200 || response.statusCode == 204) {
-        return;
-      }
-
-      final Map<String, dynamic> errorData = json.decode(response.body) as Map<String, dynamic>;
-      
-      final List<String> erros = [];
-      errorData.forEach((key, value) {
-        if (value is List) {
-          erros.addAll(value.map((e) => e.toString()));
-        } else {
-          erros.add(value.toString());
-        }
-      });
-
-      throw AgendaServiceException(erros.isNotEmpty ? erros.join('\n') : 'Dados inválidos.');
     } catch (e) {
-      if (e is AgendaServiceException) rethrow;
-      throw AgendaServiceException('Erro ao conectar ao servidor: $e');
+      throw AgendaServiceException('Erro de conexão: $e');
     }
+
+    if (response.statusCode == 200 || response.statusCode == 204) return;
+
+    throw AgendaServiceException(
+      _extrairMensagemErro(response.body),
+    );
   }
 
   /// Exclui um evento acadêmico no backend.
   Future<void> excluirEvento(String eventoId) async {
     final uri = Uri.parse('$kBaseUrl/api/eventos-academicos/$eventoId/');
 
+    late http.Response response;
     try {
-      final response = await http.delete(
-        uri,
-        headers: defaultHeaders,
-      );
-
-      if (response.statusCode == 204) {
-        return;
-      }
-
-      throw AgendaServiceException('Falha ao excluir o evento acadêmico.');
+      response = await http.delete(uri, headers: defaultHeaders);
     } catch (e) {
-      throw AgendaServiceException('Erro ao conectar ao servidor: $e');
+      throw AgendaServiceException('Erro de conexão: $e');
     }
+
+    if (response.statusCode == 204) return;
+
+    throw AgendaServiceException('Falha ao excluir o evento acadêmico. Status: ${response.statusCode}');
   }
 }
