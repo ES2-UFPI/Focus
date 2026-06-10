@@ -3,11 +3,9 @@ import '../services/auth_service.dart';
 import '../services/api_service.dart';
 
 class AuthProvider extends ChangeNotifier {
-  bool _carregando = true;
   bool _logado = false;
   Map<String, dynamic>? _aluno;
 
-  bool get carregando => _carregando;
   bool get logado => _logado;
   Map<String, dynamic>? get aluno => _aluno;
   String get nomeAluno => _aluno?['nome'] ?? '';
@@ -24,8 +22,6 @@ class AuthProvider extends ChangeNotifier {
       apiService.setToken(token);
       _logado = true;
     }
-    _carregando = false;
-    notifyListeners();
   }
 
   Future<String?> login(String email, String senha) async {

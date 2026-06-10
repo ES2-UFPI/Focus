@@ -11,21 +11,33 @@ import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/registro_screen.dart';
 
-void main() {
-  runApp(const FocusApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  final apiService = ApiService();
+  final authProvider = AuthProvider(apiService);
+  await authProvider.init();
+
+  runApp(FocusApp(apiService: apiService, authProvider: authProvider));
 }
 
 class FocusApp extends StatelessWidget {
-  const FocusApp({super.key});
+  final ApiService apiService;
+  final AuthProvider authProvider;
+
+  const FocusApp({
+    super.key,
+    required this.apiService,
+    required this.authProvider,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final apiService = ApiService();
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AppShellProvider()),
         Provider<ApiService>.value(value: apiService),
-        ChangeNotifierProvider(create: (_) => AuthProvider(apiService)),
+        ChangeNotifierProvider<AuthProvider>.value(value: authProvider),
         ChangeNotifierProvider(create: (_) => AgendaProvider()),
         ChangeNotifierProvider(create: (_) => MateriaisProvider()),
       ],
@@ -45,42 +57,8 @@ class FocusApp extends StatelessWidget {
           '/registro': (_) => const RegistroScreen(),
           '/home': (_) => const HomeScreen(),
         },
-        home: const _AuthGate(),
+        home: authProvider.logado ? const HomeScreen() : const LoginScreen(),
       ),
     );
-  }
-}
-
-class _AuthGate extends StatefulWidget {
-  const _AuthGate();
-
-  @override
-  State<_AuthGate> createState() => _AuthGateState();
-}
-
-class _AuthGateState extends State<_AuthGate> {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<AuthProvider>().init();
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final auth = context.watch<AuthProvider>();
-
-    if (auth.carregando) {
-      return const Scaffold(
-        backgroundColor: Color(0xFF0f0e17),
-        body: Center(
-          child: CircularProgressIndicator(color: Color(0xFF6366f1)),
-        ),
-      );
-    }
-
-    if (auth.logado) return const HomeScreen();
-    return const LoginScreen();
   }
 }
