@@ -199,7 +199,8 @@ class ConsistenciaService:
             'dias_totais': dias_totais
         }
 
-
+    def calcular_streak_atual(self, aluno_id):
+        """[TASK 8] Calcula streak de dias consecutivos de estudo."""
         sessoes = self.obter_sessoes_semana(aluno_id)
         hoje_dt = timezone.now().date()
 
