@@ -38,12 +38,7 @@ class AtividadesScreen extends StatefulWidget {
 class _AtividadesScreenState extends State<AtividadesScreen> {
   _FiltroTipo _filtro = _FiltroTipo.todos;
   bool _mostrarConcluidas = false;
-  final TextEditingController _todoController = TextEditingController();
-  final List<_AcademicTodo> _todos = [
-    const _AcademicTodo(title: 'Revisar conteudo da proxima prova'),
-    const _AcademicTodo(title: 'Separar referencias para o trabalho'),
-    const _AcademicTodo(title: 'Confirmar topicos do seminario', completed: true),
-  ];
+  final Map<String, List<_AcademicTodo>> _todosByEventId = {};
 
   @override
   void initState() {
@@ -59,7 +54,8 @@ class _AtividadesScreenState extends State<AtividadesScreen> {
           (_filtro == _FiltroTipo.prova && e.tipoEvento == 'PROVA') ||
           (_filtro == _FiltroTipo.trabalho && e.tipoEvento == 'TRABALHO') ||
           (_filtro == _FiltroTipo.seminario && e.tipoEvento == 'SEMINARIO') ||
-          (_filtro == _FiltroTipo.apresentacao && e.tipoEvento == 'APRESENTACAO') ||
+          (_filtro == _FiltroTipo.apresentacao &&
+              e.tipoEvento == 'APRESENTACAO') ||
           (_filtro == _FiltroTipo.outro && e.tipoEvento == 'OUTRO');
       final statusOk = _mostrarConcluidas || e.concluido != true;
       return tipoOk && statusOk;
@@ -78,34 +74,70 @@ class _AtividadesScreenState extends State<AtividadesScreen> {
     }
   }
 
-  void _adicionarTodo() {
-    final title = _todoController.text.trim();
-    if (title.isEmpty) {
+  List<_AcademicTodo> _todosFor(AgendaItem evento) {
+    return _todosByEventId.putIfAbsent(
+      evento.id,
+      () => <_AcademicTodo>[],
+    );
+  }
+
+  void _abrirTodoList(AgendaItem evento) {
+    _todosFor(evento);
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadii.xl)),
+      ),
+      builder: (context) {
+        return _EventTodoSheet(
+          evento: evento,
+          todos: _todosFor(evento),
+          onAdd: (title) => _adicionarTodo(evento.id, title),
+          onToggle: (index, completed) => _alternarTodo(
+            evento.id,
+            index,
+            completed,
+          ),
+          onRemove: (index) => _removerTodo(evento.id, index),
+        );
+      },
+    );
+  }
+
+  void _adicionarTodo(String eventId, String title) {
+    final trimmedTitle = title.trim();
+    if (trimmedTitle.isEmpty) {
       return;
     }
 
     setState(() {
-      _todos.insert(0, _AcademicTodo(title: title));
-      _todoController.clear();
+      final todos = _todosByEventId.putIfAbsent(eventId, () => []);
+      todos.insert(0, _AcademicTodo(title: trimmedTitle));
     });
   }
 
-  void _alternarTodo(int index, bool? completed) {
+  void _alternarTodo(String eventId, int index, bool? completed) {
+    final todos = _todosByEventId[eventId];
+    if (todos == null || index < 0 || index >= todos.length) {
+      return;
+    }
+
     setState(() {
-      _todos[index] = _todos[index].copyWith(completed: completed ?? false);
+      todos[index] = todos[index].copyWith(completed: completed ?? false);
     });
   }
 
-  void _removerTodo(int index) {
+  void _removerTodo(String eventId, int index) {
+    final todos = _todosByEventId[eventId];
+    if (todos == null || index < 0 || index >= todos.length) {
+      return;
+    }
+
     setState(() {
-      _todos.removeAt(index);
+      todos.removeAt(index);
     });
-  }
-
-  @override
-  void dispose() {
-    _todoController.dispose();
-    super.dispose();
   }
 
   @override
@@ -117,7 +149,9 @@ class _AtividadesScreenState extends State<AtividadesScreen> {
             .where((i) => i.isEvento && i.concluido != true)
             .length;
         final urgentes = provider.itens
-            .where((i) => i.isEvento && i.concluido != true &&
+            .where((i) =>
+                i.isEvento &&
+                i.concluido != true &&
                 (i.diasRestantes ?? 999) <= 3)
             .length;
 
@@ -131,45 +165,34 @@ class _AtividadesScreenState extends State<AtividadesScreen> {
               if (provider.isLoading)
                 const Expanded(child: Center(child: CircularProgressIndicator()))
               else if (provider.errorMessage != null)
-                Expanded(child: _ErrorState(
-                  message: provider.errorMessage!,
-                  onRetry: () => provider.fetchAgenda(),
-                ))
+                Expanded(
+                  child: _ErrorState(
+                    message: provider.errorMessage!,
+                    onRetry: () => provider.fetchAgenda(),
+                  ),
+                )
+              else if (atividades.isEmpty)
+                Expanded(child: _EmptyState(onAdd: _abrirCriarEvento))
               else
                 Expanded(
                   child: RefreshIndicator(
                     onRefresh: () => provider.fetchAgenda(isRefresh: true),
-                    child: ListView(
+                    child: ListView.separated(
                       physics: const AlwaysScrollableScrollPhysics(),
                       padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
-                      children: [
-                        _TodoListSection(
-                          controller: _todoController,
-                          todos: _todos,
-                          onAdd: _adicionarTodo,
-                          onToggle: _alternarTodo,
-                          onRemove: _removerTodo,
-                        ),
-                        const SizedBox(height: 16),
-                        if (atividades.isEmpty)
-                          _EmptyState(onAdd: _abrirCriarEvento)
-                        else ...[
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: Text(
-                              'Atividades cadastradas',
-                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.w800,
-                                    color: AppColors.textPrimary,
-                                  ),
-                            ),
-                          ),
-                          for (var i = 0; i < atividades.length; i++) ...[
-                            _EventoCard(item: atividades[i]),
-                            if (i < atividades.length - 1) const SizedBox(height: 10),
-                          ],
-                        ],
-                      ],
+                      itemCount: atividades.length,
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(height: 10),
+                      itemBuilder: (_, i) {
+                        final todos = _todosFor(atividades[i]);
+                        return _EventoCard(
+                          item: atividades[i],
+                          todoCount: todos.length,
+                          completedTodoCount:
+                              todos.where((todo) => todo.completed).length,
+                          onOpenTodos: () => _abrirTodoList(atividades[i]),
+                        );
+                      },
                     ),
                   ),
                 ),
@@ -194,7 +217,7 @@ class _AtividadesScreenState extends State<AtividadesScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Atividades Acadêmicas',
+                    'Atividades Academicas',
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                           fontWeight: FontWeight.w800,
                           color: AppColors.textPrimary,
@@ -229,7 +252,7 @@ class _AtividadesScreenState extends State<AtividadesScreen> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: _SummaryTile(
-                      label: 'Até 3 dias',
+                      label: 'Ate 3 dias',
                       value: '$urgentes',
                       icon: Icons.priority_high_rounded,
                       color: AppColors.warningStrong,
@@ -258,8 +281,8 @@ class _AtividadesScreenState extends State<AtividadesScreen> {
                 _chip(_FiltroTipo.todos, 'Todas'),
                 _chip(_FiltroTipo.prova, 'Provas'),
                 _chip(_FiltroTipo.trabalho, 'Trabalhos'),
-                _chip(_FiltroTipo.seminario, 'Seminários'),
-                _chip(_FiltroTipo.apresentacao, 'Apresentações'),
+                _chip(_FiltroTipo.seminario, 'Seminarios'),
+                _chip(_FiltroTipo.apresentacao, 'Apresentacoes'),
                 _chip(_FiltroTipo.outro, 'Outros'),
               ],
             ),
@@ -268,7 +291,7 @@ class _AtividadesScreenState extends State<AtividadesScreen> {
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
             dense: true,
-            title: const Text('Mostrar concluídas'),
+            title: const Text('Mostrar concluidas'),
             value: _mostrarConcluidas,
             onChanged: (v) => setState(() => _mostrarConcluidas = v),
           ),
@@ -291,15 +314,15 @@ class _AtividadesScreenState extends State<AtividadesScreen> {
   }
 }
 
-class _TodoListSection extends StatelessWidget {
-  final TextEditingController controller;
+class _EventTodoSheet extends StatefulWidget {
+  final AgendaItem evento;
   final List<_AcademicTodo> todos;
-  final VoidCallback onAdd;
+  final ValueChanged<String> onAdd;
   final void Function(int index, bool? completed) onToggle;
   final void Function(int index) onRemove;
 
-  const _TodoListSection({
-    required this.controller,
+  const _EventTodoSheet({
+    required this.evento,
     required this.todos,
     required this.onAdd,
     required this.onToggle,
@@ -307,123 +330,198 @@ class _TodoListSection extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final pendingCount = todos.where((todo) => !todo.completed).length;
-    final completedCount = todos.length - pendingCount;
+  State<_EventTodoSheet> createState() => _EventTodoSheetState();
+}
 
-    return Card(
-      elevation: 0,
-      color: AppColors.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppRadii.lg),
-        side: const BorderSide(color: AppColors.borderSubtle),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 36,
-                  height: 36,
+class _EventTodoSheetState extends State<_EventTodoSheet> {
+  final TextEditingController _controller = TextEditingController();
+
+  void _adicionar() {
+    final title = _controller.text.trim();
+    if (title.isEmpty) {
+      return;
+    }
+
+    setState(() {
+      widget.onAdd(title);
+      _controller.clear();
+    });
+  }
+
+  void _alternar(int index, bool? completed) {
+    setState(() {
+      widget.onToggle(index, completed);
+    });
+  }
+
+  void _remover(int index) {
+    setState(() {
+      widget.onRemove(index);
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+    final pendingCount = widget.todos.where((todo) => !todo.completed).length;
+    final completedCount = widget.todos.length - pendingCount;
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottomInset),
+      child: SafeArea(
+        top: false,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(context).height * 0.78,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
                   decoration: BoxDecoration(
-                    color: AppColors.subjectTeal.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(AppRadii.md),
-                  ),
-                  child: const Icon(
-                    Icons.checklist_rounded,
-                    color: AppColors.subjectTeal,
+                    color: AppColors.border,
+                    borderRadius: BorderRadius.circular(99),
                   ),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'To-do List',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.textPrimary,
-                            ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '$pendingCount pendentes - $completedCount concluidas',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: AppColors.textMuted,
-                            ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: controller,
-                    textInputAction: TextInputAction.done,
-                    onSubmitted: (_) => onAdd(),
-                    decoration: InputDecoration(
-                      hintText: 'Adicionar tarefa academica',
-                      isDense: true,
-                      filled: true,
-                      fillColor: AppColors.surfaceMuted,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppRadii.md),
-                        borderSide: BorderSide.none,
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 12,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                IconButton.filled(
-                  onPressed: onAdd,
-                  icon: const Icon(Icons.add_rounded),
-                  tooltip: 'Adicionar tarefa',
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            if (todos.isEmpty)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceMuted,
-                  borderRadius: BorderRadius.circular(AppRadii.md),
-                ),
-                child: Text(
-                  'Nenhuma tarefa adicionada.',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.textMuted,
-                      ),
-                ),
-              )
-            else
-              Column(
+              ),
+              const SizedBox(height: 18),
+              Row(
                 children: [
-                  for (var i = 0; i < todos.length; i++) ...[
-                    _TodoTile(
-                      todo: todos[i],
-                      onChanged: (value) => onToggle(i, value),
-                      onRemove: () => onRemove(i),
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: AppColors.subjectTeal.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(AppRadii.md),
                     ),
-                    if (i < todos.length - 1) const SizedBox(height: 8),
-                  ],
+                    child: const Icon(
+                      Icons.checklist_rounded,
+                      color: AppColors.subjectTeal,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'To-do List',
+                          style:
+                              Theme.of(context).textTheme.titleLarge?.copyWith(
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.textPrimary,
+                                  ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          widget.evento.titulo,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: AppColors.textMuted,
+                                  ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
-          ],
+              const SizedBox(height: 10),
+              Text(
+                '$pendingCount pendentes - $completedCount concluidas',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.textMuted,
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _controller,
+                      textInputAction: TextInputAction.done,
+                      onSubmitted: (_) => _adicionar(),
+                      decoration: InputDecoration(
+                        hintText: 'Adicionar tarefa deste evento',
+                        isDense: true,
+                        filled: true,
+                        fillColor: AppColors.surfaceMuted,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(AppRadii.md),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 12,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton.filled(
+                    onPressed: _adicionar,
+                    icon: const Icon(Icons.add_rounded),
+                    tooltip: 'Adicionar tarefa',
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Flexible(
+                child: widget.todos.isEmpty
+                    ? _TodoEmptyState(eventTitle: widget.evento.titulo)
+                    : ListView.separated(
+                        shrinkWrap: true,
+                        itemCount: widget.todos.length,
+                        separatorBuilder: (context, index) =>
+                            const SizedBox(height: 8),
+                        itemBuilder: (_, index) {
+                          return _TodoTile(
+                            todo: widget.todos[index],
+                            onChanged: (value) => _alternar(index, value),
+                            onRemove: () => _remover(index),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
         ),
+      ),
+    );
+  }
+}
+
+class _TodoEmptyState extends StatelessWidget {
+  final String eventTitle;
+
+  const _TodoEmptyState({required this.eventTitle});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceMuted,
+        borderRadius: BorderRadius.circular(AppRadii.md),
+      ),
+      child: Text(
+        'Nenhuma tarefa adicionada para "$eventTitle".',
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: AppColors.textMuted,
+            ),
       ),
     );
   }
@@ -442,7 +540,8 @@ class _TodoTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textColor = todo.completed ? AppColors.textMuted : AppColors.textPrimary;
+    final textColor =
+        todo.completed ? AppColors.textMuted : AppColors.textPrimary;
     final backgroundColor = todo.completed
         ? AppColors.success.withValues(alpha: 0.08)
         : AppColors.appBackground;
@@ -468,8 +567,10 @@ class _TodoTile extends StatelessWidget {
               todo.title,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: textColor,
-                    fontWeight: todo.completed ? FontWeight.w500 : FontWeight.w700,
-                    decoration: todo.completed ? TextDecoration.lineThrough : null,
+                    fontWeight:
+                        todo.completed ? FontWeight.w500 : FontWeight.w700,
+                    decoration:
+                        todo.completed ? TextDecoration.lineThrough : null,
                     decorationColor: AppColors.textMuted,
                   ),
             ),
@@ -486,13 +587,18 @@ class _TodoTile extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Card de evento
-// ---------------------------------------------------------------------------
-
 class _EventoCard extends StatelessWidget {
   final AgendaItem item;
-  const _EventoCard({required this.item});
+  final int todoCount;
+  final int completedTodoCount;
+  final VoidCallback onOpenTodos;
+
+  const _EventoCard({
+    required this.item,
+    required this.todoCount,
+    required this.completedTodoCount,
+    required this.onOpenTodos,
+  });
 
   static const _tipoColors = {
     'PROVA': AppColors.dangerSoft,
@@ -505,8 +611,8 @@ class _EventoCard extends StatelessWidget {
   static const _tipoLabels = {
     'PROVA': 'Prova',
     'TRABALHO': 'Trabalho',
-    'SEMINARIO': 'Seminário',
-    'APRESENTACAO': 'Apresentação',
+    'SEMINARIO': 'Seminario',
+    'APRESENTACAO': 'Apresentacao',
     'OUTRO': 'Outro',
   };
 
@@ -548,13 +654,14 @@ class _EventoCard extends StatelessWidget {
                         _Badge(label: label, color: concluido ? AppColors.neutral : cor),
                         const SizedBox(width: 8),
                         if (concluido)
-                          const _Badge(label: 'Concluída', color: AppColors.neutral),
+                          const _Badge(label: 'Concluida', color: AppColors.neutral),
                         const Spacer(),
                         Text(
                           _formatDate(item.timestamp),
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: AppColors.textMuted,
-                              ),
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: AppColors.textMuted,
+                                  ),
                         ),
                       ],
                     ),
@@ -585,10 +692,21 @@ class _EventoCard extends StatelessWidget {
                       ),
                     ],
                     const SizedBox(height: 12),
-                    _PrazoInfo(
-                      diasRestantes: item.diasRestantes ?? 0,
-                      concluida: concluido,
-                      urgencia: item.urgencia,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _PrazoInfo(
+                            diasRestantes: item.diasRestantes ?? 0,
+                            concluida: concluido,
+                            urgencia: item.urgencia,
+                          ),
+                        ),
+                        TextButton.icon(
+                          onPressed: onOpenTodos,
+                          icon: const Icon(Icons.checklist_rounded, size: 18),
+                          label: Text('To-do ($completedTodoCount/$todoCount)'),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -650,31 +768,36 @@ class _PrazoInfo extends StatelessWidget {
       children: [
         Icon(icon, size: 16, color: color),
         const SizedBox(width: 6),
-        Text(
-          label,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: color,
-                fontWeight: FontWeight.w700,
-              ),
+        Flexible(
+          child: Text(
+            label,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
         ),
       ],
     );
   }
 
   (String, Color, IconData) _prazoData() {
-    if (concluida) return ('Finalizada', AppColors.neutral, Icons.check_circle_outline_rounded);
+    if (concluida) {
+      return ('Finalizada', AppColors.neutral, Icons.check_circle_outline_rounded);
+    }
     if (urgencia == 'ATRASADO' || diasRestantes < 0) {
       return ('Atrasada', AppColors.danger, Icons.error_outline_rounded);
     }
-    if (diasRestantes == 0) return ('Hoje', AppColors.dangerSoft, Icons.today_rounded);
-    if (diasRestantes == 1) return ('Amanhã', AppColors.warningStrong, Icons.schedule_rounded);
+    if (diasRestantes == 0) {
+      return ('Hoje', AppColors.dangerSoft, Icons.today_rounded);
+    }
+    if (diasRestantes == 1) {
+      return ('Amanha', AppColors.warningStrong, Icons.schedule_rounded);
+    }
     return ('Em $diasRestantes dias', AppColors.subjectIndigo, Icons.event_available_rounded);
   }
 }
-
-// ---------------------------------------------------------------------------
-// Widgets auxiliares
-// ---------------------------------------------------------------------------
 
 class _SummaryTile extends StatelessWidget {
   final String label;
