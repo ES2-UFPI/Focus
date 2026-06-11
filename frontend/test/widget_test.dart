@@ -1,11 +1,18 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/main.dart';
+import 'package:frontend/providers/auth_provider.dart';
+import 'package:frontend/services/api_service.dart';
 
 void main() {
-  testWidgets('FocusApp renders AgendaScreen', (WidgetTester tester) async {
-    await tester.pumpWidget(const FocusApp());
+  testWidgets('FocusApp renders login screen when logged out', (WidgetTester tester) async {
+    final apiService = ApiService();
+    final authProvider = AuthProvider(apiService);
 
-    // Verifica que a tela de agenda é exibida com o título correto.
-    expect(find.text('Agenda Acadêmica'), findsOneWidget);
+    await tester.pumpWidget(
+      FocusApp(apiService: apiService, authProvider: authProvider),
+    );
+
+    expect(find.text('Focus'), findsOneWidget);
+    expect(find.text('Entrar'), findsOneWidget);
   });
 }

@@ -1,10 +1,35 @@
 import 'dart:convert';
+
 import 'package:http/http.dart' as http;
+
 import '../core/network/api_client.dart';
 import 'agenda_service.dart';
 
 class SessaoEstudoService {
-  /// Cadastra uma nova sessão de estudo no backend.
+  static String _extrairMensagemErro(String responseBody) {
+    try {
+      final decoded = json.decode(responseBody);
+      final erros = <String>[];
+
+      if (decoded is Map) {
+        decoded.forEach((key, value) {
+          if (value is List) {
+            erros.addAll(value.map((e) => e.toString()));
+          } else {
+            erros.add(value.toString());
+          }
+        });
+      } else if (decoded is List) {
+        erros.addAll(decoded.map((e) => e.toString()));
+      }
+
+      return erros.isNotEmpty ? erros.join('\n') : 'Dados invalidos.';
+    } catch (_) {
+      return 'Erro inesperado do servidor.';
+    }
+  }
+
+  /// Cadastra uma nova sessao de estudo no backend.
   Future<void> criarSessao({
     required String disciplinaId,
     required DateTime inicio,
@@ -25,7 +50,7 @@ class SessaoEstudoService {
     try {
       final response = await http.post(
         uri,
-        headers: kDefaultHeaders,
+        headers: defaultHeaders,
         body: json.encode(body),
       );
 
@@ -33,26 +58,14 @@ class SessaoEstudoService {
         return;
       }
 
-      // Tenta extrair a mensagem de erro detalhada retornada pelo Django
-      final Map<String, dynamic> errorData = json.decode(response.body) as Map<String, dynamic>;
-      
-      final List<String> erros = [];
-      errorData.forEach((key, value) {
-        if (value is List) {
-          erros.addAll(value.map((e) => e.toString()));
-        } else {
-          erros.add(value.toString());
-        }
-      });
-
-      throw AgendaServiceException(erros.isNotEmpty ? erros.join('\n') : 'Dados inválidos.');
+      throw AgendaServiceException(_extrairMensagemErro(response.body));
     } catch (e) {
       if (e is AgendaServiceException) rethrow;
       throw AgendaServiceException('Erro ao conectar ao servidor: $e');
     }
   }
 
-  /// Atualiza (PATCH) uma sessão de estudo no backend.
+  /// Atualiza (PATCH) uma sessao de estudo no backend.
   Future<void> editarSessao({
     required String sessaoId,
     required String disciplinaId,
@@ -76,7 +89,7 @@ class SessaoEstudoService {
     try {
       final response = await http.patch(
         uri,
-        headers: kDefaultHeaders,
+        headers: defaultHeaders,
         body: json.encode(body),
       );
 
@@ -84,40 +97,30 @@ class SessaoEstudoService {
         return;
       }
 
-      final Map<String, dynamic> errorData = json.decode(response.body) as Map<String, dynamic>;
-      
-      final List<String> erros = [];
-      errorData.forEach((key, value) {
-        if (value is List) {
-          erros.addAll(value.map((e) => e.toString()));
-        } else {
-          erros.add(value.toString());
-        }
-      });
-
-      throw AgendaServiceException(erros.isNotEmpty ? erros.join('\n') : 'Dados inválidos.');
+      throw AgendaServiceException(_extrairMensagemErro(response.body));
     } catch (e) {
       if (e is AgendaServiceException) rethrow;
       throw AgendaServiceException('Erro ao conectar ao servidor: $e');
     }
   }
 
-  /// Exclui uma sessão de estudo no backend.
+  /// Exclui uma sessao de estudo no backend.
   Future<void> excluirSessao(String sessaoId) async {
     final uri = Uri.parse('$kBaseUrl/api/sessoes-estudo/$sessaoId/');
 
     try {
       final response = await http.delete(
         uri,
-        headers: kDefaultHeaders,
+        headers: defaultHeaders,
       );
 
       if (response.statusCode == 204) {
         return;
       }
 
-      throw AgendaServiceException('Falha ao excluir a sessão de estudo.');
+      throw AgendaServiceException(_extrairMensagemErro(response.body));
     } catch (e) {
+      if (e is AgendaServiceException) rethrow;
       throw AgendaServiceException('Erro ao conectar ao servidor: $e');
     }
   }
