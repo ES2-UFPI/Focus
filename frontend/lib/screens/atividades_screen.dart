@@ -217,7 +217,7 @@ class _AtividadesScreenState extends State<AtividadesScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Atividades Academicas',
+                    'Atividades Acadêmicas',
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                           fontWeight: FontWeight.w800,
                           color: AppColors.textPrimary,
@@ -252,7 +252,7 @@ class _AtividadesScreenState extends State<AtividadesScreen> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: _SummaryTile(
-                      label: 'Ate 3 dias',
+                      label: 'Até 3 dias',
                       value: '$urgentes',
                       icon: Icons.priority_high_rounded,
                       color: AppColors.warningStrong,
@@ -281,8 +281,8 @@ class _AtividadesScreenState extends State<AtividadesScreen> {
                 _chip(_FiltroTipo.todos, 'Todas'),
                 _chip(_FiltroTipo.prova, 'Provas'),
                 _chip(_FiltroTipo.trabalho, 'Trabalhos'),
-                _chip(_FiltroTipo.seminario, 'Seminarios'),
-                _chip(_FiltroTipo.apresentacao, 'Apresentacoes'),
+                _chip(_FiltroTipo.seminario, 'Seminários'),
+                _chip(_FiltroTipo.apresentacao, 'Apresentações'),
                 _chip(_FiltroTipo.outro, 'Outros'),
               ],
             ),
@@ -291,7 +291,7 @@ class _AtividadesScreenState extends State<AtividadesScreen> {
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
             dense: true,
-            title: const Text('Mostrar concluidas'),
+            title: const Text('Mostrar concluídas'),
             value: _mostrarConcluidas,
             onChanged: (v) => setState(() => _mostrarConcluidas = v),
           ),
@@ -342,22 +342,20 @@ class _EventTodoSheetState extends State<_EventTodoSheet> {
       return;
     }
 
+    widget.onAdd(title);
     setState(() {
-      widget.onAdd(title);
       _controller.clear();
     });
   }
 
   void _alternar(int index, bool? completed) {
-    setState(() {
-      widget.onToggle(index, completed);
-    });
+    widget.onToggle(index, completed);
+    setState(() {});
   }
 
   void _remover(int index) {
-    setState(() {
-      widget.onRemove(index);
-    });
+    widget.onRemove(index);
+    setState(() {});
   }
 
   @override
@@ -439,7 +437,7 @@ class _EventTodoSheetState extends State<_EventTodoSheet> {
               ),
               const SizedBox(height: 10),
               Text(
-                '$pendingCount pendentes - $completedCount concluidas',
+                '$pendingCount pendentes - $completedCount concluídas',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: AppColors.textMuted,
                       fontWeight: FontWeight.w700,
@@ -453,14 +451,24 @@ class _EventTodoSheetState extends State<_EventTodoSheet> {
                       controller: _controller,
                       textInputAction: TextInputAction.done,
                       onSubmitted: (_) => _adicionar(),
+                      style: const TextStyle(color: AppColors.textPrimary),
                       decoration: InputDecoration(
                         hintText: 'Adicionar tarefa deste evento',
+                        hintStyle: const TextStyle(color: AppColors.textMuted),
                         isDense: true,
                         filled: true,
                         fillColor: AppColors.surfaceMuted,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(AppRadii.md),
-                          borderSide: BorderSide.none,
+                          borderSide: const BorderSide(color: AppColors.border),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(AppRadii.md),
+                          borderSide: const BorderSide(color: AppColors.border),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(AppRadii.md),
+                          borderSide: const BorderSide(color: AppColors.brandPrimary, width: 2),
                         ),
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 12,
@@ -470,10 +478,18 @@ class _EventTodoSheetState extends State<_EventTodoSheet> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  IconButton.filled(
+                  ElevatedButton(
                     onPressed: _adicionar,
-                    icon: const Icon(Icons.add_rounded),
-                    tooltip: 'Adicionar tarefa',
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.brandPrimary,
+                      foregroundColor: AppColors.textInverted,
+                      minimumSize: const Size(48, 48),
+                      padding: EdgeInsets.zero,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppRadii.md),
+                      ),
+                    ),
+                    child: const Icon(Icons.add_rounded),
                   ),
                 ],
               ),
@@ -611,8 +627,8 @@ class _EventoCard extends StatelessWidget {
   static const _tipoLabels = {
     'PROVA': 'Prova',
     'TRABALHO': 'Trabalho',
-    'SEMINARIO': 'Seminario',
-    'APRESENTACAO': 'Apresentacao',
+    'SEMINARIO': 'Seminário',
+    'APRESENTACAO': 'Apresentação',
     'OUTRO': 'Outro',
   };
 
@@ -654,7 +670,7 @@ class _EventoCard extends StatelessWidget {
                         _Badge(label: label, color: concluido ? AppColors.neutral : cor),
                         const SizedBox(width: 8),
                         if (concluido)
-                          const _Badge(label: 'Concluida', color: AppColors.neutral),
+                          const _Badge(label: 'Concluída', color: AppColors.neutral),
                         const Spacer(),
                         Text(
                           _formatDate(item.timestamp),
@@ -703,6 +719,10 @@ class _EventoCard extends StatelessWidget {
                         ),
                         TextButton.icon(
                           onPressed: onOpenTodos,
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppColors.brandPrimary,
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          ),
                           icon: const Icon(Icons.checklist_rounded, size: 18),
                           label: Text('To-do ($completedTodoCount/$todoCount)'),
                         ),
@@ -793,7 +813,7 @@ class _PrazoInfo extends StatelessWidget {
       return ('Hoje', AppColors.dangerSoft, Icons.today_rounded);
     }
     if (diasRestantes == 1) {
-      return ('Amanha', AppColors.warningStrong, Icons.schedule_rounded);
+      return ('Amanhã', AppColors.warningStrong, Icons.schedule_rounded);
     }
     return ('Em $diasRestantes dias', AppColors.subjectIndigo, Icons.event_available_rounded);
   }
