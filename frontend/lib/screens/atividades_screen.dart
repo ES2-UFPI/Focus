@@ -8,6 +8,26 @@ import 'criar_evento_screen.dart';
 
 enum _FiltroTipo { todos, prova, trabalho, seminario, apresentacao, outro }
 
+class _AcademicTodo {
+  final String title;
+  final bool completed;
+
+  const _AcademicTodo({
+    required this.title,
+    this.completed = false,
+  });
+
+  _AcademicTodo copyWith({
+    String? title,
+    bool? completed,
+  }) {
+    return _AcademicTodo(
+      title: title ?? this.title,
+      completed: completed ?? this.completed,
+    );
+  }
+}
+
 class AtividadesScreen extends StatefulWidget {
   const AtividadesScreen({super.key});
 
@@ -18,6 +38,12 @@ class AtividadesScreen extends StatefulWidget {
 class _AtividadesScreenState extends State<AtividadesScreen> {
   _FiltroTipo _filtro = _FiltroTipo.todos;
   bool _mostrarConcluidas = false;
+  final TextEditingController _todoController = TextEditingController();
+  final List<_AcademicTodo> _todos = [
+    const _AcademicTodo(title: 'Revisar conteudo da proxima prova'),
+    const _AcademicTodo(title: 'Separar referencias para o trabalho'),
+    const _AcademicTodo(title: 'Confirmar topicos do seminario', completed: true),
+  ];
 
   @override
   void initState() {
@@ -52,6 +78,36 @@ class _AtividadesScreenState extends State<AtividadesScreen> {
     }
   }
 
+  void _adicionarTodo() {
+    final title = _todoController.text.trim();
+    if (title.isEmpty) {
+      return;
+    }
+
+    setState(() {
+      _todos.insert(0, _AcademicTodo(title: title));
+      _todoController.clear();
+    });
+  }
+
+  void _alternarTodo(int index, bool? completed) {
+    setState(() {
+      _todos[index] = _todos[index].copyWith(completed: completed ?? false);
+    });
+  }
+
+  void _removerTodo(int index) {
+    setState(() {
+      _todos.removeAt(index);
+    });
+  }
+
+  @override
+  void dispose() {
+    _todoController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<AgendaProvider>(
@@ -79,17 +135,41 @@ class _AtividadesScreenState extends State<AtividadesScreen> {
                   message: provider.errorMessage!,
                   onRetry: () => provider.fetchAgenda(),
                 ))
-              else if (atividades.isEmpty)
-                Expanded(child: _EmptyState(onAdd: _abrirCriarEvento))
               else
                 Expanded(
                   child: RefreshIndicator(
                     onRefresh: () => provider.fetchAgenda(isRefresh: true),
-                    child: ListView.separated(
+                    child: ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
                       padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
-                      itemCount: atividades.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 10),
-                      itemBuilder: (_, i) => _EventoCard(item: atividades[i]),
+                      children: [
+                        _TodoListSection(
+                          controller: _todoController,
+                          todos: _todos,
+                          onAdd: _adicionarTodo,
+                          onToggle: _alternarTodo,
+                          onRemove: _removerTodo,
+                        ),
+                        const SizedBox(height: 16),
+                        if (atividades.isEmpty)
+                          _EmptyState(onAdd: _abrirCriarEvento)
+                        else ...[
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: Text(
+                              'Atividades cadastradas',
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.textPrimary,
+                                  ),
+                            ),
+                          ),
+                          for (var i = 0; i < atividades.length; i++) ...[
+                            _EventoCard(item: atividades[i]),
+                            if (i < atividades.length - 1) const SizedBox(height: 10),
+                          ],
+                        ],
+                      ],
                     ),
                   ),
                 ),
@@ -206,6 +286,201 @@ class _AtividadesScreenState extends State<AtividadesScreen> {
         selected: selected,
         showCheckmark: false,
         onSelected: (_) => setState(() => _filtro = tipo),
+      ),
+    );
+  }
+}
+
+class _TodoListSection extends StatelessWidget {
+  final TextEditingController controller;
+  final List<_AcademicTodo> todos;
+  final VoidCallback onAdd;
+  final void Function(int index, bool? completed) onToggle;
+  final void Function(int index) onRemove;
+
+  const _TodoListSection({
+    required this.controller,
+    required this.todos,
+    required this.onAdd,
+    required this.onToggle,
+    required this.onRemove,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final pendingCount = todos.where((todo) => !todo.completed).length;
+    final completedCount = todos.length - pendingCount;
+
+    return Card(
+      elevation: 0,
+      color: AppColors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadii.lg),
+        side: const BorderSide(color: AppColors.borderSubtle),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: AppColors.subjectTeal.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(AppRadii.md),
+                  ),
+                  child: const Icon(
+                    Icons.checklist_rounded,
+                    color: AppColors.subjectTeal,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'To-do List',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.textPrimary,
+                            ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '$pendingCount pendentes - $completedCount concluidas',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: AppColors.textMuted,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: controller,
+                    textInputAction: TextInputAction.done,
+                    onSubmitted: (_) => onAdd(),
+                    decoration: InputDecoration(
+                      hintText: 'Adicionar tarefa academica',
+                      isDense: true,
+                      filled: true,
+                      fillColor: AppColors.surfaceMuted,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppRadii.md),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 12,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton.filled(
+                  onPressed: onAdd,
+                  icon: const Icon(Icons.add_rounded),
+                  tooltip: 'Adicionar tarefa',
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (todos.isEmpty)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceMuted,
+                  borderRadius: BorderRadius.circular(AppRadii.md),
+                ),
+                child: Text(
+                  'Nenhuma tarefa adicionada.',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppColors.textMuted,
+                      ),
+                ),
+              )
+            else
+              Column(
+                children: [
+                  for (var i = 0; i < todos.length; i++) ...[
+                    _TodoTile(
+                      todo: todos[i],
+                      onChanged: (value) => onToggle(i, value),
+                      onRemove: () => onRemove(i),
+                    ),
+                    if (i < todos.length - 1) const SizedBox(height: 8),
+                  ],
+                ],
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TodoTile extends StatelessWidget {
+  final _AcademicTodo todo;
+  final ValueChanged<bool?> onChanged;
+  final VoidCallback onRemove;
+
+  const _TodoTile({
+    required this.todo,
+    required this.onChanged,
+    required this.onRemove,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final textColor = todo.completed ? AppColors.textMuted : AppColors.textPrimary;
+    final backgroundColor = todo.completed
+        ? AppColors.success.withValues(alpha: 0.08)
+        : AppColors.appBackground;
+    final borderColor = todo.completed
+        ? AppColors.success.withValues(alpha: 0.28)
+        : AppColors.borderSubtle;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(AppRadii.md),
+        border: Border.all(color: borderColor),
+      ),
+      child: Row(
+        children: [
+          Checkbox(
+            value: todo.completed,
+            onChanged: onChanged,
+            activeColor: AppColors.success,
+          ),
+          Expanded(
+            child: Text(
+              todo.title,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: textColor,
+                    fontWeight: todo.completed ? FontWeight.w500 : FontWeight.w700,
+                    decoration: todo.completed ? TextDecoration.lineThrough : null,
+                    decorationColor: AppColors.textMuted,
+                  ),
+            ),
+          ),
+          IconButton(
+            onPressed: onRemove,
+            icon: const Icon(Icons.delete_outline_rounded),
+            color: AppColors.dangerSoft,
+            tooltip: 'Remover tarefa',
+          ),
+        ],
       ),
     );
   }

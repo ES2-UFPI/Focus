@@ -1,0 +1,64 @@
+[33mb33b846[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mfeat/to-do-list-atividades-academicas[m[33m, [m[1;31morigin/dev[m[33m, [m[1;32mdev[m[33m)[m Merge pull request #175 from ES2-UFPI/Diogo#31_e_168
+[33m37acdc1[m[33m ([m[1;31morigin/Diogo#31_e_168[m[33m)[m Merge branch 'dev' into Diogo#31_e_168
+[33mc7725b0[m Merge pull request #201 from ES2-UFPI/feat/eventos-academicos-frontend
+[33mb336fd9[m[33m ([m[1;31morigin/feat/eventos-academicos-frontend[m[33m)[m chore: atualizar arquivos gerados apos adicao do flutter_localizations
+[33m792e3a0[m feat: adicionar localizacao pt-BR para traduzir date/time pickers
+[33m3122ada[m fix: adicionar ScaffoldMessenger ao ShadApp para corrigir erro em snackbars
+[33m14668d9[m fix: centralizar titulo da semana e corrigir corte do horario 07:00 na grade semanal
+[33m8a6a7ff[m fix: corrigir tratamento de excecoes no EventoService para compatibilidade com DDC web
+[33mfbf54c6[m fix: adicionar basename nos registros do router para viewsets sem queryset fixo
+[33m08e1f32[m feat: reestruturar navegacao para 4 abas e integrar eventos com autenticacao
+[33m68773ce[m fix: filtrar disciplinas por usuario autenticado e auto-atribuir aluno no create
+[33mc0264c2[m fix: navegar para home apos login e registro bem-sucedidos
+[33m90f8ec3[m fix: inicializar AuthProvider antes do runApp para evitar setState durante build
+[33m413459c[m fix: corrigir setState durante build no AuthProvider
+[33m39042c7[m feat: implementar autenticacao com login e cadastro
+[33m27e23c0[m feat: remover tela de Ciclo de Estudos do frontend
+[33m7335020[m Merge pull request #191 from ES2-UFPI/feat/atividadesacademicas
+[33m2542f96[m[33m ([m[1;31morigin/feat/atividadesacademicas[m[33m, [m[1;32mfeat/atividadesacademicas[m[33m)[m Issue#2Vinicius
+[33m498ecb1[m Issue#1Vinicius
+[33m7c3b6de[m resolvendoPR
+[33mb7b1b0e[m Merge pull request #176 from ES2-UFPI/feat/biblioteca-materiais
+[33m1501457[m Documentaçao1
+[33m296ba1d[m[33m ([m[1;31morigin/feat/biblioteca-materiais[m[33m, [m[1;32mfeat/biblioteca-materiais[m[33m)[m fix: corrigir textos e icones invisiveis em Consistencia e Ciclos
+[33m1a0bbd5[m fix: corrigir cores de titulos e botoes invisiveis em Consistencia e Ciclos
+[33mc8f1d7a[m fix: corrigir texto invisivel em chips selecionados e marcador de hoje
+[33mbd12773[m fix: adicionar basename ao registro de MaterialEstudoViewSet
+[33mb4f3265[m chore: reverter alteracoes de settings e urls para o estado de origin/dev
+[33mee262bd[m chore: remover DOCUMENTATION.md da branch de feature
+[33m4cdfaa2[m refactor: redesenhar tela de Materiais com layout responsivo
+[33m8bb9c72[m feat: implementar telas de Consistência Semanal e Ciclo de Estudos (Issues 3 e 4)
+[33m4d1bdfb[m fix: adaptar MaterialEstudo ao modelo atualizado (sem campo aluno direto)
+[33m53dda96[m fix: corrigir avisos do flutter analyze
+[33m60371cd[m feat: integrar BibliotecaMateriais na estrutura de navegacao do app
+[33mf6131de[m fix: corrigir erros de renderização no Flutter web e simplificar ApiService
+[33m67637b7[m docs: traduzir documentação para português (pt-BR)
+[33m4795666[m feat: implementar Biblioteca de Materiais (#33)
+[33m311c6b8[m Merge pull request #167 from ES2-UFPI/Caio
+[33mc2176a7[m Merge branch 'dev' of https://github.com/ES2-UFPI/Focus into diogo
+[33mcd7fa61[m feat(api): implementar modulo de estatisticas e sessoes de estudo
+[33mb443211[m refac: adicionando nos models tempo de evento/sessao
+[33mec09e89[m fix: adicionando funcionalidade de excluir e editar eventos
+[33mab0d973[m feat: frontend parcialmente finalizado #2
+[33m7c71955[m feat: front-end parcialmente desenvolvido
+[33m9cd4031[m feat: backend implementado da issue #18 Gerenciamento de Eventos Academicos
+[33m86654a6[m Merge pull request #165 from ES2-UFPI/diogo/remodelagem-entidades
+[33m13fbbdc[m[33m ([m[1;31morigin/diogo/remodelagem-entidades[m[33m)[m refactor: remodelagem das entidades e novos relacionamentos
+[33mf46786e[m Merge pull request #161 from ES2-UFPI/feat/Caio
+[33mde9b034[m fix: correcoes do PR revisado pelo Samuel
+[33mc6c32c1[m fix: relacionamento entre aluno e disciplina corrigido
+[33m05e7b78[m feat: implementacao das entidades Aluno, Disciplina e TarefaDisciplina
+[33m54aaeba[m docs: imagem do diagrama de classes
+[33mc521d16[m docs: add venv ao gitignore
+[33mde221ad[m Merge pull request #153 from ES2-UFPI/Samuel#147
+[33m7f69e5f[m feat: criar entidade MaterialEstudo (#147)
+[33m8fcc3fb[m Merge pull request #154 from ES2-UFPI/Samuel#145
+[33m4ac4a97[m feat: criar entidade CicloEstudo (#145)
+[33m0361632[m Merge pull request #152 from ES2-UFPI/Samuel#144
+[33m664950a[m feat: criar entidade MetaSemanal (#144)
+[33mb79b76d[m Merge pull request #151 from ES2-UFPI/Samuel#148
+[33m458f0a0[m feat: criar entidade AvaliacaoAcademica (#148)
+[33mfa88982[m ambiente inicial do frontend
+[33m6e1cbc5[m ambiente backend com django
+[33m6b58151[m docs: adding git and gitignore
+[33mf3e9b6c[m test
