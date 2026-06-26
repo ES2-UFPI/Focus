@@ -11,6 +11,7 @@ void main() {
     await tester.pumpWidget(
       FocusApp(apiService: apiService, authProvider: authProvider),
     );
+    await tester.pumpAndSettle();
 
     expect(find.text('Focus'), findsOneWidget);
     expect(find.text('Entrar'), findsOneWidget);
