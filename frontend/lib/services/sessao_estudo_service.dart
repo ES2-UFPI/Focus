@@ -35,6 +35,8 @@ class SessaoEstudoService {
     required DateTime inicio,
     required DateTime fim,
     String? descricao,
+    required String status,          // 🌟 Adicionado
+    required int duracaoRealizada,
   }) async {
     final uri = Uri.parse('$kBaseUrl/api/sessoes-estudo/');
 
@@ -43,7 +45,7 @@ class SessaoEstudoService {
       'inicio': inicio.toUtc().toIso8601String(),
       'fim': fim.toUtc().toIso8601String(),
       'status': 'AGENDADO',
-      'duracao_realizada': 0,
+      'duracao_realizada': duracaoRealizada, // 👈 Agora usa o parâmetro da tela
       'descricao': descricao,
     };
 

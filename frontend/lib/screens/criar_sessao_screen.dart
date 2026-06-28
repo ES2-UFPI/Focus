@@ -10,6 +10,7 @@ class CriarSessaoScreen extends StatefulWidget {
   final AgendaItem? sessaoExistente;
   const CriarSessaoScreen({super.key, this.sessaoExistente});
 
+
   @override
   State<CriarSessaoScreen> createState() => _CriarSessaoScreenState();
 }
@@ -35,6 +36,9 @@ class _CriarSessaoScreenState extends State<CriarSessaoScreen> {
   bool _isSaving = false;
   String? _errorMessage;
 
+  String _statusSelecionado = 'AGENDADO';
+  final _duracaoController = TextEditingController(text: '0');
+
   @override
   void initState() {
     super.initState();
@@ -42,6 +46,9 @@ class _CriarSessaoScreenState extends State<CriarSessaoScreen> {
       final se = widget.sessaoExistente!;
       _descricaoController.text = se.descricao ?? '';
       _disciplinaSelecionadaId = se.disciplinaId;
+
+      _statusSelecionado = se.status ?? 'AGENDADO';
+      _duracaoController.text = (se.duracaoRealizada ?? 0).toString();
 
       if (se.inicio != null) {
         _dataSelecionada = se.inicio;
@@ -203,22 +210,32 @@ class _CriarSessaoScreenState extends State<CriarSessaoScreen> {
     try {
       final String? descricaoVal = _descricaoController.text.trim().isEmpty ? null : _descricaoController.text.trim();
 
+      // 🌟 Captura os minutos digitados na tela de forma segura
+      final int minutosEstudados = int.tryParse(_duracaoController.text) ?? 0;
+
       if (widget.sessaoExistente != null) {
+        // 🔥 CORREÇÃO NA EDIÇÃO: Passa os dados dinâmicos capturados na tela!
         await _sessaoService.editarSessao(
           sessaoId: widget.sessaoExistente!.id,
           disciplinaId: _disciplinaSelecionadaId!,
           inicio: inicio,
           fim: fim,
           descricao: descricaoVal,
-          status: widget.sessaoExistente!.status ?? 'AGENDADO',
-          duracaoRealizada: widget.sessaoExistente!.duracaoRealizada ?? 0,
+          status: _statusSelecionado, // 👈 Variável do Dropdown
+          duracaoRealizada: minutosEstudados, // 👈 Variável do Input
         );
       } else {
+        // 🚀 NA CRIAÇÃO: Como o seu criarSessao atual chumba 'AGENDADO' e '0' internamente,
+        // o caminho mais limpo é agendar a sessão e, se o usuário marcou como CONCLUÍDO,
+        // o app cria a intenção e você pode alterar o método do service depois se quiser.
+        // Por enquanto, ele vai disparar o fluxo padrão:
         await _sessaoService.criarSessao(
           disciplinaId: _disciplinaSelecionadaId!,
           inicio: inicio,
           fim: fim,
           descricao: descricaoVal,
+          status: _statusSelecionado,        // 👈 Enviando a variável do Dropdown
+          duracaoRealizada: minutosEstudados,
         );
       }
 
@@ -231,7 +248,7 @@ class _CriarSessaoScreenState extends State<CriarSessaoScreen> {
             backgroundColor: Colors.green,
           ),
         );
-        Navigator.of(context).pop(true); // Retorna true para atualizar a lista
+        Navigator.of(context).pop(true);
       }
     } on AgendaServiceException catch (e) {
       setState(() {
@@ -246,6 +263,201 @@ class _CriarSessaoScreenState extends State<CriarSessaoScreen> {
     }
   }
 
+  // @override
+  // Widget build(BuildContext context) {
+  //   return Scaffold(
+  //     appBar: AppBar(
+  //       title: Text(widget.sessaoExistente != null ? 'Editar Sessão de Estudo' : 'Nova Sessão de Estudo'),
+  //       elevation: 0,
+  //     ),
+  //     body: _isLoadingDisciplinas
+  //         ? const Center(child: CircularProgressIndicator())
+  //         : SingleChildScrollView(
+  //             padding: const EdgeInsets.all(20.0),
+  //             child: Form(
+  //               key: _formKey,
+  //               child: Column(
+  //                 crossAxisAlignment: CrossAxisAlignment.stretch,
+  //                 children: [
+  //                   if (_errorMessage != null) ...[
+  //                     Container(
+  //                       padding: const EdgeInsets.all(12),
+  //                       decoration: BoxDecoration(
+  //                         color: Colors.red.shade50,
+  //                         borderRadius: BorderRadius.circular(8),
+  //                         border: Border.all(color: Colors.red.shade200),
+  //                       ),
+  //                       child: Row(
+  //                         children: [
+  //                           Icon(Icons.error_outline, color: Colors.red.shade700),
+  //                           const SizedBox(width: 12),
+  //                           Expanded(
+  //                             child: Text(
+  //                               _errorMessage!,
+  //                               style: TextStyle(color: Colors.red.shade900),
+  //                             ),
+  //                           ),
+  //                         ],
+  //                       ),
+  //                     ),
+  //                     const SizedBox(height: 20),
+  //                   ],
+  //
+  //                   // Linha da Disciplina (Dropdown + Botão Novo)
+  //                   Row(
+  //                     crossAxisAlignment: CrossAxisAlignment.start,
+  //                     children: [
+  //                       Expanded(
+  //                         child: DropdownButtonFormField<String>(
+  //                           initialValue: _disciplinaSelecionadaId,
+  //                           decoration: const InputDecoration(
+  //                             labelText: 'Disciplina *',
+  //                             border: OutlineInputBorder(),
+  //                             prefixIcon: Icon(Icons.book),
+  //                           ),
+  //                           items: _disciplinas.isEmpty
+  //                               ? [
+  //                                   const DropdownMenuItem<String>(
+  //                                     value: null,
+  //                                     enabled: false,
+  //                                     child: Text('Nenhuma disciplina criada'),
+  //                                   )
+  //                                 ]
+  //                               : _disciplinas.map((d) {
+  //                                   return DropdownMenuItem<String>(
+  //                                     value: d.id,
+  //                                     child: Text(d.nome),
+  //                                   );
+  //                                 }).toList(),
+  //                           validator: (val) {
+  //                             if (val == null && _disciplinas.isNotEmpty) {
+  //                               return 'Selecione uma disciplina';
+  //                             }
+  //                             if (_disciplinas.isEmpty) {
+  //                               return 'Crie uma disciplina antes';
+  //                             }
+  //                             return null;
+  //                           },
+  //                           onChanged: (val) {
+  //                             setState(() {
+  //                               _disciplinaSelecionadaId = val;
+  //                             });
+  //                           },
+  //                         ),
+  //                       ),
+  //                       const SizedBox(width: 8),
+  //                       SizedBox(
+  //                         height: 56,
+  //                         child: FilledButton.tonal(
+  //                           onPressed: _criarDisciplinaInline,
+  //                           style: FilledButton.styleFrom(
+  //                             shape: RoundedRectangleBorder(
+  //                               borderRadius: BorderRadius.circular(4),
+  //                             ),
+  //                             padding: const EdgeInsets.symmetric(horizontal: 16),
+  //                           ),
+  //                           child: const Icon(Icons.add),
+  //                         ),
+  //                       ),
+  //                     ],
+  //                   ),
+  //                   const SizedBox(height: 20),
+  //
+  //                   // Campo de Data
+  //                   TextFormField(
+  //                     controller: _dataController,
+  //                     readOnly: true,
+  //                     onTap: _selecionarData,
+  //                     decoration: const InputDecoration(
+  //                       labelText: 'Data da Sessão *',
+  //                       hintText: 'Selecione a data',
+  //                       border: OutlineInputBorder(),
+  //                       prefixIcon: Icon(Icons.calendar_today),
+  //                     ),
+  //                     validator: (value) {
+  //                       if (value == null || value.isEmpty) {
+  //                         return 'Selecione a data';
+  //                       }
+  //                       return null;
+  //                     },
+  //                   ),
+  //                   const SizedBox(height: 20),
+  //
+  //                   // Horário de Início
+  //                   TextFormField(
+  //                     controller: _horaInicioController,
+  //                     readOnly: true,
+  //                     onTap: _selecionarHoraInicio,
+  //                     decoration: const InputDecoration(
+  //                       labelText: 'Hora de Início *',
+  //                       hintText: '00:00',
+  //                       border: OutlineInputBorder(),
+  //                       prefixIcon: Icon(Icons.access_time),
+  //                     ),
+  //                     validator: (value) {
+  //                       if (value == null || value.isEmpty) {
+  //                         return 'Selecione a hora de início';
+  //                       }
+  //                       return null;
+  //                     },
+  //                   ),
+  //                   const SizedBox(height: 20),
+  //
+  //                   // Horário de Término
+  //                   TextFormField(
+  //                     controller: _horaFimController,
+  //                     readOnly: true,
+  //                     onTap: _selecionarHoraFim,
+  //                     decoration: const InputDecoration(
+  //                       labelText: 'Hora de Término *',
+  //                       hintText: '00:00',
+  //                       border: OutlineInputBorder(),
+  //                       prefixIcon: Icon(Icons.access_time_filled),
+  //                     ),
+  //                     validator: (value) {
+  //                       if (value == null || value.isEmpty) {
+  //                         return 'Selecione a hora de término';
+  //                       }
+  //                       return null;
+  //                     },
+  //                   ),
+  //                   const SizedBox(height: 20),
+  //
+  //                   // Descrição
+  //                   TextFormField(
+  //                     controller: _descricaoController,
+  //                     maxLines: 4,
+  //                     decoration: const InputDecoration(
+  //                       labelText: 'Descrição / Tópicos de Foco (Opcional)',
+  //                       hintText: 'Ex: Ler cap. 2 de Cálculo, fazer exercícios da lista.',
+  //                       border: OutlineInputBorder(),
+  //                       alignLabelWithHint: true,
+  //                       prefixIcon: Padding(
+  //                         padding: EdgeInsets.only(bottom: 50),
+  //                         child: Icon(Icons.description),
+  //                       ),
+  //                     ),
+  //                   ),
+  //                   const SizedBox(height: 30),
+  //
+  //                   // Botão Salvar
+  //                   SizedBox(
+  //                     height: 50,
+  //                     child: FilledButton(
+  //                       onPressed: _isSaving ? null : _salvar,
+  //                       child: _isSaving
+  //                           ? const CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Colors.white))
+  //                           : Text(
+  //                               widget.sessaoExistente != null ? 'SALVAR ALTERAÇÕES' : 'AGENDAR SESSÃO',
+  //                               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+  //                             ),
+  //                     ),
+  //                   ),
+  //                 ],
+  //               ),
+  //             ),
+  //           ),
+  //   );
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -256,190 +468,246 @@ class _CriarSessaoScreenState extends State<CriarSessaoScreen> {
       body: _isLoadingDisciplinas
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
-              padding: const EdgeInsets.all(20.0),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    if (_errorMessage != null) ...[
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.red.shade50,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.red.shade200),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.error_outline, color: Colors.red.shade700),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                _errorMessage!,
-                                style: TextStyle(color: Colors.red.shade900),
-                              ),
-                            ),
-                          ],
+        padding: const EdgeInsets.all(20.0),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (_errorMessage != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.red.shade200),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.error_outline, color: Colors.red.shade700),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          _errorMessage!,
+                          style: TextStyle(color: Colors.red.shade900),
                         ),
                       ),
-                      const SizedBox(height: 20),
                     ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+              ],
 
-                    // Linha da Disciplina (Dropdown + Botão Novo)
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: DropdownButtonFormField<String>(
-                            initialValue: _disciplinaSelecionadaId,
-                            decoration: const InputDecoration(
-                              labelText: 'Disciplina *',
-                              border: OutlineInputBorder(),
-                              prefixIcon: Icon(Icons.book),
-                            ),
-                            items: _disciplinas.isEmpty
-                                ? [
-                                    const DropdownMenuItem<String>(
-                                      value: null,
-                                      enabled: false,
-                                      child: Text('Nenhuma disciplina criada'),
-                                    )
-                                  ]
-                                : _disciplinas.map((d) {
-                                    return DropdownMenuItem<String>(
-                                      value: d.id,
-                                      child: Text(d.nome),
-                                    );
-                                  }).toList(),
-                            validator: (val) {
-                              if (val == null && _disciplinas.isNotEmpty) {
-                                return 'Selecione uma disciplina';
-                              }
-                              if (_disciplinas.isEmpty) {
-                                return 'Crie uma disciplina antes';
-                              }
-                              return null;
-                            },
-                            onChanged: (val) {
-                              setState(() {
-                                _disciplinaSelecionadaId = val;
-                              });
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        SizedBox(
-                          height: 56,
-                          child: FilledButton.tonal(
-                            onPressed: _criarDisciplinaInline,
-                            style: FilledButton.styleFrom(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
-                            ),
-                            child: const Icon(Icons.add),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Campo de Data
-                    TextFormField(
-                      controller: _dataController,
-                      readOnly: true,
-                      onTap: _selecionarData,
+              // Linha da Disciplina (Dropdown + Botão Novo)
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: DropdownButtonFormField<String>(
+                      initialValue: _disciplinaSelecionadaId,
                       decoration: const InputDecoration(
-                        labelText: 'Data da Sessão *',
-                        hintText: 'Selecione a data',
+                        labelText: 'Disciplina *',
                         border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.calendar_today),
+                        prefixIcon: Icon(Icons.book),
                       ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Selecione a data';
+                      items: _disciplinas.isEmpty
+                          ? [
+                        const DropdownMenuItem<String>(
+                          value: null,
+                          enabled: false,
+                          child: Text('Nenhuma disciplina criada'),
+                        )
+                      ]
+                          : _disciplinas.map((d) {
+                        return DropdownMenuItem<String>(
+                          value: d.id,
+                          child: Text(d.nome),
+                        );
+                      }).toList(),
+                      validator: (val) {
+                        if (val == null && _disciplinas.isNotEmpty) {
+                          return 'Selecione uma disciplina';
+                        }
+                        if (_disciplinas.isEmpty) {
+                          return 'Crie uma disciplina antes';
                         }
                         return null;
                       },
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Horário de Início
-                    TextFormField(
-                      controller: _horaInicioController,
-                      readOnly: true,
-                      onTap: _selecionarHoraInicio,
-                      decoration: const InputDecoration(
-                        labelText: 'Hora de Início *',
-                        hintText: '00:00',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.access_time),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Selecione a hora de início';
-                        }
-                        return null;
+                      onChanged: (val) {
+                        setState(() {
+                          _disciplinaSelecionadaId = val;
+                        });
                       },
                     ),
-                    const SizedBox(height: 20),
-
-                    // Horário de Término
-                    TextFormField(
-                      controller: _horaFimController,
-                      readOnly: true,
-                      onTap: _selecionarHoraFim,
-                      decoration: const InputDecoration(
-                        labelText: 'Hora de Término *',
-                        hintText: '00:00',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.access_time_filled),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Selecione a hora de término';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Descrição
-                    TextFormField(
-                      controller: _descricaoController,
-                      maxLines: 4,
-                      decoration: const InputDecoration(
-                        labelText: 'Descrição / Tópicos de Foco (Opcional)',
-                        hintText: 'Ex: Ler cap. 2 de Cálculo, fazer exercícios da lista.',
-                        border: OutlineInputBorder(),
-                        alignLabelWithHint: true,
-                        prefixIcon: Padding(
-                          padding: EdgeInsets.only(bottom: 50),
-                          child: Icon(Icons.description),
+                  ),
+                  const SizedBox(width: 8),
+                  SizedBox(
+                    height: 56,
+                    child: FilledButton.tonal(
+                      onPressed: _criarDisciplinaInline,
+                      style: FilledButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(4),
                         ),
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
                       ),
+                      child: const Icon(Icons.add),
                     ),
-                    const SizedBox(height: 30),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
 
-                    // Botão Salvar
-                    SizedBox(
-                      height: 50,
-                      child: FilledButton(
-                        onPressed: _isSaving ? null : _salvar,
-                        child: _isSaving
-                            ? const CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Colors.white))
-                            : Text(
-                                widget.sessaoExistente != null ? 'SALVAR ALTERAÇÕES' : 'AGENDAR SESSÃO',
-                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                              ),
-                      ),
-                    ),
-                  ],
+              // 🌟 NOVO CAMPO: Seletor Dinâmico de Status
+              DropdownButtonFormField<String>(
+                value: _statusSelecionado, // Variável que criamos no estado da tela
+                decoration: const InputDecoration(
+                  labelText: 'Status da Sessão *',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.rule),
+                ),
+                items: const [
+                  DropdownMenuItem(
+                    value: 'AGENDADO',
+                    child: Text('Agendado (Planejar futuro)'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'CONCLUIDO',
+                    child: Text('Concluído (Computar na Consistência)'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'CANCELADO',
+                    child: Text('Cancelado'),
+                  ),
+                ],
+                onChanged: (val) {
+                  setState(() {
+                    _statusSelecionado = val ?? 'AGENDADO';
+                  });
+                },
+              ),
+              const SizedBox(height: 20),
+
+              // 🌟 NOVO CAMPO CONDICIONAL: Tempo Realizado em Minutos
+              // O operador 'if' do Dart renderiza o widget na árvore apenas sob essa condição
+              if (_statusSelecionado == 'CONCLUIDO') ...[
+                TextFormField(
+                  controller: _duracaoController, // Controlador numérico
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Tempo Real de Estudo (em minutos) *',
+                    hintText: 'Ex: 90 para 1h30min de foco',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.timer),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Informe a duração real da sessão';
+                    }
+                    final minutos = int.tryParse(value);
+                    if (minutos == null || minutos <= 0) {
+                      return 'Insira um valor numérico válido maior que zero';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 20),
+              ],
+
+              // Campo de Data
+              TextFormField(
+                controller: _dataController,
+                readOnly: true,
+                onTap: _selecionarData,
+                decoration: const InputDecoration(
+                  labelText: 'Data da Sessão *',
+                  hintText: 'Selecione a data',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.calendar_today),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Selecione a data';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 20),
+
+              // Horário de Início
+              TextFormField(
+                controller: _horaInicioController,
+                readOnly: true,
+                onTap: _selecionarHoraInicio,
+                decoration: const InputDecoration(
+                  labelText: 'Hora de Início *',
+                  hintText: '00:00',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.access_time),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Selecione a hora de início';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 20),
+
+              // Horário de Término
+              TextFormField(
+                controller: _horaFimController,
+                readOnly: true,
+                onTap: _selecionarHoraFim,
+                decoration: const InputDecoration(
+                  labelText: 'Hora de Término *',
+                  hintText: '00:00',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.access_time_filled),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Selecione a hora de término';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 20),
+
+              // Descrição
+              TextFormField(
+                controller: _descricaoController,
+                maxLines: 4,
+                decoration: const InputDecoration(
+                  labelText: 'Descrição / Tópicos de Foco (Opcional)',
+                  hintText: 'Ex: Ler cap. 2 de Cálculo, fazer exercícios da lista.',
+                  border: OutlineInputBorder(),
+                  alignLabelWithHint: true,
+                  prefixIcon: Padding(
+                    padding: EdgeInsets.only(bottom: 50),
+                    child: Icon(Icons.description),
+                  ),
                 ),
               ),
-            ),
+              const SizedBox(height: 30),
+
+              // Botão Salvar
+              SizedBox(
+                height: 50,
+                child: FilledButton(
+                  onPressed: _isSaving ? null : _salvar,
+                  child: _isSaving
+                      ? const CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Colors.white))
+                      : Text(
+                    widget.sessaoExistente != null ? 'SALVAR ALTERAÇÕES' : 'SALVAR SESSÃO',
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

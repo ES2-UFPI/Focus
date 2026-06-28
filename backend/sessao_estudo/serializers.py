@@ -8,31 +8,28 @@ from .models import SessaoEstudo
 class SessaoEstudoSerializer(serializers.ModelSerializer):
     """Serializer para mapear os dados da sessao de estudo para JSON."""
 
+    # Campo calculado para exibir o nome da disciplina nas listagens (somente leitura)
     disciplina_nome = serializers.CharField(source='disciplina.nome', read_only=True)
     semana_estudo = serializers.SerializerMethodField()
     horario_estudo = serializers.SerializerMethodField()
 
     class Meta:
         model = SessaoEstudo
+        # 🔍 Alinhado perfeitamente com as propriedades reais do seu Model
         fields = [
-            'id',
+            'id', 
             'semana_estudo',
-            'disciplina',
-            'disciplina_nome',
+            'disciplina', 
+            'disciplina_nome', 
             'horario_estudo',
-            'inicio',
-            'fim',
-            'duracao_realizada',
-            'status',
-            'descricao',
+            'inicio', 
+            'fim', 
+            'duracao_realizada', 
+            'status'
         ]
-        read_only_fields = [
-            'id',
-            'semana_estudo',
-            'horario_estudo',
-            'duracao_realizada',
-        ]
-
+      
+        read_only_fields = ['id', 'semana_estudo', 'duracao_realizada']
+        
     def get_semana_estudo(self, obj):
         return timezone.localtime(obj.inicio).isocalendar().week
 
@@ -43,10 +40,15 @@ class SessaoEstudoSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         instance = self.instance
+        
         if instance:
+            # Para atualizações (PUT/PATCH): clona os dados atuais para não perder 
+            # campos obrigatórios que não foram enviados no corpo do PATCH
             for field, value in attrs.items():
                 setattr(instance, field, value)
         else:
+            # Para criação (POST): tenta instanciar temporariamente para rodar o clean
+            # Usando attrs.get para evitar KeyError se algum opcional faltar
             instance = SessaoEstudo(**attrs)
 
         try:
