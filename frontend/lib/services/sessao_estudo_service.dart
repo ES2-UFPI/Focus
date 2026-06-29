@@ -1,7 +1,5 @@
 import 'dart:convert';
-
 import 'package:http/http.dart' as http;
-
 import '../core/network/api_client.dart';
 import 'agenda_service.dart';
 
@@ -10,7 +8,6 @@ class SessaoEstudoService {
     try {
       final decoded = json.decode(responseBody);
       final erros = <String>[];
-
       if (decoded is Map) {
         decoded.forEach((key, value) {
           if (value is List) {
@@ -22,44 +19,51 @@ class SessaoEstudoService {
       } else if (decoded is List) {
         erros.addAll(decoded.map((e) => e.toString()));
       }
-
-      return erros.isNotEmpty ? erros.join('\n') : 'Dados invalidos.';
+      return erros.isNotEmpty ? erros.join('\n') : 'Dados inválidos.';
     } catch (_) {
       return 'Erro inesperado do servidor.';
     }
   }
 
-  /// Cadastra uma nova sessao de estudo no backend.
+  // 🌟 FUNÇÃO MÁGICA: Garante o envio do horário local com o fuso correto (-03:00)
+  static String _formatarParaBackend(DateTime date) {
+    final localDate = date.isUtc ? date.toLocal() : date;
+    final iso = localDate.toIso8601String();
+    final offset = localDate.timeZoneOffset;
+    final horas = offset.inHours.abs().toString().padLeft(2, '0');
+    final minutos = (offset.inMinutes.abs() % 60).toString().padLeft(2, '0');
+    final sinal = offset.isNegative ? '-' : '+';
+    return '$iso$sinal$horas:$minutos'; 
+  }
+
+  /// Cadastra uma nova sessão de estudo no backend.
   Future<void> criarSessao({
     required String disciplinaId,
-    required DateTime inicio,
-    required DateTime fim,
+    required DateTime inicio, 
+    required DateTime fim,    
     String? descricao,
-    required String status,          // 🌟 Adicionado
+    required String status,          
     required int duracaoRealizada,
   }) async {
     final uri = Uri.parse('$kBaseUrl/api/sessoes-estudo/');
 
     final body = {
       'disciplina': disciplinaId,
-      'inicio': inicio.toUtc().toIso8601String(),
-      'fim': fim.toUtc().toIso8601String(),
-      'status': 'AGENDADO',
-      'duracao_realizada': duracaoRealizada, // 👈 Agora usa o parâmetro da tela
+      'inicio': _formatarParaBackend(inicio), // 👈 Formatado com fuso local
+      'fim': _formatarParaBackend(fim),       // 👈 Formatado com fuso local
+      'status': status, 
+      'duracao_realizada': duracaoRealizada, 
       'descricao': descricao,
     };
 
     try {
       final response = await http.post(
         uri,
-        headers: defaultHeaders,
+        headers: kDefaultHeaders, 
         body: json.encode(body),
       );
 
-      if (response.statusCode == 201) {
-        return;
-      }
-
+      if (response.statusCode == 201) return;
       throw AgendaServiceException(_extrairMensagemErro(response.body));
     } catch (e) {
       if (e is AgendaServiceException) rethrow;
@@ -67,12 +71,12 @@ class SessaoEstudoService {
     }
   }
 
-  /// Atualiza (PATCH) uma sessao de estudo no backend.
+  /// Atualiza (PATCH) uma sessão de estudo no backend.
   Future<void> editarSessao({
     required String sessaoId,
     required String disciplinaId,
-    required DateTime inicio,
-    required DateTime fim,
+    required DateTime inicio, 
+    required DateTime fim,    
     String? descricao,
     required String status,
     required int duracaoRealizada,
@@ -81,8 +85,8 @@ class SessaoEstudoService {
 
     final body = {
       'disciplina': disciplinaId,
-      'inicio': inicio.toUtc().toIso8601String(),
-      'fim': fim.toUtc().toIso8601String(),
+      'inicio': _formatarParaBackend(inicio), // 👈 Formatado com fuso local
+      'fim': _formatarParaBackend(fim),       // 👈 Formatado com fuso local
       'status': status,
       'duracao_realizada': duracaoRealizada,
       'descricao': descricao,
@@ -91,14 +95,11 @@ class SessaoEstudoService {
     try {
       final response = await http.patch(
         uri,
-        headers: defaultHeaders,
+        headers: kDefaultHeaders, 
         body: json.encode(body),
       );
 
-      if (response.statusCode == 200 || response.statusCode == 204) {
-        return;
-      }
-
+      if (response.statusCode == 200 || response.statusCode == 204) return;
       throw AgendaServiceException(_extrairMensagemErro(response.body));
     } catch (e) {
       if (e is AgendaServiceException) rethrow;
@@ -106,20 +107,12 @@ class SessaoEstudoService {
     }
   }
 
-  /// Exclui uma sessao de estudo no backend.
+  /// Exclui uma sessão de estudo no backend.
   Future<void> excluirSessao(String sessaoId) async {
     final uri = Uri.parse('$kBaseUrl/api/sessoes-estudo/$sessaoId/');
-
     try {
-      final response = await http.delete(
-        uri,
-        headers: defaultHeaders,
-      );
-
-      if (response.statusCode == 204) {
-        return;
-      }
-
+      final response = await http.delete(uri, headers: kDefaultHeaders);
+      if (response.statusCode == 204) return;
       throw AgendaServiceException(_extrairMensagemErro(response.body));
     } catch (e) {
       if (e is AgendaServiceException) rethrow;

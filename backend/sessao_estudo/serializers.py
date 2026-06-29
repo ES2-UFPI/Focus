@@ -28,7 +28,7 @@ class SessaoEstudoSerializer(serializers.ModelSerializer):
             'status'
         ]
       
-        read_only_fields = ['id', 'semana_estudo', 'duracao_realizada']
+        read_only_fields = ['id', 'semana_estudo']
         
     def get_semana_estudo(self, obj):
         return timezone.localtime(obj.inicio).isocalendar().week
@@ -39,20 +39,30 @@ class SessaoEstudoSerializer(serializers.ModelSerializer):
         return f'{inicio} - {fim}'
 
     def validate(self, attrs):
-        instance = self.instance
+        # Criamos um dicionário temporário a partir dos dados já validados/tratados pelo DRF
+        contexto_validacao = {}
         
-        if instance:
-            # Para atualizações (PUT/PATCH): clona os dados atuais para não perder 
-            # campos obrigatórios que não foram enviados no corpo do PATCH
-            for field, value in attrs.items():
-                setattr(instance, field, value)
-        else:
-            # Para criação (POST): tenta instanciar temporariamente para rodar o clean
-            # Usando attrs.get para evitar KeyError se algum opcional faltar
-            instance = SessaoEstudo(**attrs)
+        if self.instance:
+            contexto_validacao = {
+                'id': self.instance.id, # 🌟 ADICIONE ESTA LINHA AQUI! (Injeta o UUID na validação)
+                'disciplina_id': self.instance.disciplina_id,
+                'inicio': self.instance.inicio,
+                'fim': self.instance.fim,
+                'status': self.instance.status,
+                'duracao_realizada': self.instance.duracao_realizada,
+            }
+            
+        # Mescla estritamente com os novos dados modificados vindos do payload
+        for campo, valor in attrs.items():
+            if campo == 'disciplina':
+                contexto_validacao['disciplina_id'] = valor.id if hasattr(valor, 'id') else valor
+            else:
+                contexto_validacao[campo] = valor
 
+        # Criamos o objeto temporário de forma segura repassando o ID
         try:
-            instance.clean()
+            temp_instance = SessaoEstudo(**contexto_validacao)
+            temp_instance.clean()
         except DjangoValidationError as e:
             raise serializers.ValidationError(
                 e.message_dict if hasattr(e, 'message_dict') else e.messages
