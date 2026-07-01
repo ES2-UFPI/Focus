@@ -138,3 +138,11 @@ Rotas principais (/api/)
 - Extras: eventos-academicos/proximos/, sessoes-estudo/semana_atual/, sessoes-estudo/dashboard/, sessoes-estudo/ranking/, sessoes-estudo/disciplina_negligenciada/, sessoes-estudo/disciplina/{id}/desempenho/
 - GET agenda/ — agenda unificada (eventos + sessões + recomendações)
 - Tudo escopado ao aluno autenticado (IsAuthenticated + filtro por usuário)
+
+
+## BACKEND 
+O pomodoro se conecta a umas essão 
+Aluno
+  └── Disciplina
+        └── SessaoEstudo
+              └── CicloPomodoro
