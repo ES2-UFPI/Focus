@@ -47,6 +47,7 @@ class PomodoroProvider extends ChangeNotifier {
     DisciplinaService? disciplinaService,
     AgendaService? agendaService,
     SessaoEstudoService? sessaoEstudoService,
+    this.somAtivado = true,
   })  : _disciplinaService = disciplinaService ?? DisciplinaService(),
         _agendaService = agendaService ?? AgendaService(),
         _sessaoEstudoService = sessaoEstudoService ?? SessaoEstudoService() {
@@ -68,8 +69,13 @@ class PomodoroProvider extends ChangeNotifier {
 
   late final Timer _ticker;
 
+  /// Desliga o alarme sonoro (usado nos testes de unidade, onde o plugin
+  /// de áudio não existe).
+  final bool somAtivado;
+
   /// Player do alarme tocado quando o timer zera naturalmente (não no Pular).
-  final AudioPlayer _alarmePlayer = AudioPlayer();
+  /// Criado sob demanda dentro de _tocarAlarme.
+  AudioPlayer? _alarmePlayer;
 
   bool loading = true;
   String? error;
@@ -378,9 +384,11 @@ class PomodoroProvider extends ChangeNotifier {
 
   /// Toca o alarme sonoro. Falha de áudio nunca pode afetar o timer.
   Future<void> _tocarAlarme() async {
+    if (!somAtivado) return;
     try {
-      await _alarmePlayer.stop();
-      await _alarmePlayer.play(AssetSource('sounds/alarme_pomodoro.wav'));
+      final player = _alarmePlayer ??= AudioPlayer();
+      await player.stop();
+      await player.play(AssetSource('sounds/alarme_pomodoro.wav'));
     } catch (_) {
       // Sem áudio disponível (ex.: autoplay bloqueado no navegador): ignora.
     }
@@ -525,7 +533,7 @@ class PomodoroProvider extends ChangeNotifier {
   @override
   void dispose() {
     _ticker.cancel();
-    _alarmePlayer.dispose();
+    _alarmePlayer?.dispose();
     super.dispose();
   }
 }
