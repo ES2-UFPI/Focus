@@ -76,7 +76,7 @@ class _ConfiguracoesScreenState extends State<ConfiguracoesScreen> {
                   child: Row(
                     children: [
                       Consumer<AuthProvider>(
-                        builder: (_, auth, __) {
+                        builder: (_, auth, _) {
                           final inicial = auth.nomeAluno.isNotEmpty
                               ? auth.nomeAluno[0].toUpperCase()
                               : 'U';
@@ -97,7 +97,7 @@ class _ConfiguracoesScreenState extends State<ConfiguracoesScreen> {
                       const SizedBox(width: 16),
                       Expanded(
                         child: Consumer<AuthProvider>(
-                          builder: (_, auth, __) => Column(
+                          builder: (_, auth, _) => Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(

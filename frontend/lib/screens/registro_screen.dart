@@ -81,7 +81,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
                   const SizedBox(height: 6),
                   Text(
                     'Comece a organizar seus estudos',
-                    style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 14),
+                    style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 14),
                   ),
                   const SizedBox(height: 32),
                   _campo(
@@ -138,9 +138,9 @@ class _RegistroScreenState extends State<RegistroScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                       decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(0.12),
+                        color: Colors.red.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: Colors.red.withOpacity(0.3)),
+                        border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
                       ),
                       child: Row(
                         children: [
@@ -172,7 +172,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text('Já tem conta? ', style: TextStyle(color: Colors.white.withOpacity(0.5))),
+                      Text('Já tem conta? ', style: TextStyle(color: Colors.white.withValues(alpha: 0.5))),
                       GestureDetector(
                         onTap: () => Navigator.pushReplacementNamed(context, '/login'),
                         child: const Text(
@@ -209,7 +209,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
       validator: validar,
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
+        labelStyle: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
         prefixIcon: Icon(icon, color: Colors.white38, size: 20),
         suffixIcon: sufixo,
         filled: true,
