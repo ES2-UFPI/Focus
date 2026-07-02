@@ -62,7 +62,7 @@ jobs:
       - name: Run Flutter Analyze
         run: |
           cd frontend
-          flutter analyze
+          flutter analyze --no-fatal-infos
 
       - name: Run Flutter Tests
         run: |

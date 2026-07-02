@@ -43,7 +43,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final cores = Theme.of(context).colorScheme;
     return Scaffold(
       backgroundColor: const Color(0xFF0f0e17),
       body: SafeArea(
