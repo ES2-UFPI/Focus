@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-h8xbi!8zof+1bhrlf5&#6l+*1hs+cv@u97a693ej)hswu+8wy(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -146,3 +146,10 @@ REST_FRAMEWORK = {
 # CORS — permite todas as origens em ambiente de desenvolvimento
 CORS_ALLOW_ALL_ORIGINS = True
 
+CORS_ALLOW_CREDENTIALS = True
+
+# Avisa o Django para confiar na origem do seu Flutter Web
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:63607',
+    'http://127.0.0.1:63607',
+]

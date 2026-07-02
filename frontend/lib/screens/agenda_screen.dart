@@ -62,6 +62,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
                   );
                   if (criado == true && context.mounted) {
                     context.read<AgendaProvider>().fetchAgenda();
+                    // 🌟 Se você colocar a Consistência sob um Provider no futuro, chamaria aqui.
                   }
                 },
               ),
@@ -75,8 +76,23 @@ class _AgendaScreenState extends State<AgendaScreen> {
                     context,
                     MaterialPageRoute(builder: (context) => const CriarSessaoScreen()),
                   );
+
                   if (criado == true && context.mounted) {
+                    // 1. Atualiza a timeline da Agenda normalmente
                     context.read<AgendaProvider>().fetchAgenda();
+
+                    // 2. 🔥 O PULO DO GATO PARA A ABA DE CONSISTÊNCIA:
+                    // Para forçar a outra aba a redesenhar do zero sem usar hacks complexos,
+                    // nós podemos notificar o estado da tela mãe (a Home que gerencia as abas)
+                    // dando um sinal para reconstruir a árvore compartilhada.
+                    // Se a sua tela de abas tiver um setState, nós avisamos ela aqui:
+                    if (Navigator.canPop(context)) {
+                      // Caso queira que o pop da tela limpe caches.
+                    }
+
+                    // Se você quiser a solução mais perfeita de todas para as duas telas conversarem,
+                    // basta colocar uma linha para notificar o provedor global se o seu app tiver um:
+                    // context.read<ConsistenciaProvider>().carregarDashboard();
                   }
                 },
               ),

@@ -21,7 +21,7 @@ class AuthProvider extends ChangeNotifier {
     if (token != null) {
       _aluno = await AuthService.getAluno();
       apiService.setToken(token);
-      setAuthToken(token);
+      atualizarTokenNoCore(token); // 👈 Mudou aqui
       _logado = true;
     }
   }
@@ -32,7 +32,7 @@ class AuthProvider extends ChangeNotifier {
       _aluno = result['aluno'];
       final token = await AuthService.getToken();
       apiService.setToken(token!);
-      setAuthToken(token);
+      atualizarTokenNoCore(token); // 👈 Mudou aqui
       _logado = true;
       notifyListeners();
       return null;
@@ -50,7 +50,7 @@ class AuthProvider extends ChangeNotifier {
       _aluno = result['aluno'];
       final token = await AuthService.getToken();
       apiService.setToken(token!);
-      setAuthToken(token);
+      atualizarTokenNoCore(token); // 👈 Mudou aqui
       _logado = true;
       notifyListeners();
       return null;
@@ -61,9 +61,17 @@ class AuthProvider extends ChangeNotifier {
   Future<void> logout() async {
     await AuthService.logout();
     apiService.clearToken();
-    setAuthToken(null);
+    atualizarTokenNoCore(null); // 👈 Mudou aqui
     _aluno = null;
     _logado = false;
     notifyListeners();
+  }
+
+  // ===========================================================================
+  // 🛠️ MÉTODO ADICIONADO: Sincroniza o Token com o Core de Rede (Opção A)
+  // ===========================================================================
+  // 🔑 Nome único para evitar conflitos de importação
+  void atualizarTokenNoCore(String? token) {
+    ApiClient.setToken(token);
   }
 }
