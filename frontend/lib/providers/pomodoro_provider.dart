@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 
 import '../models/disciplina_model.dart';
 import '../services/disciplina_service.dart';
+import '../services/agenda_service.dart';
+import '../services/sessao_estudo_service.dart';
 
 enum PomodoroMode { foco, curta, longa }
 
@@ -22,22 +24,32 @@ class PomodoroHistoryEntry {
 }
 
 class _MetaDisciplina {
+  /// -1 quando a disciplina não tem evento acadêmico com prazo definido.
   final int diasRestantes;
   final String tipo;
+  final String titulo;
   final int planejado;
-  const _MetaDisciplina(this.diasRestantes, this.tipo, this.planejado);
+  /// Id do EventoAcademico de origem (null quando é o fallback "sem prazo").
+  final String? eventoId;
+  const _MetaDisciplina(this.diasRestantes, this.tipo, this.titulo, this.planejado, this.eventoId);
 }
 
-const List<String> _kTiposMeta = ['Prova', 'Trabalho', 'Seminário', 'Exercícios'];
-
-/// Estado do timer Pomodoro. Mantido em memória (não persiste no backend);
-/// só a lista de disciplinas vem da API.
+/// Estado do timer Pomodoro. Disciplinas, metas (via Agenda) e progresso da
+/// semana (via SessaoEstudo) vêm do backend; cada ciclo de foco concluído é
+/// persistido como uma sessão de estudo CONCLUIDO.
 class PomodoroProvider extends ChangeNotifier {
   final DisciplinaService _disciplinaService;
+  final AgendaService _agendaService;
+  final SessaoEstudoService _sessaoEstudoService;
 
-  PomodoroProvider({DisciplinaService? disciplinaService})
-      : _disciplinaService = disciplinaService ?? DisciplinaService() {
-    _carregarDisciplinas();
+  PomodoroProvider({
+    DisciplinaService? disciplinaService,
+    AgendaService? agendaService,
+    SessaoEstudoService? sessaoEstudoService,
+  })  : _disciplinaService = disciplinaService ?? DisciplinaService(),
+        _agendaService = agendaService ?? AgendaService(),
+        _sessaoEstudoService = sessaoEstudoService ?? SessaoEstudoService() {
+    _carregarTudo();
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) => _tick());
   }
 
@@ -58,7 +70,8 @@ class PomodoroProvider extends ChangeNotifier {
   bool loading = true;
   String? error;
   List<Disciplina> disciplinas = [];
-  final Map<String, _MetaDisciplina> _metas = {};
+  final Map<String, List<_MetaDisciplina>> _metasPorDisciplina = {};
+  final Map<String, int> _metaIndexPorDisciplina = {};
   final Map<String, int> _doneCounts = {};
 
   final Map<PomodoroMode, int> durations = {
@@ -80,17 +93,11 @@ class PomodoroProvider extends ChangeNotifier {
   final List<double> weekHours = List.filled(7, 0.0);
   final List<PomodoroHistoryEntry> history = [];
 
-  Future<void> _carregarDisciplinas() async {
+  Future<void> _carregarTudo() async {
     try {
       final lista = await _disciplinaService.getDisciplinas();
       disciplinas = lista.where((d) => d.ativo).toList();
-      final rnd = Random(42);
       for (final d in disciplinas) {
-        _metas[d.id] = _MetaDisciplina(
-          1 + rnd.nextInt(7),
-          _kTiposMeta[rnd.nextInt(_kTiposMeta.length)],
-          3 + rnd.nextInt(6),
-        );
         _doneCounts[d.id] = 0;
       }
       remainingSeconds = durations[mode]! * 60;
@@ -98,6 +105,134 @@ class PomodoroProvider extends ChangeNotifier {
       error = 'Não foi possível carregar as disciplinas.';
     } finally {
       loading = false;
+      notifyListeners();
+    }
+    // Falhas nas duas chamadas abaixo não devem travar a tela: o Pomodoro
+    // continua funcional com metas/histórico vazios se a rede falhar.
+    await _carregarMetasReais();
+    await _carregarProgressoSemana();
+  }
+
+  /// Usa a Agenda (eventos acadêmicos por disciplina) para listar, por
+  /// disciplina, cada evento pendente (Prova, Trabalho etc.) como uma meta
+  /// selecionável — evita misturar prazos diferentes da mesma disciplina.
+  /// meta_horas_semanais da disciplina define quantos pomodoros de foco são
+  /// "planejados" na semana (igual para todas as metas da disciplina).
+  Future<void> _carregarMetasReais() async {
+    try {
+      final agenda = await _agendaService.getAgenda();
+      final eventosPendentes = agenda.itens
+          .where((i) => i.isEvento && !(i.concluido ?? false))
+          .toList();
+
+      for (final d in disciplinas) {
+        final eventosDaDisciplina = eventosPendentes
+            .where((e) => e.disciplinaId == d.id)
+            .toList()
+          ..sort((a, b) => (a.diasRestantes ?? 999).compareTo(b.diasRestantes ?? 999));
+
+        final planejado = d.metaHorasSemanais > 0
+            ? max(1, (d.metaHorasSemanais * 60 / durations[PomodoroMode.foco]!).round())
+            : 0;
+
+        final metas = eventosDaDisciplina
+            .map((e) => _MetaDisciplina(
+                  e.diasRestantes ?? 0,
+                  e.tipoEvento ?? 'Evento',
+                  e.titulo,
+                  planejado,
+                  e.id,
+                ))
+            .toList();
+
+        if (metas.isEmpty && planejado > 0) {
+          metas.add(_MetaDisciplina(-1, '', '', planejado, null));
+        }
+
+        _metasPorDisciplina[d.id] = metas;
+        _metaIndexPorDisciplina[d.id] = 0;
+      }
+      notifyListeners();
+    } catch (_) {
+      // Sem prazos reais disponíveis: dueText cai no fallback "sem meta definida".
+    }
+  }
+
+  /// Usa as sessões concluídas da semana atual para preencher o histórico,
+  /// as horas por dia da semana e as sessões concluídas hoje.
+  Future<void> _carregarProgressoSemana() async {
+    try {
+      final sessoes = await _sessaoEstudoService.getSemanaAtual();
+      final concluidas = sessoes.where((s) => s.status == 'CONCLUIDO').toList();
+
+      for (var i = 0; i < weekHours.length; i++) {
+        weekHours[i] = 0.0;
+      }
+      sessionsToday = 0;
+      focusSecondsToday = 0;
+      _doneCounts.updateAll((key, value) => 0);
+
+      final hoje = DateTime.now();
+      for (final s in concluidas) {
+        final idx = s.inicio.weekday - 1;
+        if (idx >= 0 && idx < 7) weekHours[idx] += s.duracaoRealizada / 60.0;
+        if (_isMesmoDia(s.inicio, hoje)) {
+          sessionsToday++;
+          focusSecondsToday += s.duracaoRealizada * 60;
+        }
+        _doneCounts[s.disciplinaId] = (_doneCounts[s.disciplinaId] ?? 0) + 1;
+      }
+
+      concluidas.sort((a, b) => b.inicio.compareTo(a.inicio));
+      history
+        ..clear()
+        ..addAll(concluidas.take(6).map((s) {
+          final match = disciplinas.where((d) => d.id == s.disciplinaId);
+          final cor = match.isNotEmpty ? _parseHex(match.first.cor) : modeColors[PomodoroMode.foco]!;
+          return PomodoroHistoryEntry(
+            disciplinaNome: s.disciplinaNome,
+            cor: cor,
+            duracaoMinutos: s.duracaoRealizada,
+            hora: '${s.inicio.hour.toString().padLeft(2, '0')}:${s.inicio.minute.toString().padLeft(2, '0')}',
+          );
+        }));
+      notifyListeners();
+    } catch (_) {
+      // Sem progresso real disponível: mantém weekHours/history/sessionsToday zerados.
+    }
+  }
+
+  bool _isMesmoDia(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
+  /// Persiste um ciclo de foco concluído como sessão CONCLUIDO no backend.
+  /// Nunca bloqueia o timer: falhas de rede só marcam [error] para exibição.
+  Future<void> _persistirSessaoConcluida(
+    String disciplinaId,
+    DateTime inicio,
+    DateTime fim,
+    int duracaoMinutos,
+    String? descricao,
+    String? eventoAcademicoId,
+  ) async {
+    try {
+      await _sessaoEstudoService.criarSessaoConcluida(
+        disciplinaId: disciplinaId,
+        inicio: inicio,
+        fim: fim,
+        duracaoRealizada: duracaoMinutos,
+        descricao: descricao,
+        eventoAcademicoId: eventoAcademicoId,
+      );
+      if (error != null) {
+        error = null;
+        notifyListeners();
+      }
+    } on AgendaServiceException catch (e) {
+      error = 'Sessão não foi salva no servidor: ${e.message}';
+      notifyListeners();
+    } catch (_) {
+      error = 'Sessão não foi salva no servidor.';
       notifyListeners();
     }
   }
@@ -113,11 +248,23 @@ class PomodoroProvider extends ChangeNotifier {
 
   Color get corSelecionadaSuave => Color.lerp(corSelecionada, Colors.white, 0.85)!;
 
+  List<_MetaDisciplina> get _metasDisciplinaSelecionada {
+    final d = disciplinaSelecionada;
+    if (d == null) return const [];
+    return _metasPorDisciplina[d.id] ?? const [];
+  }
+
   _MetaDisciplina? get _metaSelecionada {
     final d = disciplinaSelecionada;
-    if (d == null) return null;
-    return _metas[d.id];
+    final lista = _metasDisciplinaSelecionada;
+    if (d == null || lista.isEmpty) return null;
+    final idx = (_metaIndexPorDisciplina[d.id] ?? 0) % lista.length;
+    return lista[idx];
   }
+
+  /// Indica se a disciplina selecionada tem mais de um evento acadêmico
+  /// (ex.: Prova e Trabalho), então vale mostrar o seletor de meta.
+  bool get temMultiplasMetas => _metasDisciplinaSelecionada.length > 1;
 
   int get doneCountSelecionado {
     final d = disciplinaSelecionada;
@@ -128,13 +275,33 @@ class PomodoroProvider extends ChangeNotifier {
   String get dueText {
     final meta = _metaSelecionada;
     if (meta == null) return 'sem meta definida';
+    if (meta.diasRestantes < 0) {
+      return meta.planejado > 0
+          ? 'meta semanal: ${meta.planejado} pomodoros'
+          : 'sem meta definida';
+    }
     final dd = meta.diasRestantes;
     final prazo = dd <= 0 ? 'entrega hoje' : (dd == 1 ? 'falta 1 dia' : 'faltam $dd dias');
-    return '$prazo · ${meta.tipo}';
+    final rotulo = meta.titulo.isNotEmpty ? meta.titulo : meta.tipo;
+    return '$prazo · $rotulo';
+  }
+
+  /// Texto que identifica qual meta específica (ex.: Prova vs Trabalho) da
+  /// disciplina está selecionada, usado como descrição da sessão persistida.
+  String? get _descricaoParaSessao {
+    final meta = _metaSelecionada;
+    if (meta == null) return null;
+    final rotulo = meta.titulo.isNotEmpty ? meta.titulo : meta.tipo;
+    if (rotulo.isEmpty) return null;
+    if (meta.diasRestantes < 0) return rotulo;
+    final dd = meta.diasRestantes;
+    final prazo = dd <= 0 ? 'entrega hoje' : (dd == 1 ? 'falta 1 dia' : 'faltam $dd dias');
+    return '$rotulo · $prazo';
   }
 
   Color get dueColor {
-    final dd = _metaSelecionada?.diasRestantes ?? 99;
+    final dd = _metaSelecionada?.diasRestantes;
+    if (dd == null || dd < 0) return const Color(0xFF6B7280);
     if (dd <= 1) return const Color(0xFFE53935);
     if (dd <= 3) return const Color(0xFFF9A825);
     return const Color(0xFF6B7280);
@@ -186,17 +353,28 @@ class PomodoroProvider extends ChangeNotifier {
     if (mode == PomodoroMode.foco) {
       final d = disciplinaSelecionada;
       if (d != null) {
+        final duracaoMin = durations[PomodoroMode.foco]!;
+        final fim = DateTime.now();
         history.insert(
           0,
           PomodoroHistoryEntry(
             disciplinaNome: d.nome,
             cor: _parseHex(d.cor),
-            duracaoMinutos: durations[PomodoroMode.foco]!,
+            duracaoMinutos: duracaoMin,
             hora: _horaAtual(),
           ),
         );
         if (history.length > 6) history.removeRange(6, history.length);
         _doneCounts[d.id] = (_doneCounts[d.id] ?? 0) + 1;
+        // Não aguardado de propósito: falha de rede não pode travar o timer.
+        _persistirSessaoConcluida(
+          d.id,
+          fim.subtract(Duration(minutes: duracaoMin)),
+          fim,
+          duracaoMin,
+          _descricaoParaSessao,
+          _metaSelecionada?.eventoId,
+        );
       }
       final isRoundEnd = cycle % cyclesPerRound == 0;
       final proximoModo = isRoundEnd ? PomodoroMode.longa : PomodoroMode.curta;
@@ -237,6 +415,18 @@ class PomodoroProvider extends ChangeNotifier {
   void trocarDisciplina() {
     if (disciplinas.isEmpty) return;
     selectedIndex = (selectedIndex + 1) % disciplinas.length;
+    notifyListeners();
+  }
+
+  /// Alterna entre os eventos (metas) da disciplina selecionada, ex.: entre
+  /// Prova e Trabalho da mesma disciplina. Não faz nada se houver 0 ou 1.
+  void trocarMeta() {
+    final d = disciplinaSelecionada;
+    if (d == null) return;
+    final lista = _metasPorDisciplina[d.id] ?? const [];
+    if (lista.length <= 1) return;
+    final atual = _metaIndexPorDisciplina[d.id] ?? 0;
+    _metaIndexPorDisciplina[d.id] = (atual + 1) % lista.length;
     notifyListeners();
   }
 

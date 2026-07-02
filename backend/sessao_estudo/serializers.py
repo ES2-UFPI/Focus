@@ -19,6 +19,7 @@ class SessaoEstudoSerializer(serializers.ModelSerializer):
             'semana_estudo',
             'disciplina',
             'disciplina_nome',
+            'evento_academico',
             'horario_estudo',
             'inicio',
             'fim',
@@ -30,7 +31,6 @@ class SessaoEstudoSerializer(serializers.ModelSerializer):
             'id',
             'semana_estudo',
             'horario_estudo',
-            'duracao_realizada',
         ]
 
     def get_semana_estudo(self, obj):

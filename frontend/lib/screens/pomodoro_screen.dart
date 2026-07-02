@@ -199,14 +199,32 @@ class _TimerCard extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        Icon(Icons.hourglass_bottom_rounded, size: 14, color: provider.dueColor),
-                        const SizedBox(width: 6),
-                        Text(provider.dueText,
-                            style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: provider.dueColor)),
-                      ],
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Icon(Icons.hourglass_bottom_rounded, size: 14, color: provider.dueColor),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(provider.dueText,
+                                style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: provider.dueColor),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis),
+                          ),
+                          if (provider.temMultiplasMetas) ...[
+                            const SizedBox(width: 6),
+                            InkWell(
+                              onTap: provider.trocarMeta,
+                              borderRadius: BorderRadius.circular(6),
+                              child: const Tooltip(
+                                message: 'Trocar meta (Prova, Trabalho...)',
+                                child: Icon(Icons.swap_horiz_rounded, size: 15, color: AppColors.textMuted),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
                     ),
+                    const SizedBox(width: 8),
                     Text('${provider.doneCountSelecionado} de ${provider.goalPlanejado} pomodoros',
                         style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.textSecondary)),
                   ],
