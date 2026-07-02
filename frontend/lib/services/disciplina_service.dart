@@ -8,7 +8,7 @@ class DisciplinaService {
   Future<List<Disciplina>> getDisciplinas() async {
     final uri = Uri.parse('$kBaseUrl/api/disciplinas/');
     try {
-      final response = await http.get(uri, headers: defaultHeaders);
+      final response = await http.get(uri, headers: kDefaultHeaders);
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body) as List<dynamic>;
         return data.map((j) => Disciplina.fromJson(j as Map<String, dynamic>)).toList();
@@ -39,7 +39,7 @@ class DisciplinaService {
     try {
       final response = await http.post(
         uri,
-        headers: defaultHeaders,
+        headers: kDefaultHeaders,
         body: json.encode(body),
       );
 

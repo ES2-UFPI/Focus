@@ -56,15 +56,18 @@ class SessaoEstudo(models.Model):
             if self.fim <= self.inicio:
                 raise ValidationError("A data/hora de término deve ser posterior à data/hora de início.")
             
-            # 2. Sessão duplicada
+            # 2. Sessão duplicada (🔥 CORRIGIDO AQUI)
             if hasattr(self, 'disciplina') and self.disciplina:
                 duplicates = SessaoEstudo.objects.filter(
                     disciplina=self.disciplina,
                     inicio=self.inicio,
                     fim=self.fim
                 )
-                if self.pk:
-                    duplicates = duplicates.exclude(pk=self.pk)
+                
+                # Garante de forma robusta que estamos editando a mesma sessão
+                if self.id is not None:
+                    duplicates = duplicates.exclude(id=self.id)
+                    
                 if duplicates.exists():
                     raise ValidationError("Já existe uma sessão de estudo cadastrada com estes mesmos horários para esta disciplina.")
                 
@@ -75,10 +78,14 @@ class SessaoEstudo(models.Model):
                     inicio__lt=self.fim,
                     fim__gt=self.inicio
                 )
-                if self.pk:
-                    overlapping = overlapping.exclude(pk=self.pk)
+                
+                # Garante de forma robusta que não vai conflitar com ela mesma na edição
+                if self.id is not None:
+                    overlapping = overlapping.exclude(id=self.id)
+                    
                 if overlapping.exists():
                     raise ValidationError("Conflito de agenda: Esta sessão de estudo coincide com outra sessão de estudo do aluno.")
+
 
     class Meta:
         verbose_name = 'Sessão de Estudo'

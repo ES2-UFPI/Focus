@@ -1,22 +1,30 @@
-/// Configuração centralizada de rede para comunicação com o backend Django.
-library;
+import 'package:flutter/foundation.dart';
 
-const String kBaseUrl = 'http://localhost:8000';
+const String kBaseUrl = 'http://localhost:8000'; // Ajuste conforme sua URL base
 
-String? _kAuthToken;
+class ApiClient {
+  // 🔑 Armazenamento global do token dentro do core de rede
+  static String? _token;
 
-void setAuthToken(String? token) {
-  _kAuthToken = token;
+  /// Salva o token na memória global assim que o login for bem-sucedido
+  static void setToken(String? token) {
+    _token = token;
+    if (kDebugMode) {
+      print('🔑 [ApiClient] Token atualizado globalmente: $_token');
+    }
+  }
+
+  /// Limpa o token no logout
+  static void clearToken() {
+    _token = null;
+  }
+
+  /// Getter dinâmico que substitui a constante antiga antiga
+  static Map<String, String> get headers => {
+    'Content-Type': 'application/json',
+    if (_token != null) 'Authorization': 'Token $_token',
+  };
 }
 
-Map<String, String> get defaultHeaders => {
-  'Content-Type': 'application/json',
-  'Accept': 'application/json',
-  if (_kAuthToken != null) 'Authorization': 'Token $_kAuthToken',
-};
-
-// Mantido para compatibilidade com código legado que não precisa de auth.
-const Map<String, String> kDefaultHeaders = {
-  'Content-Type': 'application/json',
-  'Accept': 'application/json',
-};
+// 🔄 Para manter a compatibilidade com o resto do seu projeto sem quebrar nada:
+Map<String, String> get kDefaultHeaders => ApiClient.headers;

@@ -56,7 +56,7 @@ class EventoService {
     try {
       response = await http.post(
         uri,
-        headers: defaultHeaders,
+        headers: kDefaultHeaders,
         body: json.encode(body),
       );
     } catch (e) {
@@ -103,7 +103,7 @@ class EventoService {
     try {
       response = await http.patch(
         uri,
-        headers: defaultHeaders,
+        headers: kDefaultHeaders,
         body: json.encode(body),
       );
     } catch (e) {
@@ -123,7 +123,7 @@ class EventoService {
 
     late http.Response response;
     try {
-      response = await http.delete(uri, headers: defaultHeaders);
+      response = await http.delete(uri, headers: kDefaultHeaders);
     } catch (e) {
       throw AgendaServiceException('Erro de conexão: $e');
     }

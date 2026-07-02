@@ -2,20 +2,36 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/disciplina.dart';
 import '../models/material_estudo.dart';
+import '../models/dashboard_model.dart';
+
 
 class ApiService {
   static const String _baseUrl = 'http://localhost:8000/api';
 
-  String? _token;
+  // 🔑 O SEGREDO ESTÁ AQUI: Adicione o modificador static!
+  static String? _token;
 
-  void setToken(String token) => _token = token;
+  void setToken(String token) {
+    _token = token;
+    print("🔑 [ApiService] Token guardado na memória global: $_token");
+  }
+
   void clearToken() => _token = null;
 
-  Map<String, String> _headers() => {
-    'Content-Type': 'application/json',
-    if (_token != null) 'Authorization': 'Token $_token',
-  };
+  Map<String, String> _headers() {
+    final Map<String, String> headers = {
+      'Content-Type': 'application/json',
+    };
 
+    if (_token != null) {
+      headers['Authorization'] = 'Token $_token';
+      print("🚀 [ApiService] Enviando requisição COM Token: Token $_token");
+    } else {
+      print("⚠️ [ApiService] AVISO: Enviando requisição SEM Token (Anônimo)!");
+    }
+
+    return headers;
+  }
   Future<List<Disciplina>> getDisciplinas() async {
     final response = await http.get(
       Uri.parse('$_baseUrl/disciplinas/'),
@@ -79,5 +95,20 @@ class ApiService {
       headers: _headers(),
     );
     return response.statusCode == 204;
+  }
+
+  Future<DashboardData?> getDashboardConsistencia() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/sessoes-estudo/dashboard/'),
+        headers: _headers(),
+      );
+      if (response.statusCode == 200) {
+        return DashboardData.fromJson(jsonDecode(response.body));
+      }
+    } catch (e) {
+      print('Erro ao buscar dashboard: $e');
+    }
+    return null;
   }
 }

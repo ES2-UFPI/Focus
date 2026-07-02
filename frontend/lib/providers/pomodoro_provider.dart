@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 
 import '../models/disciplina_model.dart';
@@ -67,6 +68,9 @@ class PomodoroProvider extends ChangeNotifier {
 
   late final Timer _ticker;
 
+  /// Player do alarme tocado quando o timer zera naturalmente (não no Pular).
+  final AudioPlayer _alarmePlayer = AudioPlayer();
+
   bool loading = true;
   String? error;
   List<Disciplina> disciplinas = [];
@@ -93,6 +97,14 @@ class PomodoroProvider extends ChangeNotifier {
   final List<double> weekHours = List.filled(7, 0.0);
   final List<PomodoroHistoryEntry> history = [];
 
+  /// Sessões AGENDADO de todas as disciplinas, usadas no seletor
+  /// matéria → sessão (a lista de baixo depende da matéria escolhida).
+  List<SessaoEstudoResumo> _sessoesAgendadas = [];
+
+  /// Sessão específica escolhida pelo usuário para rodar o Pomodoro.
+  /// Precisa estar preenchida para o modo Foco poder iniciar.
+  SessaoEstudoResumo? sessaoSelecionada;
+
   Future<void> _carregarTudo() async {
     try {
       final lista = await _disciplinaService.getDisciplinas();
@@ -107,10 +119,24 @@ class PomodoroProvider extends ChangeNotifier {
       loading = false;
       notifyListeners();
     }
-    // Falhas nas duas chamadas abaixo não devem travar a tela: o Pomodoro
-    // continua funcional com metas/histórico vazios se a rede falhar.
+    // Falhas nas chamadas abaixo não devem travar a tela: o Pomodoro
+    // continua funcional com metas/histórico/sessões vazios se a rede falhar.
     await _carregarMetasReais();
     await _carregarProgressoSemana();
+    await _carregarSessoesAgendadas();
+  }
+
+  /// Busca todas as sessões AGENDADO do aluno, para alimentar o seletor de
+  /// sessão específica (matéria → sessão) na tela do Pomodoro.
+  Future<void> _carregarSessoesAgendadas() async {
+    try {
+      final sessoes = await _sessaoEstudoService.listarSessoes();
+      _sessoesAgendadas = sessoes.where((s) => s.status == 'AGENDADO').toList()
+        ..sort((a, b) => a.inicio.compareTo(b.inicio));
+      notifyListeners();
+    } catch (_) {
+      // Sem sessões agendadas disponíveis: lista fica vazia no seletor.
+    }
   }
 
   /// Usa a Agenda (eventos acadêmicos por disciplina) para listar, por
@@ -205,29 +231,42 @@ class PomodoroProvider extends ChangeNotifier {
   bool _isMesmoDia(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
 
-  /// Persiste um ciclo de foco concluído como sessão CONCLUIDO no backend.
+  /// Persiste um ciclo de foco concluído fazendo PATCH na sessão que o
+  /// usuário selecionou. Só soma os minutos de foco em duracao_realizada —
+  /// não altera status, inicio, fim nem disciplina da sessão (pausas não
+  /// contam, e a sessão continua AGENDADO/CONCLUIDO/CANCELADO como estava).
   /// Nunca bloqueia o timer: falhas de rede só marcam [error] para exibição.
-  Future<void> _persistirSessaoConcluida(
-    String disciplinaId,
-    DateTime inicio,
-    DateTime fim,
-    int duracaoMinutos,
-    String? descricao,
-    String? eventoAcademicoId,
-  ) async {
+  Future<void> _persistirSessaoConcluida(int duracaoMinutos) async {
+    final sessao = sessaoSelecionada;
+    if (sessao == null) return;
+    final novaDuracao = sessao.duracaoRealizada + duracaoMinutos;
     try {
-      await _sessaoEstudoService.criarSessaoConcluida(
-        disciplinaId: disciplinaId,
-        inicio: inicio,
-        fim: fim,
-        duracaoRealizada: duracaoMinutos,
-        descricao: descricao,
-        eventoAcademicoId: eventoAcademicoId,
+      await _sessaoEstudoService.editarSessao(
+        sessaoId: sessao.id,
+        disciplinaId: sessao.disciplinaId,
+        inicio: sessao.inicio,
+        fim: sessao.fim,
+        status: sessao.status,
+        duracaoRealizada: novaDuracao,
       );
+      // Mantém a sessão selecionada com a duração atualizada, para que os
+      // próximos ciclos de foco continuem somando na mesma sessão.
+      final atualizada = SessaoEstudoResumo(
+        id: sessao.id,
+        disciplinaId: sessao.disciplinaId,
+        disciplinaNome: sessao.disciplinaNome,
+        inicio: sessao.inicio,
+        fim: sessao.fim,
+        duracaoRealizada: novaDuracao,
+        status: sessao.status,
+      );
+      sessaoSelecionada = atualizada;
+      final idx = _sessoesAgendadas.indexWhere((s) => s.id == sessao.id);
+      if (idx != -1) _sessoesAgendadas[idx] = atualizada;
       if (error != null) {
         error = null;
-        notifyListeners();
       }
+      notifyListeners();
     } on AgendaServiceException catch (e) {
       error = 'Sessão não foi salva no servidor: ${e.message}';
       notifyListeners();
@@ -239,6 +278,17 @@ class PomodoroProvider extends ChangeNotifier {
 
   Disciplina? get disciplinaSelecionada =>
       disciplinas.isEmpty ? null : disciplinas[selectedIndex % disciplinas.length];
+
+  /// Sessões AGENDADO da disciplina selecionada, para o segundo seletor
+  /// (matéria → sessão). Vazio quando a matéria não tem sessão agendada.
+  List<SessaoEstudoResumo> get sessoesDaDisciplinaSelecionada {
+    final d = disciplinaSelecionada;
+    if (d == null) return const [];
+    return _sessoesAgendadas.where((s) => s.disciplinaId == d.id).toList();
+  }
+
+  /// O timer só pode iniciar o modo Foco depois de uma sessão selecionada.
+  bool get podeIniciarFoco => sessaoSelecionada != null;
 
   Color get corSelecionada {
     final d = disciplinaSelecionada;
@@ -286,19 +336,6 @@ class PomodoroProvider extends ChangeNotifier {
     return '$prazo · $rotulo';
   }
 
-  /// Texto que identifica qual meta específica (ex.: Prova vs Trabalho) da
-  /// disciplina está selecionada, usado como descrição da sessão persistida.
-  String? get _descricaoParaSessao {
-    final meta = _metaSelecionada;
-    if (meta == null) return null;
-    final rotulo = meta.titulo.isNotEmpty ? meta.titulo : meta.tipo;
-    if (rotulo.isEmpty) return null;
-    if (meta.diasRestantes < 0) return rotulo;
-    final dd = meta.diasRestantes;
-    final prazo = dd <= 0 ? 'entrega hoje' : (dd == 1 ? 'falta 1 dia' : 'faltam $dd dias');
-    return '$rotulo · $prazo';
-  }
-
   Color get dueColor {
     final dd = _metaSelecionada?.diasRestantes;
     if (dd == null || dd < 0) return const Color(0xFF6B7280);
@@ -339,11 +376,24 @@ class PomodoroProvider extends ChangeNotifier {
     return '${h}h ${m.toString().padLeft(2, '0')}m';
   }
 
+  /// Toca o alarme sonoro. Falha de áudio nunca pode afetar o timer.
+  Future<void> _tocarAlarme() async {
+    try {
+      await _alarmePlayer.stop();
+      await _alarmePlayer.play(AssetSource('sounds/alarme_pomodoro.wav'));
+    } catch (_) {
+      // Sem áudio disponível (ex.: autoplay bloqueado no navegador): ignora.
+    }
+  }
+
   void _tick() {
     if (!running) return;
     if (remainingSeconds > 1) {
       remainingSeconds--;
     } else {
+      // Término natural do timer (foco ou pausa): toca o alarme.
+      // O Pular (skip) chama _completarFase direto, sem som.
+      _tocarAlarme();
       _completarFase();
     }
     notifyListeners();
@@ -354,7 +404,6 @@ class PomodoroProvider extends ChangeNotifier {
       final d = disciplinaSelecionada;
       if (d != null) {
         final duracaoMin = durations[PomodoroMode.foco]!;
-        final fim = DateTime.now();
         history.insert(
           0,
           PomodoroHistoryEntry(
@@ -367,14 +416,7 @@ class PomodoroProvider extends ChangeNotifier {
         if (history.length > 6) history.removeRange(6, history.length);
         _doneCounts[d.id] = (_doneCounts[d.id] ?? 0) + 1;
         // Não aguardado de propósito: falha de rede não pode travar o timer.
-        _persistirSessaoConcluida(
-          d.id,
-          fim.subtract(Duration(minutes: duracaoMin)),
-          fim,
-          duracaoMin,
-          _descricaoParaSessao,
-          _metaSelecionada?.eventoId,
-        );
+        _persistirSessaoConcluida(duracaoMin);
       }
       final isRoundEnd = cycle % cyclesPerRound == 0;
       final proximoModo = isRoundEnd ? PomodoroMode.longa : PomodoroMode.curta;
@@ -396,6 +438,11 @@ class PomodoroProvider extends ChangeNotifier {
   }
 
   void toggle() {
+    if (!running && mode == PomodoroMode.foco && !podeIniciarFoco) {
+      error = 'Selecione uma matéria e uma sessão para iniciar o foco.';
+      notifyListeners();
+      return;
+    }
     running = !running;
     notifyListeners();
   }
@@ -415,6 +462,24 @@ class PomodoroProvider extends ChangeNotifier {
   void trocarDisciplina() {
     if (disciplinas.isEmpty) return;
     selectedIndex = (selectedIndex + 1) % disciplinas.length;
+    sessaoSelecionada = null;
+    notifyListeners();
+  }
+
+  /// Primeiro passo do seletor: escolhe a matéria. Limpa a sessão escolhida
+  /// anteriormente, já que a lista de sessões depende da matéria.
+  void selecionarDisciplina(Disciplina disciplina) {
+    final idx = disciplinas.indexWhere((d) => d.id == disciplina.id);
+    if (idx == -1) return;
+    selectedIndex = idx;
+    sessaoSelecionada = null;
+    notifyListeners();
+  }
+
+  /// Segundo passo do seletor: escolhe a sessão específica (por data/horário)
+  /// dentro da matéria já selecionada.
+  void selecionarSessao(SessaoEstudoResumo sessao) {
+    sessaoSelecionada = sessao;
     notifyListeners();
   }
 
@@ -460,6 +525,7 @@ class PomodoroProvider extends ChangeNotifier {
   @override
   void dispose() {
     _ticker.cancel();
+    _alarmePlayer.dispose();
     super.dispose();
   }
 }

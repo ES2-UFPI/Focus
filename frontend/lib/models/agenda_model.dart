@@ -79,7 +79,7 @@ class AgendaItem {
       id: json['id'] as String,
       titulo: json['titulo'] as String,
       data: json['data'] as String,
-      timestamp: DateTime.parse(json['timestamp'] as String),
+      timestamp: DateTime.parse(json['timestamp'] as String).toLocal(),
       descricao: json['descricao'] as String?,
       disciplinaId: json['disciplina_id'] as String?,
       disciplinaNome: json['disciplina_nome'] as String? ?? '',
@@ -90,11 +90,12 @@ class AgendaItem {
       horaInicio: json['hora_inicio'] as String?,
       horaFim: json['hora_fim'] as String?,
       inicio: json['inicio'] != null
-          ? DateTime.parse(json['inicio'] as String)
+          ? DateTime.parse(json['inicio'] as String).toLocal()
           : null,
+      // 🌟 CORRIGIDO: Força a conversão para o fuso local do aparelho
       fim: json['fim'] != null
-          ? DateTime.parse(json['fim'] as String)
-          : null,
+          ? DateTime.parse(json['fim'] as String).toLocal()
+          : null, 
       status: json['status'] as String?,
       duracaoRealizada: json['duracao_realizada'] as int?,
     );

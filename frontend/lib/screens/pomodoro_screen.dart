@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../core/theme/app_theme.dart';
 import '../providers/pomodoro_provider.dart';
+import '../services/sessao_estudo_service.dart';
 
 class PomodoroScreen extends StatelessWidget {
   const PomodoroScreen({super.key});
@@ -45,15 +46,13 @@ class _PomodoroView extends StatelessWidget {
                           const SizedBox(height: 22),
                         if (provider.disciplinas.isNotEmpty)
                           isWide
-                              ? IntrinsicHeight(
-                                  child: Row(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Expanded(flex: 3, child: _TimerCard(provider: provider)),
-                                      const SizedBox(width: 22),
-                                      SizedBox(width: 340, child: _SidePanel(provider: provider)),
-                                    ],
-                                  ),
+                              ? Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(flex: 3, child: _TimerCard(provider: provider)),
+                                    const SizedBox(width: 22),
+                                    SizedBox(width: 340, child: _SidePanel(provider: provider)),
+                                  ],
                                 )
                               : Column(
                                   children: [
@@ -167,78 +166,17 @@ class _TimerCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(d.nome,
-                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis),
-                          Text(subtitulo, style: const TextStyle(fontSize: 12.5, color: AppColors.textMuted)),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    OutlinedButton.icon(
-                      onPressed: provider.trocarDisciplina,
-                      icon: const Icon(Icons.sync_alt_rounded, size: 14),
-                      label: const Text('Trocar'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.textSecondary,
-                        side: const BorderSide(color: AppColors.border),
-                        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
-                        textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                      ),
+                      child: Text(subtitulo,
+                          style: const TextStyle(fontSize: 12.5, color: AppColors.textMuted),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis),
                     ),
                   ],
                 ),
-                const SizedBox(height: 14),
-                const Divider(height: 1, color: AppColors.borderSubtle),
-                const SizedBox(height: 14),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Row(
-                        children: [
-                          Icon(Icons.hourglass_bottom_rounded, size: 14, color: provider.dueColor),
-                          const SizedBox(width: 6),
-                          Flexible(
-                            child: Text(provider.dueText,
-                                style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: provider.dueColor),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis),
-                          ),
-                          if (provider.temMultiplasMetas) ...[
-                            const SizedBox(width: 6),
-                            InkWell(
-                              onTap: provider.trocarMeta,
-                              borderRadius: BorderRadius.circular(6),
-                              child: const Tooltip(
-                                message: 'Trocar meta (Prova, Trabalho...)',
-                                child: Icon(Icons.swap_horiz_rounded, size: 15, color: AppColors.textMuted),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text('${provider.doneCountSelecionado} de ${provider.goalPlanejado} pomodoros',
-                        style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.textSecondary)),
-                  ],
-                ),
-                const SizedBox(height: 9),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(999),
-                  child: LinearProgressIndicator(
-                    value: provider.goalPct,
-                    minHeight: 8,
-                    backgroundColor: AppColors.borderSubtle,
-                    valueColor: AlwaysStoppedAnimation(provider.corSelecionada),
-                  ),
-                ),
+                const SizedBox(height: 12),
+                _MateriaSeletor(provider: provider),
+                const SizedBox(height: 10),
+                _SessaoSeletor(provider: provider),
               ],
             ),
           ),
@@ -255,6 +193,110 @@ class _TimerCard extends StatelessWidget {
           _DurationSteppers(provider: provider),
         ],
       ),
+    );
+  }
+}
+
+/// Primeiro passo do seletor: escolhe a matéria (disciplina).
+class _MateriaSeletor extends StatelessWidget {
+  final PomodoroProvider provider;
+  const _MateriaSeletor({required this.provider});
+
+  @override
+  Widget build(BuildContext context) {
+    return _SeletorContainer(
+      label: 'MATÉRIA',
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          isExpanded: true,
+          value: provider.disciplinaSelecionada?.id,
+          hint: const Text('Selecione a matéria'),
+          items: provider.disciplinas
+              .map((d) => DropdownMenuItem(value: d.id, child: Text(d.nome, overflow: TextOverflow.ellipsis)))
+              .toList(),
+          onChanged: (id) {
+            if (id == null) return;
+            final d = provider.disciplinas.firstWhere((e) => e.id == id);
+            provider.selecionarDisciplina(d);
+          },
+        ),
+      ),
+    );
+  }
+}
+
+/// Segundo passo do seletor: escolhe a sessão específica (por data/horário)
+/// dentro da matéria já selecionada. Some vazio se a matéria não tiver sessão.
+class _SessaoSeletor extends StatelessWidget {
+  final PomodoroProvider provider;
+  const _SessaoSeletor({required this.provider});
+
+  static String _formatarSessao(SessaoEstudoResumo s) {
+    final data = '${s.inicio.day.toString().padLeft(2, '0')}/${s.inicio.month.toString().padLeft(2, '0')}';
+    final hIni = '${s.inicio.hour.toString().padLeft(2, '0')}:${s.inicio.minute.toString().padLeft(2, '0')}';
+    final hFim = '${s.fim.hour.toString().padLeft(2, '0')}:${s.fim.minute.toString().padLeft(2, '0')}';
+    return '$data · $hIni - $hFim';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final sessoes = provider.sessoesDaDisciplinaSelecionada;
+
+    if (sessoes.isEmpty) {
+      return _SeletorContainer(
+        label: 'SESSÃO',
+        child: Text('Não há sessão agendada para esta matéria.',
+            style: TextStyle(fontSize: 13, color: AppColors.textMuted)),
+      );
+    }
+
+    final valorAtual = sessoes.any((s) => s.id == provider.sessaoSelecionada?.id) ? provider.sessaoSelecionada?.id : null;
+
+    return _SeletorContainer(
+      label: 'SESSÃO',
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          isExpanded: true,
+          value: valorAtual,
+          hint: const Text('Selecione a sessão'),
+          items: sessoes
+              .map((s) => DropdownMenuItem(value: s.id, child: Text(_formatarSessao(s), overflow: TextOverflow.ellipsis)))
+              .toList(),
+          onChanged: (id) {
+            if (id == null) return;
+            final s = sessoes.firstWhere((e) => e.id == id);
+            provider.selecionarSessao(s);
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _SeletorContainer extends StatelessWidget {
+  final String label;
+  final Widget child;
+  const _SeletorContainer({required this.label, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, letterSpacing: 0.6, color: AppColors.neutral)),
+        const SizedBox(height: 4),
+        Container(
+          width: double.infinity,
+          height: 44,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(9),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Align(alignment: Alignment.centerLeft, child: child),
+        ),
+      ],
     );
   }
 }
@@ -543,8 +585,6 @@ class _SidePanel extends StatelessWidget {
       children: [
         _ResumoHojeCard(provider: provider),
         const SizedBox(height: 22),
-        _ConsistenciaSemanalCard(provider: provider),
-        const SizedBox(height: 22),
         _HistoricoCard(provider: provider),
       ],
     );
@@ -594,71 +634,6 @@ class _StatBox extends StatelessWidget {
           Text(value, style: TextStyle(fontFamily: 'monospace', fontSize: 22, fontWeight: FontWeight.w700, color: color)),
           const SizedBox(height: 3),
           Text(label, style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
-        ],
-      ),
-    );
-  }
-}
-
-class _ConsistenciaSemanalCard extends StatelessWidget {
-  final PomodoroProvider provider;
-  const _ConsistenciaSemanalCard({required this.provider});
-
-  static const _dias = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
-
-  @override
-  Widget build(BuildContext context) {
-    final maxH = max(6.0, provider.weekHours.fold<double>(0, max));
-    final total = provider.weekHours.fold<double>(0, (a, b) => a + b);
-    final hojeIdx = DateTime.now().weekday - 1;
-
-    return _Card(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Consistência semanal', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
-          const SizedBox(height: 4),
-          Text('${total.toStringAsFixed(1)}h registradas nesta semana',
-              style: const TextStyle(fontSize: 12.5, color: AppColors.neutral)),
-          const SizedBox(height: 16),
-          SizedBox(
-            height: 96,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: List.generate(7, (i) {
-                final h = provider.weekHours[i];
-                final pct = h <= 0 ? 0.0 : (h / maxH).clamp(0.0, 1.0);
-                final isHoje = i == hojeIdx;
-                final barColor = h <= 0 ? AppColors.borderSubtle : (isHoje ? AppColors.brandPrimary : AppColors.successSoft);
-                return Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 3),
-                    child: Column(
-                      children: [
-                        Expanded(
-                          child: Align(
-                            alignment: Alignment.bottomCenter,
-                            child: FractionallySizedBox(
-                              heightFactor: pct == 0 ? 0.02 : pct,
-                              child: Container(
-                                decoration: BoxDecoration(color: barColor, borderRadius: BorderRadius.circular(6)),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(_dias[i],
-                            style: TextStyle(
-                                fontSize: 11.5,
-                                fontWeight: isHoje ? FontWeight.w700 : FontWeight.w500,
-                                color: isHoje ? AppColors.brandPrimary : AppColors.neutral)),
-                      ],
-                    ),
-                  ),
-                );
-              }),
-            ),
-          ),
         ],
       ),
     );
