@@ -9,10 +9,7 @@ class AppScaffold extends StatelessWidget {
 
   final List<Widget> screens;
 
-  const AppScaffold({
-    super.key,
-    required this.screens,
-  });
+  const AppScaffold({super.key, required this.screens});
 
   @override
   Widget build(BuildContext context) {
@@ -79,6 +76,11 @@ class _BottomNavigationBar extends StatelessWidget {
           icon: Icon(Icons.track_changes_outlined),
           selectedIcon: Icon(Icons.track_changes_rounded),
           label: 'Consistência',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.auto_awesome_outlined),
+          selectedIcon: Icon(Icons.auto_awesome_rounded),
+          label: 'Perfil',
         ),
         NavigationDestination(
           icon: Icon(Icons.timer_outlined),
