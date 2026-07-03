@@ -7,6 +7,8 @@ class Insight {
   final String titulo;
   final String descricao;
   final Map<String, num> numeros;
+  final String categoria;
+  final String? disciplina;
   final int amostra;
   final String confianca;
   final String natureza;
@@ -17,6 +19,8 @@ class Insight {
     required this.titulo,
     required this.descricao,
     required this.numeros,
+    this.categoria = 'tempo',
+    this.disciplina,
     required this.amostra,
     required this.confianca,
     required this.natureza,
@@ -37,6 +41,8 @@ class Insight {
               ),
             )
           : const {},
+      categoria: json['categoria'] as String? ?? 'tempo',
+      disciplina: json['disciplina'] as String?,
       amostra: (json['amostra'] as num?)?.toInt() ?? 0,
       confianca: json['confianca'] as String? ?? 'insuficiente',
       natureza: json['natureza'] as String? ?? 'observacional',

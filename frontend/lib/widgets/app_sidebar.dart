@@ -54,7 +54,7 @@ class AppSidebar extends StatelessWidget {
                   context,
                   AppPage.perfil,
                   LucideIcons.sparkles,
-                  'Perfil',
+                  'Insights',
                 ),
                 _buildItem(
                   context,

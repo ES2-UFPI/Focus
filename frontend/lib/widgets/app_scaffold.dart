@@ -80,7 +80,7 @@ class _BottomNavigationBar extends StatelessWidget {
         NavigationDestination(
           icon: Icon(Icons.auto_awesome_outlined),
           selectedIcon: Icon(Icons.auto_awesome_rounded),
-          label: 'Perfil',
+          label: 'Insights',
         ),
         NavigationDestination(
           icon: Icon(Icons.timer_outlined),
