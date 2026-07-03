@@ -134,58 +134,69 @@ class _TimelineRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // ── Coluna da timeline (dot + linha vertical) ──────────────────
-          SizedBox(
-            width: 24,
-            child: Column(
-              children: [
-                const SizedBox(height: 12),
-                // Dot
-                Container(
-                  width: 10,
-                  height: 10,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: item.isEvento
-                        ? AgendaColors.corPorUrgencia(item.urgencia)
-                        : AgendaColors.corPorStatus(item.status),
-                    border: Border.all(
-                      color: Colors.white,
-                      width: 2,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: (item.isEvento
-                                ? AgendaColors.corPorUrgencia(item.urgencia)
-                                : AgendaColors.corPorStatus(item.status))
-                            .withValues(alpha: 0.35),
-                        blurRadius: 4,
-                      ),
-                    ],
-                  ),
-                ),
-                // Conector vertical
-                if (!isLastInGroup)
-                  Expanded(
-                    child: Container(
-                      width: 2,
-                      color: AgendaColors.timelineConnector,
-                    ),
-                  ),
-                if (isLastInGroup) const Expanded(child: SizedBox()),
-              ],
-            ),
+    // Sem IntrinsicHeight: o conector vertical é um Positioned (top/bottom)
+    // num Stack, acompanhando a altura natural do card sem a passagem de
+    // medição intrínseca — era ela que causava o overflow de 1px por
+    // arredondamento das métricas de texto. Seguro agora porque o
+    // AgendaItemCard não depende mais de altura fechada (barra lateral
+    // também virou Positioned na etapa 1).
+    return Stack(
+      children: [
+        // ── Linha conectora vertical ─────────────────────────────────────
+        // left 11: centralizada sob o dot (coluna de 24 → centro 12, traço
+        // de 2px). top 22: começa abaixo do dot (12 de respiro + 10 do dot).
+        if (!isLastInGroup)
+          const Positioned(
+            left: 11,
+            top: 22,
+            bottom: 0,
+            width: 2,
+            child: ColoredBox(color: AgendaColors.timelineConnector),
           ),
-          const SizedBox(width: 6),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Coluna da timeline (só o dot) ────────────────────────────
+            SizedBox(
+              width: 24,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(height: 12),
+                  // Dot
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: item.isEvento
+                          ? AgendaColors.corPorUrgencia(item.urgencia)
+                          : AgendaColors.corPorStatus(item.status),
+                      border: Border.all(
+                        color: Colors.white,
+                        width: 2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: (item.isEvento
+                                  ? AgendaColors.corPorUrgencia(item.urgencia)
+                                  : AgendaColors.corPorStatus(item.status))
+                              .withValues(alpha: 0.35),
+                          blurRadius: 4,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 6),
 
-          // ── Card do item ──────────────────────────────────────────────
-          Expanded(child: AgendaItemCard(item: item)),
-        ],
-      ),
+            // ── Card do item ────────────────────────────────────────────
+            Expanded(child: AgendaItemCard(item: item)),
+          ],
+        ),
+      ],
     );
   }
 }

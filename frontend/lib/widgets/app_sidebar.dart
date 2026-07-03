@@ -35,6 +35,7 @@ class AppSidebar extends StatelessWidget {
                 _buildItem(context, AppPage.atividades, LucideIcons.clipboardList, 'Atividades'),
                 _buildItem(context, AppPage.eventos, LucideIcons.calendarDays, 'Eventos'),
                 _buildItem(context, AppPage.consistencia, LucideIcons.barChart2, 'Consistência'),
+                _buildItem(context, AppPage.pomodoro, LucideIcons.timer, 'Pomodoro'),
                 _buildItem(context, AppPage.ajustes, LucideIcons.settings, 'Ajustes'),
               ],
             ),

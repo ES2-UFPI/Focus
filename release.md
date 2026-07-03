@@ -69,3 +69,6 @@ Foram corrigidos problemas visuais que afetavam o título da semana e a exibiç�
 As listas de tarefas criadas dentro das atividades ficam disponíveis durante a sessão atual de uso.
 
 A tela de Consistência Semanal apresenta dados demonstrativos nesta versão. A conexão com indicadores reais de estudo é um próximo passo relevante.
+
+
+## Pomodoro
