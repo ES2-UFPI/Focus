@@ -75,19 +75,29 @@ void main() {
     );
   });
 
-  testWidgets('opens detail from a grid card and weekly focus', (tester) async {
+  testWidgets('opens detail from a grid card and weekly plan', (tester) async {
     tester.view.physicalSize = const Size(1000, 1600);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    await tester.pumpWidget(const ShadApp(home: InsightsScreen()));
+    await tester.pumpWidget(
+      const ShadApp(home: InsightsScreen(initiallyShowPatternLibrary: true)),
+    );
     await tester.pumpAndSettle();
 
     final gridCard = find.byKey(
       const ValueKey('insight-card-tap-melhor_horario'),
     );
+    final outerScroll = find
+        .descendant(
+          of: find.byType(CustomScrollView),
+          matching: find.byType(Scrollable),
+        )
+        .first;
+    await tester.scrollUntilVisible(gridCard, 500, scrollable: outerScroll);
     await tester.ensureVisible(gridCard);
+    await tester.pumpAndSettle();
     await tester.tap(gridCard);
     await tester.pumpAndSettle();
 
@@ -103,12 +113,25 @@ void main() {
       const ShadApp(key: ValueKey('fresh-app'), home: InsightsScreen()),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('weekly-focus-card')));
+    final weeklyPlan = find.byKey(const ValueKey('weekly-plan-melhor_horario'));
+    await tester.scrollUntilVisible(
+      weeklyPlan,
+      300,
+      scrollable: find
+          .descendant(
+            of: find.byType(CustomScrollView),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    await tester.ensureVisible(weeklyPlan);
+    await tester.pumpAndSettle();
+    await tester.tap(weeklyPlan);
     await tester.pumpAndSettle();
 
     expect(find.text('Detalhe do insight'), findsOneWidget);
     expect(
-      find.text('60% das sessões de sexta à noite são canceladas'),
+      find.text('Seu rendimento tende a ser maior pela manhã'),
       findsOneWidget,
     );
   });

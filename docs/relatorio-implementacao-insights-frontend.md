@@ -42,8 +42,13 @@ Entregue em **cinco rodadas incrementais** (commits `e6b86f57` → `fbd001d2`).
 - **filtro por categoria** e **filtro por disciplina** (combinados);
 - **barra de resumo** com contadores por severidade, tocáveis como **filtro por
   severidade** (combina com categoria/disciplina);
-- card-herói **"Foco da semana"** — destaca o insight de maior prioridade
-  (crítico > atenção > positivo > info), ignorando insuficientes e ocultados;
+- resumo semanal orientado a decisão, com **"Continue / Ajuste / Teste"**;
+- alerta crítico separado dos demais padrões, para não competir visualmente com
+  conquistas e observações comuns;
+- panorama independente de **tempo, foco, planejamento, consistência e
+  recuperação**, sem produzir uma nota geral artificial;
+- biblioteca completa de padrões recolhível, mantendo filtros, cards, feedback
+  e drill-down como camada de exploração;
 - **abas "Insights" / "Evolução"** (ver §2.10);
 - estados de **vazio** e de **lista filtrada sem itens**;
 - rótulo/menu exibido como **"Insights"**.
@@ -68,6 +73,11 @@ Entregue em **cinco rodadas incrementais** (commits `e6b86f57` → `fbd001d2`).
 - `grafico`: `tipo` (`barras` / `comparacao` / `linha`), `labels`, `valores`,
   `destaqueIndex?`;
 - `sessoesEvidencia`: lista de `{ data, disciplina?, duracaoMin, produtividade }`;
+- `InsightsDashboard`: período e atualização, dimensões do estudo, comparações
+  temporais e experimentos observacionais;
+- `InsightComparison`: antes, agora, unidade, variação e série para minitendência;
+- `InsightExperiment`: hipótese, estágio, métrica inicial/atual, amostra e
+  confiança;
 - `fromJson` tolerante em todos — **alinhado ao contrato de resposta do insight**
   (o backend futuro emite este mesmo formato), para o swap sem mexer na UI.
 
@@ -86,8 +96,9 @@ isolada (**ponto de swap** para a API futura). Contém **17 insights** em
 - disciplinas usadas: **ES2, Cálculo, Física, Banco de Dados**.
 
 Os insights-chave trazem `grafico` + `sessoesEvidencia` para o detalhe; há também
-um `getJornadaMock()` para a aba Evolução. Todos com `natureza: "observacional"`;
-inclui um item `confianca: "insuficiente"`.
+um `getJornadaMock()` e um `getInsightsDashboardMock()` para a aba Evolução e o
+resumo semanal. Todos com `natureza: "observacional"`; inclui um item
+`confianca: "insuficiente"`.
 
 ### 2.5. Feedback do usuário (personalização)
 Na `insights_screen.dart`:
@@ -133,11 +144,14 @@ lastro visual ao insight de sono e ao de tempo de tela.
 - recomendação + **botão de ação** (reusa `acao`) + **feedback**;
 - insight sem `grafico` degrada graciosamente (mostra números/descrição).
 
-### 2.10. Foco da semana, Evolução e resumo
-- **Foco da semana** e **barra de resumo / filtro por severidade**: descritos em §2.1;
-- aba **"Evolução"**: **timeline vertical** (mock, via `getJornadaMock()`) da
-  jornada **diagnóstico → ação → melhora**, ancorada nos insights `progresso` e
-  `efeito_acao`.
+### 2.10. Resumo semanal, Evolução e experimentos
+- aba **"Insights"**: contexto da semana, alerta prioritário, plano
+  **Continue / Ajuste / Teste**, panorama por dimensão e biblioteca recolhível;
+- aba **"Evolução"**: comparações **antes × agora** com minitendências, ciclos
+  **padrão → ação → teste → resultado**, leitura por disciplina e timeline
+  cronológica complementar;
+- confiança e severidade passaram a aparecer diretamente nos cards completos,
+  sem exigir abertura do detalhe.
 
 ---
 

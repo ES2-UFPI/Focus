@@ -88,11 +88,21 @@ class InsightCard extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _SubjectBadge(
-                            label: insight.disciplina ?? 'Geral',
-                            color: insight.disciplina == null
-                                ? AppColors.neutral
-                                : _subjectColor(),
+                          Wrap(
+                            spacing: AppSpacing.xs,
+                            runSpacing: AppSpacing.xs,
+                            children: [
+                              _SubjectBadge(
+                                label: insight.disciplina ?? 'Geral',
+                                color: insight.disciplina == null
+                                    ? AppColors.neutral
+                                    : _subjectColor(),
+                              ),
+                              _SeverityBadge(
+                                label: _severityLabel(),
+                                color: accentColor,
+                              ),
+                            ],
                           ),
                           const SizedBox(height: AppSpacing.sm),
                           Text(
@@ -141,6 +151,10 @@ class InsightCard extends StatelessWidget {
                       icon: LucideIcons.database,
                       label:
                           '${insight.amostra} ${insight.amostra == 1 ? 'sessão' : 'sessões'}',
+                    ),
+                    _Badge(
+                      icon: LucideIcons.shieldCheck,
+                      label: _confidenceLabel(),
                     ),
                     _Badge(
                       icon: LucideIcons.telescope,
@@ -245,6 +259,32 @@ class InsightCard extends StatelessWidget {
       case 'info':
       default:
         return AppColors.info;
+    }
+  }
+
+  String _severityLabel() {
+    switch (insight.severidade) {
+      case 'positivo':
+        return 'Conquista';
+      case 'atencao':
+        return 'Atenção';
+      case 'critico':
+        return 'Crítico';
+      case 'info':
+      default:
+        return 'Informativo';
+    }
+  }
+
+  String _confidenceLabel() {
+    switch (insight.confianca) {
+      case 'alta':
+        return 'Confiança alta';
+      case 'media':
+        return 'Confiança média';
+      case 'insuficiente':
+      default:
+        return 'Evidência inicial';
     }
   }
 
@@ -613,6 +653,35 @@ class _SubjectBadge extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _SeverityBadge extends StatelessWidget {
+  final String label;
+  final Color color;
+
+  const _SeverityBadge({required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xs,
+      ),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(AppRadii.sm),
+        border: Border.all(color: color.withValues(alpha: 0.18)),
+      ),
+      child: Text(
+        label,
+        style: AppTypography.caption.copyWith(
+          color: color,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }

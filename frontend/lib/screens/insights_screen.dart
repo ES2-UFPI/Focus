@@ -22,7 +22,15 @@ class InsightsScreen extends StatefulWidget {
   /// dados troca só a implementação do serviço, sem mexer nesta tela).
   final InsightsService? service;
 
-  const InsightsScreen({super.key, this.insights, this.service});
+  /// Permite iniciar a biblioteca expandida em testes e estados demonstrativos.
+  final bool initiallyShowPatternLibrary;
+
+  const InsightsScreen({
+    super.key,
+    this.insights,
+    this.service,
+    this.initiallyShowPatternLibrary = false,
+  });
 
   @override
   State<InsightsScreen> createState() => _InsightsScreenState();
@@ -42,6 +50,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
 
   List<Insight> _items = const [];
   List<InsightJourneyEvent> _journey = const [];
+  InsightsDashboard _dashboard = getInsightsDashboardMock();
   bool _loading = false;
   Object? _error;
   late final InsightsService _service;
@@ -50,7 +59,9 @@ class _InsightsScreenState extends State<InsightsScreen> {
   String? _selectedDisciplina;
   String? _selectedSeverity;
   bool _attentionOnly = false;
+  bool _showPatternLibrary = false;
   String? _reasonPickerFor;
+  String? _selectedEvolutionDisciplina;
 
   // Fase de dados: este mapa local vira
   // POST /api/insights/{id}/feedback (modelo InsightFeedback). A resposta
@@ -62,11 +73,13 @@ class _InsightsScreenState extends State<InsightsScreen> {
   @override
   void initState() {
     super.initState();
+    _showPatternLibrary = widget.initiallyShowPatternLibrary;
     _service = widget.service ?? const InsightsService();
     if (widget.insights != null) {
       // Injeção síncrona (testes/estados): sem carregamento assíncrono.
       _items = widget.insights!;
       _journey = getJornadaMock();
+      _dashboard = getInsightsDashboardMock();
     } else {
       _loading = true;
       _fetch();
@@ -99,11 +112,13 @@ class _InsightsScreenState extends State<InsightsScreen> {
       final results = await Future.wait([
         _service.fetchInsights(),
         _service.fetchJourney(),
+        _service.fetchDashboard(),
       ]);
       if (!mounted) return;
       setState(() {
         _items = results[0] as List<Insight>;
         _journey = results[1] as List<InsightJourneyEvent>;
+        _dashboard = results[2] as InsightsDashboard;
         _loading = false;
       });
     } catch (error) {
@@ -156,22 +171,80 @@ class _InsightsScreenState extends State<InsightsScreen> {
         .toList();
   }
 
-  Insight? get _weeklyFocus {
-    final candidates = _items
-        .where(
-          (insight) =>
-              insight.confianca != 'insuficiente' &&
-              _feedbackByType[insight.tipo]?.status !=
-                  InsightFeedbackStatus.rejected,
-        )
-        .toList();
+  Insight? _insightByType(String type) {
+    for (final insight in _items) {
+      if (insight.tipo == type) return insight;
+    }
+    return null;
+  }
 
-    if (candidates.isEmpty) return null;
-    candidates.sort(
-      (a, b) =>
-          _severityPriority(b.severidade) - _severityPriority(a.severidade),
-    );
-    return candidates.first;
+  bool _isEligibleForPriority(Insight insight) {
+    return insight.confianca != 'insuficiente' &&
+        _feedbackByType[insight.tipo]?.status != InsightFeedbackStatus.rejected;
+  }
+
+  List<_WeeklyPlanEntry> get _weeklyPlan {
+    final entries = <_WeeklyPlanEntry>[];
+    final keep = _insightByType('melhor_horario');
+    final adjust =
+        _insightByType('ritmo_disciplina') ?? _insightByType('vies_estimativa');
+    final test = _insightByType('duracao_ideal');
+
+    if (keep != null && _isEligibleForPriority(keep)) {
+      entries.add(
+        _WeeklyPlanEntry(
+          label: 'CONTINUE',
+          supportingText: 'Esse padrão já aparece em ${keep.amostra} sessões.',
+          icon: LucideIcons.circleCheck,
+          color: AppColors.success,
+          insight: keep,
+        ),
+      );
+    }
+    if (adjust != null && _isEligibleForPriority(adjust)) {
+      entries.add(
+        _WeeklyPlanEntry(
+          label: 'AJUSTE',
+          supportingText: 'Uma mudança pequena pode reduzir o risco.',
+          icon: LucideIcons.slidersHorizontal,
+          color: AppColors.warningStrong,
+          insight: adjust,
+        ),
+      );
+    }
+    if (test != null && _isEligibleForPriority(test)) {
+      entries.add(
+        _WeeklyPlanEntry(
+          label: 'TESTE',
+          supportingText: 'Compare os próximos blocos antes de concluir.',
+          icon: LucideIcons.flaskConical,
+          color: AppColors.info,
+          insight: test,
+        ),
+      );
+    }
+    return entries;
+  }
+
+  Insight? get _criticalAlert {
+    final fatigue = _insightByType('desgaste');
+    if (fatigue != null && _isEligibleForPriority(fatigue)) return fatigue;
+    for (final insight in _items) {
+      if (insight.severidade == 'critico' && _isEligibleForPriority(insight)) {
+        return insight;
+      }
+    }
+    return null;
+  }
+
+  String? get _activeEvolutionDisciplina {
+    final available = _availableDisciplinas;
+    if (available.isEmpty) return null;
+    if (_selectedEvolutionDisciplina != null &&
+        available.contains(_selectedEvolutionDisciplina)) {
+      return _selectedEvolutionDisciplina;
+    }
+    return available.contains('ES2') ? 'ES2' : available.first;
   }
 
   @override
@@ -203,7 +276,6 @@ class _InsightsScreenState extends State<InsightsScreen> {
   List<Widget> _buildLoadedSlivers() {
     final items = _items;
     final filteredItems = _filteredItems;
-    final weeklyFocus = _weeklyFocus;
 
     if (_selectedView == _InsightsView.evolucao) {
       return [SliverToBoxAdapter(child: _buildEvolution())];
@@ -214,23 +286,30 @@ class _InsightsScreenState extends State<InsightsScreen> {
       ];
     }
     return [
-      SliverToBoxAdapter(child: _buildIntroduction(items)),
-      if (weeklyFocus != null)
-        SliverToBoxAdapter(child: _buildWeeklyFocus(weeklyFocus)),
-      SliverToBoxAdapter(child: _buildSeveritySummary()),
-      SliverToBoxAdapter(child: _buildCategoryFilters()),
-      SliverToBoxAdapter(child: _buildDisciplinaFilters()),
-      if (filteredItems.isEmpty)
-        SliverToBoxAdapter(
-          child: _CategoryEmpty(
-            category: _selectedCategory == null
-                ? null
-                : _categoryLabel(_selectedCategory),
-            disciplina: _selectedDisciplina,
-          ),
-        )
-      else
-        SliverToBoxAdapter(child: _buildInsightGrid(filteredItems)),
+      SliverToBoxAdapter(child: _buildWeeklyOverview()),
+      if (_criticalAlert != null)
+        SliverToBoxAdapter(child: _buildCriticalAlert(_criticalAlert!)),
+      if (_weeklyPlan.isNotEmpty) SliverToBoxAdapter(child: _buildWeeklyPlan()),
+      if (_dashboard.dimensoes.isNotEmpty)
+        SliverToBoxAdapter(child: _buildStudyPanorama()),
+      SliverToBoxAdapter(child: _buildPatternLibraryToggle(items.length)),
+      if (_showPatternLibrary) ...[
+        SliverToBoxAdapter(child: _buildIntroduction(items)),
+        SliverToBoxAdapter(child: _buildCategoryFilters()),
+        SliverToBoxAdapter(child: _buildDisciplinaFilters()),
+        SliverToBoxAdapter(child: _buildSeveritySummary()),
+        if (filteredItems.isEmpty)
+          SliverToBoxAdapter(
+            child: _CategoryEmpty(
+              category: _selectedCategory == null
+                  ? null
+                  : _categoryLabel(_selectedCategory),
+              disciplina: _selectedDisciplina,
+            ),
+          )
+        else
+          SliverToBoxAdapter(child: _buildInsightGrid(filteredItems)),
+      ],
       const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xxxl)),
     ];
   }
@@ -350,7 +429,24 @@ class _InsightsScreenState extends State<InsightsScreen> {
     );
   }
 
-  Widget _buildWeeklyFocus(Insight insight) {
+  Widget _buildWeeklyOverview() {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.xxl,
+            AppSpacing.lg,
+            AppSpacing.md,
+          ),
+          child: _WeeklyOverviewHeader(dashboard: _dashboard),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCriticalAlert(Insight insight) {
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
@@ -361,9 +457,62 @@ class _InsightsScreenState extends State<InsightsScreen> {
             AppSpacing.lg,
             AppSpacing.md,
           ),
-          child: _WeeklyFocusCard(
+          child: _CriticalInsightAlert(
             insight: insight,
             onTap: () => _openDetail(insight),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWeeklyPlan() {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
+        child: _WeeklyPlanSection(
+          entries: _weeklyPlan,
+          onOpen: _openDetail,
+          onAction: _handleAction,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStudyPanorama() {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
+        child: _StudyPanorama(
+          dimensions: _dashboard.dimensoes,
+          onOpen: (dimension) {
+            final type = dimension.insightTipo;
+            if (type == null) return;
+            final insight = _insightByType(type);
+            if (insight != null) _openDetail(insight);
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPatternLibraryToggle(int count) {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.xxl,
+            AppSpacing.lg,
+            AppSpacing.sm,
+          ),
+          child: _PatternLibraryToggle(
+            count: count,
+            expanded: _showPatternLibrary,
+            onPressed: () {
+              setState(() => _showPatternLibrary = !_showPatternLibrary);
+            },
           ),
         ),
       ),
@@ -393,17 +542,59 @@ class _InsightsScreenState extends State<InsightsScreen> {
   }
 
   Widget _buildEvolution() {
+    final activeSubject = _activeEvolutionDisciplina;
+    final subjectInsights = activeSubject == null
+        ? const <Insight>[]
+        : _items
+              .where((insight) => insight.disciplina == activeSubject)
+              .toList();
+
     return Center(
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 760),
-        child: _EvolutionTimeline(
-          events: _journey,
-          insightTitle: (type) {
-            for (final insight in _items) {
-              if (insight.tipo == type) return insight.titulo;
-            }
-            return null;
-          },
+        constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _EvolutionOverview(
+              dashboard: _dashboard,
+              onOpenComparison: (comparison) {
+                final type = comparison.insightTipo;
+                if (type == null) return;
+                final insight = _insightByType(type);
+                if (insight != null) _openDetail(insight);
+              },
+            ),
+            if (_dashboard.experimentos.isNotEmpty)
+              _ExperimentsSection(
+                experiments: _dashboard.experimentos,
+                onOpen: (experiment) {
+                  final type = experiment.insightTipo;
+                  if (type == null) return;
+                  final insight = _insightByType(type);
+                  if (insight != null) _openDetail(insight);
+                },
+              ),
+            if (activeSubject != null)
+              _SubjectJourneySection(
+                disciplinas: _availableDisciplinas,
+                selected: activeSubject,
+                insights: subjectInsights,
+                onSelected: (value) {
+                  setState(() => _selectedEvolutionDisciplina = value);
+                },
+                onOpen: _openDetail,
+                onAction: _handleAction,
+              ),
+            _EvolutionTimeline(
+              events: _journey,
+              insightTitle: (type) {
+                for (final insight in _items) {
+                  if (insight.tipo == type) return insight.titulo;
+                }
+                return null;
+              },
+            ),
+          ],
         ),
       ),
     );
@@ -432,15 +623,15 @@ class _InsightsScreenState extends State<InsightsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Seus padrões',
+                      'Biblioteca de padrões',
                       style: AppTypography.cardTitle.copyWith(
                         color: AppColors.textPrimary,
                       ),
                     ),
                     const SizedBox(height: AppSpacing.xs),
                     Text(
-                      'São tendências dos seus registros, não relações de causa '
-                      'e efeito.',
+                      'Explore todas as tendências dos seus registros. Elas não '
+                      'representam relações comprovadas de causa e efeito.',
                       style: AppTypography.body.copyWith(
                         color: AppColors.textMuted,
                       ),
@@ -746,24 +937,8 @@ class _InsightsScreenState extends State<InsightsScreen> {
     });
   }
 
-  int _severityPriority(String severity) {
-    switch (severity) {
-      case 'critico':
-        return 4;
-      case 'atencao':
-        return 3;
-      case 'positivo':
-        return 2;
-      case 'info':
-      default:
-        return 1;
-    }
-  }
-
   void _markUseful(Insight insight) {
-    unawaited(
-      _service.submitFeedback(insightId: insight.id, useful: true),
-    );
+    unawaited(_service.submitFeedback(insightId: insight.id, useful: true));
     setState(() {
       _feedbackByType[insight.tipo] = const InsightFeedbackState(
         status: InsightFeedbackStatus.useful,
@@ -855,6 +1030,1574 @@ class _InsightsScreenState extends State<InsightsScreen> {
   }
 }
 
+class _WeeklyPlanEntry {
+  final String label;
+  final String supportingText;
+  final IconData icon;
+  final Color color;
+  final Insight insight;
+
+  const _WeeklyPlanEntry({
+    required this.label,
+    required this.supportingText,
+    required this.icon,
+    required this.color,
+    required this.insight,
+  });
+}
+
+class _SectionHeading extends StatelessWidget {
+  final String eyebrow;
+  final String title;
+  final String description;
+  final Widget? trailing;
+
+  const _SectionHeading({
+    required this.eyebrow,
+    required this.title,
+    required this.description,
+    this.trailing,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                eyebrow,
+                style: AppTypography.sectionTitle.copyWith(
+                  color: AppColors.subjectTeal,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                title,
+                style: AppTypography.pageTitle.copyWith(
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                description,
+                style: AppTypography.body.copyWith(
+                  color: AppColors.textMuted,
+                  height: 1.4,
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (trailing != null) ...[
+          const SizedBox(width: AppSpacing.md),
+          trailing!,
+        ],
+      ],
+    );
+  }
+}
+
+class _WeeklyOverviewHeader extends StatelessWidget {
+  final InsightsDashboard dashboard;
+
+  const _WeeklyOverviewHeader({required this.dashboard});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: AppSpacing.card,
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadii.lg),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: AppSpacing.xs,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.subjectTeal.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(AppRadii.sm),
+                ),
+                child: Text(
+                  'ESTA SEMANA',
+                  style: AppTypography.sectionTitle.copyWith(
+                    color: AppColors.subjectTeal,
+                  ),
+                ),
+              ),
+              Text(
+                dashboard.periodo,
+                style: AppTypography.caption.copyWith(
+                  color: AppColors.textMuted,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            'Seu estudo, traduzido em decisões',
+            style: AppTypography.pageTitle.copyWith(
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            'Veja primeiro o que manter, ajustar e testar. Os números completos '
+            'continuam disponíveis na biblioteca de padrões.',
+            style: AppTypography.body.copyWith(
+              color: AppColors.textMuted,
+              height: 1.45,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Wrap(
+            spacing: AppSpacing.md,
+            runSpacing: AppSpacing.xs,
+            children: [
+              _InlineMetadata(
+                icon: LucideIcons.database,
+                label: dashboard.atualizadoEm,
+              ),
+              const _InlineMetadata(
+                icon: LucideIcons.telescope,
+                label: 'Leitura observacional',
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InlineMetadata extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _InlineMetadata({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: AppSizes.iconSm, color: AppColors.textMuted),
+        const SizedBox(width: AppSpacing.xs),
+        Text(
+          label,
+          style: AppTypography.caption.copyWith(color: AppColors.textMuted),
+        ),
+      ],
+    );
+  }
+}
+
+class _CriticalInsightAlert extends StatelessWidget {
+  final Insight insight;
+  final VoidCallback onTap;
+
+  const _CriticalInsightAlert({required this.insight, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.danger.withValues(alpha: 0.07),
+      borderRadius: BorderRadius.circular(AppRadii.lg),
+      child: InkWell(
+        key: const ValueKey('critical-insight-alert'),
+        borderRadius: BorderRadius.circular(AppRadii.lg),
+        onTap: onTap,
+        child: Container(
+          width: double.infinity,
+          padding: AppSpacing.card,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppRadii.lg),
+            border: Border.all(color: AppColors.danger.withValues(alpha: 0.28)),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: AppColors.danger.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(AppRadii.md),
+                ),
+                child: const Icon(
+                  LucideIcons.triangleAlert,
+                  color: AppColors.danger,
+                  size: AppSizes.iconLg,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'ATENÇÃO AGORA',
+                      style: AppTypography.sectionTitle.copyWith(
+                        color: AppColors.danger,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      insight.titulo,
+                      style: AppTypography.cardTitle.copyWith(
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      insight.descricao,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.body.copyWith(
+                        color: AppColors.textSecondary,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              const Icon(
+                LucideIcons.arrowRight,
+                size: AppSizes.iconMd,
+                color: AppColors.danger,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _WeeklyPlanSection extends StatelessWidget {
+  final List<_WeeklyPlanEntry> entries;
+  final ValueChanged<Insight> onOpen;
+  final ValueChanged<Insight> onAction;
+
+  const _WeeklyPlanSection({
+    required this.entries,
+    required this.onOpen,
+    required this.onAction,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.xxl,
+        AppSpacing.lg,
+        0,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const _SectionHeading(
+            eyebrow: 'PLANO DA SEMANA',
+            title: 'Três decisões, sem sobrecarga',
+            description:
+                'Uma prática para manter, uma para ajustar e uma hipótese para testar.',
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final columns = constraints.maxWidth >= 780
+                  ? 3
+                  : constraints.maxWidth >= 540
+                  ? 2
+                  : 1;
+              final width =
+                  (constraints.maxWidth - AppSpacing.md * (columns - 1)) /
+                  columns;
+
+              return Wrap(
+                spacing: AppSpacing.md,
+                runSpacing: AppSpacing.md,
+                children: [
+                  for (final entry in entries)
+                    SizedBox(
+                      width: width,
+                      child: _WeeklyPlanCard(
+                        entry: entry,
+                        onOpen: () => onOpen(entry.insight),
+                        onAction: entry.insight.acao == null
+                            ? null
+                            : () => onAction(entry.insight),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _WeeklyPlanCard extends StatelessWidget {
+  final _WeeklyPlanEntry entry;
+  final VoidCallback onOpen;
+  final VoidCallback? onAction;
+
+  const _WeeklyPlanCard({
+    required this.entry,
+    required this.onOpen,
+    this.onAction,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final insight = entry.insight;
+
+    return Material(
+      color: AppColors.surface,
+      borderRadius: BorderRadius.circular(AppRadii.lg),
+      child: InkWell(
+        key: ValueKey('weekly-plan-${insight.tipo}'),
+        borderRadius: BorderRadius.circular(AppRadii.lg),
+        onTap: onOpen,
+        child: Container(
+          padding: AppSpacing.card,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppRadii.lg),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: entry.color.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(AppRadii.md),
+                    ),
+                    child: Icon(
+                      entry.icon,
+                      size: AppSizes.iconMd,
+                      color: entry.color,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Text(
+                    entry.label,
+                    style: AppTypography.sectionTitle.copyWith(
+                      color: entry.color,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                insight.titulo,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.cardTitle.copyWith(
+                  color: AppColors.textPrimary,
+                  height: 1.3,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                entry.supportingText,
+                style: AppTypography.caption.copyWith(
+                  color: AppColors.textMuted,
+                  height: 1.35,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      insight.acao?.label ?? 'Ver evidência e como testar',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.caption.copyWith(
+                        color: onAction == null
+                            ? AppColors.subjectTeal
+                            : AppColors.brandPrimary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  Icon(
+                    LucideIcons.arrowRight,
+                    size: AppSizes.iconSm,
+                    color: onAction == null
+                        ? AppColors.subjectTeal
+                        : AppColors.brandPrimary,
+                  ),
+                ],
+              ),
+              if (onAction != null) ...[
+                const SizedBox(height: AppSpacing.sm),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: onAction,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.brandPrimary,
+                      side: const BorderSide(color: AppColors.border),
+                    ),
+                    child: const Text('Aplicar agora'),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StudyPanorama extends StatelessWidget {
+  final List<StudyDimension> dimensions;
+  final ValueChanged<StudyDimension> onOpen;
+
+  const _StudyPanorama({required this.dimensions, required this.onOpen});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.xxl,
+        AppSpacing.lg,
+        0,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const _SectionHeading(
+            eyebrow: 'PANORAMA',
+            title: 'Saúde do seu estudo',
+            description:
+                'Cada dimensão é lida separadamente — sem uma nota geral artificial.',
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final columns = constraints.maxWidth >= 780
+                  ? 3
+                  : constraints.maxWidth >= 520
+                  ? 2
+                  : 1;
+              final width =
+                  (constraints.maxWidth - AppSpacing.md * (columns - 1)) /
+                  columns;
+
+              return Wrap(
+                spacing: AppSpacing.md,
+                runSpacing: AppSpacing.md,
+                children: [
+                  for (final dimension in dimensions)
+                    SizedBox(
+                      width: width,
+                      child: _DimensionCard(
+                        dimension: dimension,
+                        onTap: () => onOpen(dimension),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DimensionCard extends StatelessWidget {
+  final StudyDimension dimension;
+  final VoidCallback onTap;
+
+  const _DimensionCard({required this.dimension, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _insightSeverityColor(dimension.severidade);
+    final icon = _dimensionIcon(dimension.id);
+
+    return Material(
+      color: AppColors.surface,
+      borderRadius: BorderRadius.circular(AppRadii.lg),
+      child: InkWell(
+        key: ValueKey('dimension-${dimension.id}'),
+        borderRadius: BorderRadius.circular(AppRadii.lg),
+        onTap: onTap,
+        child: Container(
+          padding: AppSpacing.card,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppRadii.lg),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(icon, size: AppSizes.iconMd, color: color),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      dimension.titulo,
+                      style: AppTypography.bodyStrong.copyWith(
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ),
+                  _TrendDirection(direction: dimension.direcao, color: color),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                dimension.resumo,
+                style: AppTypography.body.copyWith(
+                  color: AppColors.textSecondary,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                dimension.tendencia,
+                style: AppTypography.caption.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  IconData _dimensionIcon(String id) {
+    switch (id) {
+      case 'tempo':
+        return LucideIcons.clock;
+      case 'foco':
+        return LucideIcons.focus;
+      case 'planejamento':
+        return LucideIcons.listChecks;
+      case 'consistencia':
+        return LucideIcons.trendingUp;
+      case 'recuperacao':
+        return LucideIcons.batteryWarning;
+      default:
+        return LucideIcons.sparkles;
+    }
+  }
+}
+
+class _TrendDirection extends StatelessWidget {
+  final String direction;
+  final Color color;
+
+  const _TrendDirection({required this.direction, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    final symbol = direction == 'subindo'
+        ? '↗'
+        : direction == 'caindo'
+        ? '↘'
+        : direction == 'atencao'
+        ? '!'
+        : '→';
+
+    return Container(
+      width: 26,
+      height: 26,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        shape: BoxShape.circle,
+      ),
+      child: Text(
+        symbol,
+        style: AppTypography.bodyStrong.copyWith(color: color),
+      ),
+    );
+  }
+}
+
+class _PatternLibraryToggle extends StatelessWidget {
+  final int count;
+  final bool expanded;
+  final VoidCallback onPressed;
+
+  const _PatternLibraryToggle({
+    required this.count,
+    required this.expanded,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: AppSpacing.card,
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadii.lg),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: AppColors.subjectTeal.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(AppRadii.md),
+            ),
+            child: const Icon(
+              LucideIcons.search,
+              size: AppSizes.iconMd,
+              color: AppColors.subjectTeal,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Explorar todos os padrões',
+                  style: AppTypography.bodyStrong.copyWith(
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  '$count observações com filtros, métricas e evidências.',
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.textMuted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          ShadButton.outline(
+            key: const ValueKey('toggle-pattern-library'),
+            size: ShadButtonSize.sm,
+            foregroundColor: AppColors.subjectTeal,
+            onPressed: onPressed,
+            child: Text(expanded ? 'Recolher' : 'Explorar'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EvolutionOverview extends StatelessWidget {
+  final InsightsDashboard dashboard;
+  final ValueChanged<InsightComparison> onOpenComparison;
+
+  const _EvolutionOverview({
+    required this.dashboard,
+    required this.onOpenComparison,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.xxl,
+        AppSpacing.lg,
+        0,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _SectionHeading(
+            eyebrow: 'EVOLUÇÃO',
+            title: 'Antes × agora',
+            description:
+                'Mudanças observadas nas últimas semanas, sem transformar tudo em uma nota.',
+            trailing: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.sm,
+                vertical: AppSpacing.xs,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(AppRadii.sm),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Text(
+                dashboard.periodo,
+                style: AppTypography.caption.copyWith(
+                  color: AppColors.textMuted,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final columns = constraints.maxWidth >= 780
+                  ? 3
+                  : constraints.maxWidth >= 520
+                  ? 2
+                  : 1;
+              final width =
+                  (constraints.maxWidth - AppSpacing.md * (columns - 1)) /
+                  columns;
+
+              return Wrap(
+                spacing: AppSpacing.md,
+                runSpacing: AppSpacing.md,
+                children: [
+                  for (final comparison in dashboard.comparacoes)
+                    SizedBox(
+                      width: width,
+                      child: _ComparisonCard(
+                        comparison: comparison,
+                        onTap: () => onOpenComparison(comparison),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ComparisonCard extends StatelessWidget {
+  final InsightComparison comparison;
+  final VoidCallback onTap;
+
+  const _ComparisonCard({required this.comparison, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final improved = comparison.melhoraQuandoDiminui
+        ? comparison.agora < comparison.antes
+        : comparison.agora > comparison.antes;
+    final color = improved ? AppColors.success : AppColors.warningStrong;
+
+    return Material(
+      color: AppColors.surface,
+      borderRadius: BorderRadius.circular(AppRadii.lg),
+      child: InkWell(
+        key: ValueKey('comparison-${comparison.id}'),
+        borderRadius: BorderRadius.circular(AppRadii.lg),
+        onTap: onTap,
+        child: Container(
+          padding: AppSpacing.card,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppRadii.lg),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                comparison.titulo,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.bodyStrong.copyWith(
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                comparison.contexto,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.caption.copyWith(
+                  color: AppColors.textMuted,
+                  height: 1.35,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  _ComparisonValue(
+                    label: 'Antes',
+                    value: comparison.antes,
+                    unit: comparison.unidade,
+                    muted: true,
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+                    child: Icon(
+                      LucideIcons.arrowRight,
+                      size: AppSizes.iconSm,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                  _ComparisonValue(
+                    label: 'Agora',
+                    value: comparison.agora,
+                    unit: comparison.unidade,
+                    color: color,
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Align(
+                alignment: Alignment.centerRight,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm,
+                    vertical: AppSpacing.xs,
+                  ),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(AppRadii.sm),
+                  ),
+                  child: Text(
+                    comparison.variacao,
+                    style: AppTypography.caption.copyWith(
+                      color: color,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+              if (comparison.serie.length >= 2) ...[
+                const SizedBox(height: AppSpacing.md),
+                SizedBox(
+                  height: 42,
+                  width: double.infinity,
+                  child: _MiniTrendChart(
+                    values: comparison.serie,
+                    color: color,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ComparisonValue extends StatelessWidget {
+  final String label;
+  final num value;
+  final String unit;
+  final bool muted;
+  final Color? color;
+
+  const _ComparisonValue({
+    required this.label,
+    required this.value,
+    required this.unit,
+    this.muted = false,
+    this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final foreground =
+        color ?? (muted ? AppColors.textMuted : AppColors.textPrimary);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: AppTypography.caption.copyWith(color: AppColors.textMuted),
+        ),
+        const SizedBox(height: AppSpacing.xxs),
+        Text(
+          '${_formatInsightNumber(value)}$unit',
+          style: AppTypography.cardTitle.copyWith(color: foreground),
+        ),
+      ],
+    );
+  }
+}
+
+class _MiniTrendChart extends StatelessWidget {
+  final List<num> values;
+  final Color color;
+
+  const _MiniTrendChart({required this.values, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      painter: _MiniTrendPainter(values: values, color: color),
+    );
+  }
+}
+
+class _MiniTrendPainter extends CustomPainter {
+  final List<num> values;
+  final Color color;
+
+  const _MiniTrendPainter({required this.values, required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (values.length < 2 || size.width <= 0 || size.height <= 0) return;
+
+    var minimum = values.first.toDouble();
+    var maximum = values.first.toDouble();
+    for (final value in values.skip(1)) {
+      final current = value.toDouble();
+      if (current < minimum) minimum = current;
+      if (current > maximum) maximum = current;
+    }
+    final span = maximum == minimum ? 1.0 : maximum - minimum;
+    final path = Path();
+    final points = <Offset>[];
+
+    for (var index = 0; index < values.length; index++) {
+      final x = size.width * index / (values.length - 1);
+      final normalized = (values[index].toDouble() - minimum) / span;
+      final y = size.height - 4 - normalized * (size.height - 8);
+      final point = Offset(x, y);
+      points.add(point);
+      if (index == 0) {
+        path.moveTo(point.dx, point.dy);
+      } else {
+        path.lineTo(point.dx, point.dy);
+      }
+    }
+
+    final guidePaint = Paint()
+      ..color = AppColors.borderSubtle
+      ..strokeWidth = 1;
+    canvas.drawLine(
+      Offset(0, size.height - 2),
+      Offset(size.width, size.height - 2),
+      guidePaint,
+    );
+
+    final linePaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    canvas.drawPath(path, linePaint);
+
+    final pointPaint = Paint()..color = color;
+    canvas.drawCircle(points.last, 3.5, pointPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _MiniTrendPainter oldDelegate) {
+    return oldDelegate.values != values || oldDelegate.color != color;
+  }
+}
+
+class _ExperimentsSection extends StatelessWidget {
+  final List<InsightExperiment> experiments;
+  final ValueChanged<InsightExperiment> onOpen;
+
+  const _ExperimentsSection({required this.experiments, required this.onOpen});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.xxxl,
+        AppSpacing.lg,
+        0,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const _SectionHeading(
+            eyebrow: 'EXPERIMENTOS',
+            title: 'Da hipótese ao resultado',
+            description:
+                'Acompanhe o que foi detectado, testado e observado nas suas próprias sessões.',
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          for (var index = 0; index < experiments.length; index++) ...[
+            _ExperimentCard(
+              experiment: experiments[index],
+              onTap: () => onOpen(experiments[index]),
+            ),
+            if (index != experiments.length - 1)
+              const SizedBox(height: AppSpacing.md),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ExperimentCard extends StatelessWidget {
+  final InsightExperiment experiment;
+  final VoidCallback onTap;
+
+  const _ExperimentCard({required this.experiment, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final stateColor = _experimentColor(experiment.estado);
+
+    return Material(
+      color: AppColors.surface,
+      borderRadius: BorderRadius.circular(AppRadii.lg),
+      child: InkWell(
+        key: ValueKey('experiment-${experiment.id}'),
+        borderRadius: BorderRadius.circular(AppRadii.lg),
+        onTap: onTap,
+        child: Container(
+          width: double.infinity,
+          padding: AppSpacing.card,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppRadii.lg),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Wrap(
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.sm,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.sm,
+                      vertical: AppSpacing.xs,
+                    ),
+                    decoration: BoxDecoration(
+                      color: stateColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(AppRadii.sm),
+                    ),
+                    child: Text(
+                      _experimentStateLabel(experiment.estado),
+                      style: AppTypography.caption.copyWith(
+                        color: stateColor,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    experiment.disciplina,
+                    style: AppTypography.caption.copyWith(
+                      color: AppColors.textMuted,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Text(
+                    experiment.inicio,
+                    style: AppTypography.caption.copyWith(
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                experiment.titulo,
+                style: AppTypography.cardTitle.copyWith(
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                experiment.hipotese,
+                style: AppTypography.body.copyWith(
+                  color: AppColors.textSecondary,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              _ExperimentProgress(state: experiment.estado),
+              const SizedBox(height: AppSpacing.lg),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(AppSpacing.md),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceMuted,
+                  borderRadius: BorderRadius.circular(AppRadii.md),
+                ),
+                child: Wrap(
+                  spacing: AppSpacing.xxl,
+                  runSpacing: AppSpacing.sm,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    _ExperimentMetric(
+                      label: 'Métrica',
+                      value: experiment.metrica,
+                    ),
+                    _ExperimentMetric(
+                      label: 'Inicial',
+                      value:
+                          '${_formatInsightNumber(experiment.valorInicial)}${experiment.unidade}',
+                    ),
+                    _ExperimentMetric(
+                      label: 'Agora',
+                      value: experiment.valorAtual == null
+                          ? 'Aguardando'
+                          : '${_formatInsightNumber(experiment.valorAtual!)}${experiment.unidade}',
+                      color: experiment.valorAtual == null
+                          ? AppColors.textMuted
+                          : stateColor,
+                    ),
+                    _ExperimentMetric(
+                      label: 'Variação',
+                      value: experiment.variacao,
+                      color: stateColor,
+                    ),
+                    _ExperimentMetric(
+                      label: 'Evidência',
+                      value: experiment.amostra == 0
+                          ? 'Ainda sem sessões'
+                          : '${experiment.amostra} sessões · ${_confidenceLabelShort(experiment.confianca)}',
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ExperimentProgress extends StatelessWidget {
+  static const _labels = ['Padrão', 'Ação', 'Teste', 'Resultado'];
+  final String state;
+
+  const _ExperimentProgress({required this.state});
+
+  @override
+  Widget build(BuildContext context) {
+    final activeSteps = state == 'resultado'
+        ? 4
+        : state == 'testando'
+        ? 3
+        : 2;
+
+    return Row(
+      children: [
+        for (var index = 0; index < _labels.length; index++) ...[
+          Expanded(
+            child: Column(
+              children: [
+                Container(
+                  width: 24,
+                  height: 24,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: index < activeSteps
+                        ? AppColors.subjectTeal
+                        : AppColors.surfaceMuted,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: index < activeSteps
+                          ? AppColors.subjectTeal
+                          : AppColors.border,
+                    ),
+                  ),
+                  child: index < activeSteps
+                      ? const Icon(
+                          LucideIcons.circleCheck,
+                          size: 13,
+                          color: AppColors.textInverted,
+                        )
+                      : Text(
+                          '${index + 1}',
+                          style: AppTypography.caption.copyWith(
+                            color: AppColors.textMuted,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  _labels[index],
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.caption.copyWith(
+                    color: index < activeSteps
+                        ? AppColors.subjectTeal
+                        : AppColors.textMuted,
+                    fontWeight: index < activeSteps
+                        ? FontWeight.w700
+                        : FontWeight.w400,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (index != _labels.length - 1)
+            Expanded(
+              child: Container(
+                height: 2,
+                margin: const EdgeInsets.only(bottom: 20),
+                color: index < activeSteps - 1
+                    ? AppColors.subjectTeal
+                    : AppColors.border,
+              ),
+            ),
+        ],
+      ],
+    );
+  }
+}
+
+class _ExperimentMetric extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color? color;
+
+  const _ExperimentMetric({
+    required this.label,
+    required this.value,
+    this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: AppTypography.caption.copyWith(color: AppColors.textMuted),
+        ),
+        const SizedBox(height: AppSpacing.xxs),
+        Text(
+          value,
+          style: AppTypography.bodyStrong.copyWith(
+            color: color ?? AppColors.textSecondary,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SubjectJourneySection extends StatelessWidget {
+  final List<String> disciplinas;
+  final String selected;
+  final List<Insight> insights;
+  final ValueChanged<String> onSelected;
+  final ValueChanged<Insight> onOpen;
+  final ValueChanged<Insight> onAction;
+
+  const _SubjectJourneySection({
+    required this.disciplinas,
+    required this.selected,
+    required this.insights,
+    required this.onSelected,
+    required this.onOpen,
+    required this.onAction,
+  });
+
+  Insight? _findByTypes(List<String> types) {
+    for (final type in types) {
+      for (final insight in insights) {
+        if (insight.tipo == type) return insight;
+      }
+    }
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final current =
+        _findByTypes([
+          'progresso',
+          'efeito_acao',
+          'sequencia_produtiva',
+          'tarefas_no_prazo',
+        ]) ??
+        _firstWhere((insight) => insight.severidade == 'positivo');
+    final best =
+        _findByTypes([
+          'melhor_horario',
+          'melhor_dia_semana',
+          'foco_sem_interrupcoes',
+        ]) ??
+        current;
+    final next =
+        _findByTypes([
+          'ritmo_disciplina',
+          'vies_estimativa',
+          'cramming',
+          'equilibrio_metodo',
+          'duracao_ideal',
+        ]) ??
+        _firstWhere((insight) => insight.acao != null) ??
+        _firstWhere(
+          (insight) =>
+              insight.severidade == 'critico' ||
+              insight.severidade == 'atencao',
+        );
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.xxxl,
+        AppSpacing.lg,
+        0,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const _SectionHeading(
+            eyebrow: 'POR MATÉRIA',
+            title: 'A história de cada disciplina',
+            description:
+                'Concentre a leitura no momento atual, na melhor condição e no próximo passo.',
+          ),
+          const SizedBox(height: AppSpacing.md),
+          SizedBox(
+            height: 38,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: disciplinas.length,
+              separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.sm),
+              itemBuilder: (context, index) {
+                final disciplina = disciplinas[index];
+                final isSelected = disciplina == selected;
+                return isSelected
+                    ? ShadButton(
+                        key: ValueKey('evolution-subject-$disciplina'),
+                        size: ShadButtonSize.sm,
+                        backgroundColor: AppColors.subjectTeal,
+                        foregroundColor: AppColors.textInverted,
+                        onPressed: () => onSelected(disciplina),
+                        child: Text(disciplina),
+                      )
+                    : ShadButton.outline(
+                        key: ValueKey('evolution-subject-$disciplina'),
+                        size: ShadButtonSize.sm,
+                        foregroundColor: AppColors.textSecondary,
+                        onPressed: () => onSelected(disciplina),
+                        child: Text(disciplina),
+                      );
+              },
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Container(
+            width: double.infinity,
+            padding: AppSpacing.card,
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(AppRadii.lg),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Column(
+              children: [
+                if (current != null)
+                  _SubjectStoryRow(
+                    label: 'AGORA',
+                    icon: LucideIcons.trendingUp,
+                    color: AppColors.success,
+                    insight: current,
+                    onOpen: () => onOpen(current),
+                  ),
+                if (current != null && best != null)
+                  const Divider(height: AppSpacing.xxl),
+                if (best != null)
+                  _SubjectStoryRow(
+                    label: 'MELHOR CONDIÇÃO',
+                    icon: LucideIcons.circleCheck,
+                    color: AppColors.subjectTeal,
+                    insight: best,
+                    onOpen: () => onOpen(best),
+                  ),
+                if ((current != null || best != null) && next != null)
+                  const Divider(height: AppSpacing.xxl),
+                if (next != null)
+                  _SubjectStoryRow(
+                    label: 'PRÓXIMO PASSO',
+                    icon: LucideIcons.target,
+                    color: AppColors.warningStrong,
+                    insight: next,
+                    onOpen: () => onOpen(next),
+                    onAction: next.acao == null ? null : () => onAction(next),
+                  ),
+                if (current == null && best == null && next == null)
+                  Text(
+                    'Ainda não há dados suficientes para montar esta jornada.',
+                    style: AppTypography.body.copyWith(
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Insight? _firstWhere(bool Function(Insight insight) test) {
+    for (final insight in insights) {
+      if (test(insight)) return insight;
+    }
+    return null;
+  }
+}
+
+class _SubjectStoryRow extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final Color color;
+  final Insight insight;
+  final VoidCallback onOpen;
+  final VoidCallback? onAction;
+
+  const _SubjectStoryRow({
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.insight,
+    required this.onOpen,
+    this.onAction,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(AppRadii.md),
+          ),
+          child: Icon(icon, size: AppSizes.iconMd, color: color),
+        ),
+        const SizedBox(width: AppSpacing.md),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: AppTypography.sectionTitle.copyWith(color: color),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                insight.titulo,
+                style: AppTypography.bodyStrong.copyWith(
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                '${insight.amostra} sessões · ${_confidenceLabelShort(insight.confianca)}',
+                style: AppTypography.caption.copyWith(
+                  color: AppColors.textMuted,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Wrap(
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.sm,
+                children: [
+                  TextButton(
+                    onPressed: onOpen,
+                    child: const Text('Ver evidência'),
+                  ),
+                  if (onAction != null)
+                    FilledButton.tonal(
+                      onPressed: onAction,
+                      child: Text(insight.acao!.label),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+Color _experimentColor(String state) {
+  switch (state) {
+    case 'resultado':
+      return AppColors.success;
+    case 'testando':
+      return AppColors.info;
+    case 'pronto':
+    default:
+      return AppColors.warningStrong;
+  }
+}
+
+String _experimentStateLabel(String state) {
+  switch (state) {
+    case 'resultado':
+      return 'RESULTADO OBSERVADO';
+    case 'testando':
+      return 'EM TESTE';
+    case 'pronto':
+    default:
+      return 'PRONTO PARA TESTAR';
+  }
+}
+
+String _confidenceLabelShort(String confidence) {
+  switch (confidence) {
+    case 'alta':
+      return 'confiança alta';
+    case 'media':
+      return 'confiança média';
+    case 'insuficiente':
+    default:
+      return 'evidência inicial';
+  }
+}
+
+String _formatInsightNumber(num value) {
+  return value % 1 == 0
+      ? value.toInt().toString()
+      : value.toStringAsFixed(1).replaceAll('.', ',');
+}
+
 class _ViewButton extends StatelessWidget {
   final String label;
   final IconData icon;
@@ -902,117 +2645,6 @@ class _ViewButton extends StatelessWidget {
       hoverBackgroundColor: AppColors.surfaceMuted,
       onPressed: onPressed,
       child: child,
-    );
-  }
-}
-
-class _WeeklyFocusCard extends StatelessWidget {
-  final Insight insight;
-  final VoidCallback onTap;
-
-  const _WeeklyFocusCard({required this.insight, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final severityColor = _insightSeverityColor(insight.severidade);
-
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        key: const ValueKey('weekly-focus-card'),
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(AppSpacing.xl),
-          decoration: BoxDecoration(
-            gradient: AppGradients.reportsHeader,
-            borderRadius: BorderRadius.circular(AppRadii.xl),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: AppColors.textInverted.withValues(alpha: 0.16),
-                  borderRadius: BorderRadius.circular(AppRadii.lg),
-                ),
-                child: const Icon(
-                  LucideIcons.target,
-                  color: AppColors.textInverted,
-                  size: AppSizes.iconLg,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.lg),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Wrap(
-                      spacing: AppSpacing.sm,
-                      runSpacing: AppSpacing.xs,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        Text(
-                          'Foco da semana',
-                          style: AppTypography.sectionTitle.copyWith(
-                            color: AppColors.textInverted.withValues(
-                              alpha: 0.9,
-                            ),
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.sm,
-                            vertical: AppSpacing.xs,
-                          ),
-                          decoration: BoxDecoration(
-                            color: severityColor,
-                            borderRadius: BorderRadius.circular(AppRadii.sm),
-                          ),
-                          child: Text(
-                            _severityLabel(insight.severidade),
-                            style: AppTypography.caption.copyWith(
-                              color: AppColors.textInverted,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Text(
-                      insight.titulo,
-                      style: AppTypography.cardTitle.copyWith(
-                        color: AppColors.textInverted,
-                        height: 1.25,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      insight.descricao,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTypography.body.copyWith(
-                        color: AppColors.textInverted.withValues(alpha: 0.86),
-                        height: 1.4,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              const Icon(
-                LucideIcons.arrowRight,
-                color: AppColors.textInverted,
-                size: AppSizes.iconLg,
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }
@@ -1206,15 +2838,15 @@ class _EvolutionTimeline extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Sua evolução',
+            'Histórico das mudanças',
             style: AppTypography.pageTitle.copyWith(
               color: AppColors.textPrimary,
             ),
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            'Uma linha do tempo observacional entre padrões detectados, ações '
-            'registradas e mudanças percebidas.',
+            'O registro cronológico complementa as comparações acima e mostra '
+            'quando cada ação aconteceu.',
             style: AppTypography.body.copyWith(
               color: AppColors.textMuted,
               height: 1.45,
@@ -1409,20 +3041,6 @@ Color _insightSeverityColor(String severity) {
     case 'info':
     default:
       return AppColors.info;
-  }
-}
-
-String _severityLabel(String severity) {
-  switch (severity) {
-    case 'positivo':
-      return 'Conquista';
-    case 'atencao':
-      return 'Atenção';
-    case 'critico':
-      return 'Crítico';
-    case 'info':
-    default:
-      return 'Informativo';
   }
 }
 

@@ -33,6 +33,23 @@ class _FailingInsightsService extends InsightsService {
   }
 }
 
+Widget _expandedInsightsApp() {
+  return const ShadApp(home: InsightsScreen(initiallyShowPatternLibrary: true));
+}
+
+Future<void> _scrollToPatternLibrary(WidgetTester tester) async {
+  final outerScroll = find
+      .descendant(
+        of: find.byType(CustomScrollView),
+        matching: find.byType(Scrollable),
+      )
+      .first;
+  final categories = find.text('Todos');
+  await tester.scrollUntilVisible(categories, 500, scrollable: outerScroll);
+  await tester.ensureVisible(categories);
+  await tester.pumpAndSettle();
+}
+
 void main() {
   testWidgets('shows a loading indicator before insights resolve', (
     tester,
@@ -52,7 +69,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(CircularProgressIndicator), findsNothing);
-    expect(find.text('Foco da semana'), findsOneWidget);
+    expect(find.text('Três decisões, sem sobrecarga'), findsOneWidget);
   });
 
   testWidgets('shows an error state with retry when loading fails', (
@@ -80,14 +97,19 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    await tester.pumpWidget(const ShadApp(home: InsightsScreen()));
+    await tester.pumpWidget(_expandedInsightsApp());
     await tester.pumpAndSettle();
 
     expect(find.text('Insights'), findsNWidgets(2));
-    expect(find.text('Foco da semana'), findsOneWidget);
-    expect(find.text('Resumo dos seus padrões'), findsOneWidget);
+    expect(find.text('Três decisões, sem sobrecarga'), findsOneWidget);
+    expect(find.text('Saúde do seu estudo'), findsOneWidget);
     expect(find.text('Evolução'), findsOneWidget);
-    expect(find.text('Seus padrões'), findsOneWidget);
+    expect(find.byType(InsightCard), findsNothing);
+
+    await _scrollToPatternLibrary(tester);
+
+    expect(find.text('Biblioteca de padrões'), findsOneWidget);
+    expect(find.text('Resumo dos seus padrões'), findsOneWidget);
     expect(find.text('Todos'), findsOneWidget);
     expect(find.text('Todas as matérias'), findsOneWidget);
     expect(find.text('Tempo'), findsOneWidget);
@@ -95,8 +117,8 @@ void main() {
     expect(find.text('Método'), findsOneWidget);
     expect(find.text('Fontes de dados'), findsNothing);
     expect(find.text('Mostrar insights ocultos'), findsNothing);
-    expect(find.text('Confiança alta'), findsNothing);
-    expect(find.text('Confiança média'), findsNothing);
+    expect(find.text('Confiança alta'), findsWidgets);
+    expect(find.text('Confiança média'), findsWidgets);
     expect(find.textContaining('60% das sessões'), findsWidgets);
     expect(
       find.textContaining('Dados insuficientes — continue registrando'),
@@ -114,7 +136,7 @@ void main() {
     );
   });
 
-  testWidgets('hides weekly focus when there is no eligible insight', (
+  testWidgets('hides weekly plan when there is no eligible insight', (
     tester,
   ) async {
     final insufficient = getInsightsMock().where(
@@ -125,7 +147,7 @@ void main() {
       ShadApp(home: InsightsScreen(insights: insufficient.toList())),
     );
 
-    expect(find.byKey(const ValueKey('weekly-focus-card')), findsNothing);
+    expect(find.text('Três decisões, sem sobrecarga'), findsNothing);
   });
 
   testWidgets('filters insights by category', (tester) async {
@@ -134,9 +156,9 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    await tester.pumpWidget(const ShadApp(home: InsightsScreen()));
+    await tester.pumpWidget(_expandedInsightsApp());
     await tester.pumpAndSettle();
-
+    await _scrollToPatternLibrary(tester);
     await tester.tap(find.text('Saúde'));
     await tester.pumpAndSettle();
 
@@ -156,9 +178,9 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    await tester.pumpWidget(const ShadApp(home: InsightsScreen()));
+    await tester.pumpWidget(_expandedInsightsApp());
     await tester.pumpAndSettle();
-
+    await _scrollToPatternLibrary(tester);
     await tester.tap(find.byKey(const ValueKey('summary-critico')));
     await tester.pump();
     expect(find.byType(InsightCard), findsNWidgets(2));
@@ -183,9 +205,12 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('view-evolucao')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Sua evolução'), findsOneWidget);
+    expect(find.text('Antes × agora'), findsOneWidget);
+    expect(find.text('Da hipótese ao resultado'), findsOneWidget);
+    expect(find.text('A história de cada disciplina'), findsOneWidget);
+    expect(find.text('Histórico das mudanças'), findsOneWidget);
     expect(find.text('Detectado'), findsNWidgets(2));
-    expect(find.text('Ação'), findsOneWidget);
+    expect(find.text('Ação'), findsWidgets);
     expect(find.text('Melhora observada'), findsNWidgets(2));
     expect(find.byType(InsightCard), findsNothing);
   });
@@ -196,8 +221,9 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    await tester.pumpWidget(const ShadApp(home: InsightsScreen()));
+    await tester.pumpWidget(_expandedInsightsApp());
     await tester.pumpAndSettle();
+    await _scrollToPatternLibrary(tester);
 
     await tester.tap(find.text('Planejamento'));
     await tester.pumpAndSettle();
@@ -259,9 +285,14 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    await tester.pumpWidget(const ShadApp(home: InsightsScreen()));
+    await tester.pumpWidget(_expandedInsightsApp());
     await tester.pumpAndSettle();
+    await _scrollToPatternLibrary(tester);
 
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('feedback-down-melhor_horario')),
+    );
+    await tester.pumpAndSettle();
     await tester.tap(
       find.byKey(const ValueKey('feedback-down-melhor_horario')),
     );
@@ -301,9 +332,14 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    await tester.pumpWidget(const ShadApp(home: InsightsScreen()));
+    await tester.pumpWidget(_expandedInsightsApp());
     await tester.pumpAndSettle();
+    await _scrollToPatternLibrary(tester);
 
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('feedback-up-melhor_horario')),
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('feedback-up-melhor_horario')));
     await tester.pump();
 
@@ -329,12 +365,13 @@ void main() {
             return InsightsScreen(
               key: const ValueKey('insights'),
               insights: value,
+              initiallyShowPatternLibrary: true,
             );
           },
         ),
       ),
     );
-
+    await _scrollToPatternLibrary(tester);
     await tester.tap(find.text('Saúde'));
     await tester.pumpAndSettle();
 
@@ -354,7 +391,21 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    await tester.pumpWidget(const ShadApp(home: InsightsScreen()));
+    await tester.pumpWidget(_expandedInsightsApp());
+    await tester.pumpAndSettle();
+    await _scrollToPatternLibrary(tester);
+
+    final outerScroll = find
+        .descendant(
+          of: find.byType(CustomScrollView),
+          matching: find.byType(Scrollable),
+        )
+        .first;
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('melhor_dia_semana')),
+      400,
+      scrollable: outerScroll,
+    );
     await tester.pumpAndSettle();
 
     final wideCards = find.byType(InsightCard);
