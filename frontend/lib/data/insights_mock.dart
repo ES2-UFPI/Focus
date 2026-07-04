@@ -24,6 +24,32 @@ List<Insight> getInsightsMock() {
       confianca: 'alta',
       natureza: 'observacional',
       severidade: 'positivo',
+      grafico: InsightChart(
+        tipo: 'barras',
+        labels: ['6-9h', '9-12h', '12-15h', '15-18h', '18-21h', '21-0h'],
+        valores: [4.1, 4.2, 3.0, 2.8, 2.6, 2.4],
+        destaqueIndex: 1,
+      ),
+      sessoesEvidencia: [
+        InsightEvidenceSession(
+          data: '2026-06-18',
+          disciplina: 'ES2',
+          duracaoMin: 48,
+          produtividade: 4.3,
+        ),
+        InsightEvidenceSession(
+          data: '2026-06-23',
+          disciplina: 'ES2',
+          duracaoMin: 52,
+          produtividade: 4.1,
+        ),
+        InsightEvidenceSession(
+          data: '2026-06-26',
+          disciplina: 'ES2',
+          duracaoMin: 45,
+          produtividade: 4.2,
+        ),
+      ],
       acao: InsightAction(
         tipo: 'agendar_sessao',
         label: 'Agendar de manhã',
@@ -66,6 +92,32 @@ List<Insight> getInsightsMock() {
       confianca: 'alta',
       natureza: 'observacional',
       severidade: 'atencao',
+      grafico: InsightChart(
+        tipo: 'linha',
+        labels: ['25 min', '40 min', '50 min', '70 min', '90 min'],
+        valores: [3.8, 4.2, 4.1, 3.3, 2.7],
+        destaqueIndex: 2,
+      ),
+      sessoesEvidencia: [
+        InsightEvidenceSession(
+          data: '2026-06-17',
+          disciplina: 'Banco de Dados',
+          duracaoMin: 42,
+          produtividade: 4.4,
+        ),
+        InsightEvidenceSession(
+          data: '2026-06-20',
+          disciplina: 'Banco de Dados',
+          duracaoMin: 51,
+          produtividade: 4.0,
+        ),
+        InsightEvidenceSession(
+          data: '2026-06-25',
+          disciplina: 'Banco de Dados',
+          duracaoMin: 82,
+          produtividade: 2.6,
+        ),
+      ],
     ),
     Insight(
       tipo: 'foco_sem_interrupcoes',
@@ -98,6 +150,32 @@ List<Insight> getInsightsMock() {
       confianca: 'media',
       natureza: 'observacional',
       severidade: 'atencao',
+      grafico: InsightChart(
+        tipo: 'comparacao',
+        labels: ['Planejado', 'Realizado'],
+        valores: [60, 84],
+        destaqueIndex: 1,
+      ),
+      sessoesEvidencia: [
+        InsightEvidenceSession(
+          data: '2026-06-16',
+          disciplina: 'Cálculo',
+          duracaoMin: 87,
+          produtividade: 3.8,
+        ),
+        InsightEvidenceSession(
+          data: '2026-06-21',
+          disciplina: 'Cálculo',
+          duracaoMin: 81,
+          produtividade: 4.0,
+        ),
+        InsightEvidenceSession(
+          data: '2026-06-27',
+          disciplina: 'Cálculo',
+          duracaoMin: 84,
+          produtividade: 3.7,
+        ),
+      ],
     ),
     Insight(
       tipo: 'tarefas_no_prazo',
@@ -125,6 +203,32 @@ List<Insight> getInsightsMock() {
       confianca: 'alta',
       natureza: 'observacional',
       severidade: 'critico',
+      grafico: InsightChart(
+        tipo: 'barras',
+        labels: ['Realizadas', 'Canceladas'],
+        valores: [4, 6],
+        destaqueIndex: 1,
+      ),
+      sessoesEvidencia: [
+        InsightEvidenceSession(
+          data: '2026-06-12',
+          disciplina: 'ES2',
+          duracaoMin: 0,
+          produtividade: 0,
+        ),
+        InsightEvidenceSession(
+          data: '2026-06-19',
+          disciplina: 'ES2',
+          duracaoMin: 0,
+          produtividade: 0,
+        ),
+        InsightEvidenceSession(
+          data: '2026-06-26',
+          disciplina: 'ES2',
+          duracaoMin: 36,
+          produtividade: 3.2,
+        ),
+      ],
       acao: InsightAction(
         tipo: 'reagendar',
         label: 'Reagendar sexta à noite',
@@ -167,6 +271,32 @@ List<Insight> getInsightsMock() {
       confianca: 'media',
       natureza: 'observacional',
       severidade: 'atencao',
+      grafico: InsightChart(
+        tipo: 'comparacao',
+        labels: ['Antes de 48h', 'Últimas 48h'],
+        valores: [2, 7],
+        destaqueIndex: 1,
+      ),
+      sessoesEvidencia: [
+        InsightEvidenceSession(
+          data: '2026-06-08',
+          disciplina: 'Cálculo',
+          duracaoMin: 35,
+          produtividade: 3.6,
+        ),
+        InsightEvidenceSession(
+          data: '2026-06-09',
+          disciplina: 'Cálculo',
+          duracaoMin: 95,
+          produtividade: 3.1,
+        ),
+        InsightEvidenceSession(
+          data: '2026-06-10',
+          disciplina: 'Cálculo',
+          duracaoMin: 112,
+          produtividade: 2.8,
+        ),
+      ],
       acao: InsightAction(
         tipo: 'agendar_sessao',
         label: 'Antecipar estudo antes da prova',
@@ -192,6 +322,32 @@ List<Insight> getInsightsMock() {
       confianca: 'media',
       natureza: 'observacional',
       severidade: 'atencao',
+      grafico: InsightChart(
+        tipo: 'comparacao',
+        labels: ['< 6h sono', '≥ 7h sono'],
+        valores: [2.6, 4.0],
+        destaqueIndex: 0,
+      ),
+      sessoesEvidencia: [
+        InsightEvidenceSession(
+          data: '2026-06-15',
+          disciplina: 'ES2',
+          duracaoMin: 50,
+          produtividade: 2.5,
+        ),
+        InsightEvidenceSession(
+          data: '2026-06-22',
+          disciplina: 'Cálculo',
+          duracaoMin: 47,
+          produtividade: 2.7,
+        ),
+        InsightEvidenceSession(
+          data: '2026-06-24',
+          disciplina: 'ES2',
+          duracaoMin: 55,
+          produtividade: 4.0,
+        ),
+      ],
     ),
     Insight(
       tipo: 'ritmo_disciplina',
@@ -231,6 +387,32 @@ List<Insight> getInsightsMock() {
       confianca: 'media',
       natureza: 'observacional',
       severidade: 'atencao',
+      grafico: InsightChart(
+        tipo: 'comparacao',
+        labels: ['Uso habitual', '> 1h de tela'],
+        valores: [1.3, 2.6],
+        destaqueIndex: 1,
+      ),
+      sessoesEvidencia: [
+        InsightEvidenceSession(
+          data: '2026-06-19',
+          disciplina: 'ES2',
+          duracaoMin: 44,
+          produtividade: 2.4,
+        ),
+        InsightEvidenceSession(
+          data: '2026-06-21',
+          disciplina: 'Cálculo',
+          duracaoMin: 39,
+          produtividade: 2.6,
+        ),
+        InsightEvidenceSession(
+          data: '2026-06-28',
+          disciplina: 'ES2',
+          duracaoMin: 46,
+          produtividade: 2.5,
+        ),
+      ],
       acao: InsightAction(
         tipo: 'silenciar_celular',
         label: 'Silenciar o celular 15 min antes',
@@ -249,6 +431,32 @@ List<Insight> getInsightsMock() {
       confianca: 'alta',
       natureza: 'observacional',
       severidade: 'atencao',
+      grafico: InsightChart(
+        tipo: 'barras',
+        labels: ['Leitura', 'Questões'],
+        valores: [85, 15],
+        destaqueIndex: 0,
+      ),
+      sessoesEvidencia: [
+        InsightEvidenceSession(
+          data: '2026-06-18',
+          disciplina: 'Cálculo',
+          duracaoMin: 60,
+          produtividade: 3.5,
+        ),
+        InsightEvidenceSession(
+          data: '2026-06-23',
+          disciplina: 'Cálculo',
+          duracaoMin: 72,
+          produtividade: 3.3,
+        ),
+        InsightEvidenceSession(
+          data: '2026-06-29',
+          disciplina: 'Cálculo',
+          duracaoMin: 54,
+          produtividade: 3.7,
+        ),
+      ],
       acao: InsightAction(
         tipo: 'agendar_sessao',
         label: 'Agendar sessão de exercícios',
@@ -317,6 +525,41 @@ List<Insight> getInsightsMock() {
       confianca: 'insuficiente',
       natureza: 'observacional',
       severidade: 'info',
+    ),
+  ];
+}
+
+/// Jornada mockada da demo. Na fase de dados, estes eventos virão do backend
+/// junto dos insights de progresso e efeito observado após uma ação.
+List<InsightJourneyEvent> getJornadaMock() {
+  return const [
+    InsightJourneyEvent(
+      data: 'Há 2 semanas',
+      tipo: 'detectado',
+      texto:
+          'Foi observado que 60% das sessões de sexta à noite eram canceladas.',
+      insightTipo: 'taxa_furo',
+    ),
+    InsightJourneyEvent(
+      data: '12 dias atrás',
+      tipo: 'acao',
+      texto:
+          'Você reorganizou as sessões de ES2 e passou a estudar pela manhã.',
+      insightTipo: 'melhor_horario',
+    ),
+    InsightJourneyEvent(
+      data: 'Semana passada',
+      tipo: 'melhora',
+      texto:
+          'Após a mudança de horário, foi observada produtividade média 18% maior.',
+      insightTipo: 'efeito_acao',
+    ),
+    InsightJourneyEvent(
+      data: 'Esta semana',
+      tipo: 'melhora',
+      texto:
+          'Nos registros mais recentes, os cancelamentos de sexta caíram para 10%.',
+      insightTipo: 'progresso',
     ),
   ];
 }

@@ -16,6 +16,7 @@ class InsightFeedbackState {
 class InsightCard extends StatelessWidget {
   final Insight insight;
   final String? disciplinaColorHex;
+  final VoidCallback? onTap;
   final VoidCallback? onAction;
   final InsightFeedbackState? feedback;
   final bool showFeedbackReasons;
@@ -28,6 +29,7 @@ class InsightCard extends StatelessWidget {
     super.key,
     required this.insight,
     this.disciplinaColorHex,
+    this.onTap,
     this.onAction,
     this.feedback,
     this.showFeedbackReasons = false,
@@ -55,131 +57,139 @@ class InsightCard extends StatelessWidget {
           : _dadosInsuficientes
           ? 0.68
           : 1,
-      child: Container(
-        width: double.infinity,
-        padding: AppSpacing.card,
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(AppRadii.lg),
-          border: Border.all(color: AppColors.border),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+      child: MouseRegion(
+        cursor: onTap == null ? MouseCursor.defer : SystemMouseCursors.click,
+        child: GestureDetector(
+          key: ValueKey('insight-card-tap-${insight.tipo}'),
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          child: Container(
+            width: double.infinity,
+            padding: AppSpacing.card,
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(AppRadii.lg),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _HeroMetric(
-                  icon: _insightIcon(),
-                  value: _heroValue(heroMetric),
-                  label: _metricLabel(heroMetric.key),
-                  color: accentColor,
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _HeroMetric(
+                      icon: _insightIcon(),
+                      value: _heroValue(heroMetric),
+                      label: _metricLabel(heroMetric.key),
+                      color: accentColor,
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _SubjectBadge(
+                            label: insight.disciplina ?? 'Geral',
+                            color: insight.disciplina == null
+                                ? AppColors.neutral
+                                : _subjectColor(),
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          Text(
+                            insight.titulo,
+                            style: AppTypography.cardTitle.copyWith(
+                              color: AppColors.textPrimary,
+                              height: 1.25,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.xs),
+                          Text(
+                            insight.descricao,
+                            style: AppTypography.body.copyWith(
+                              color: AppColors.textMuted,
+                              height: 1.4,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _SubjectBadge(
-                        label: insight.disciplina ?? 'Geral',
-                        color: insight.disciplina == null
-                            ? AppColors.neutral
-                            : _subjectColor(),
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      Text(
-                        insight.titulo,
-                        style: AppTypography.cardTitle.copyWith(
-                          color: AppColors.textPrimary,
-                          height: 1.25,
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.xs),
-                      Text(
-                        insight.descricao,
-                        style: AppTypography.body.copyWith(
-                          color: AppColors.textMuted,
-                          height: 1.4,
-                        ),
-                      ),
-                    ],
+                const SizedBox(height: AppSpacing.md),
+                if (_dadosInsuficientes)
+                  _InsufficientNotice(color: accentColor)
+                else if (secondaryMetrics.isNotEmpty)
+                  Wrap(
+                    spacing: AppSpacing.sm,
+                    runSpacing: AppSpacing.sm,
+                    children: secondaryMetrics
+                        .map(
+                          (entry) => _Metric(
+                            label: _metricLabel(entry.key),
+                            value: _metricValue(entry.key, entry.value),
+                            color: accentColor,
+                          ),
+                        )
+                        .toList(),
                   ),
+                const SizedBox(height: AppSpacing.md),
+                Wrap(
+                  spacing: AppSpacing.sm,
+                  runSpacing: AppSpacing.sm,
+                  children: [
+                    _Badge(
+                      icon: LucideIcons.database,
+                      label:
+                          '${insight.amostra} ${insight.amostra == 1 ? 'sessão' : 'sessões'}',
+                    ),
+                    _Badge(
+                      icon: LucideIcons.telescope,
+                      label: insight.natureza == 'comprovado'
+                          ? 'Comprovado'
+                          : 'Padrão observado',
+                    ),
+                  ],
                 ),
+                if (insight.acao != null) ...[
+                  const SizedBox(height: AppSpacing.lg),
+                  ShadButton(
+                    key: ValueKey('action-${insight.tipo}'),
+                    width: double.infinity,
+                    backgroundColor: AppColors.brandPrimary,
+                    hoverBackgroundColor: AppColors.brandPrimaryDark,
+                    foregroundColor: AppColors.textInverted,
+                    expands: false,
+                    leading: const Icon(
+                      LucideIcons.calendarPlus,
+                      size: AppSizes.iconMd,
+                    ),
+                    onPressed: onAction,
+                    child: Flexible(
+                      child: Text(
+                        insight.acao!.label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ),
+                ],
+                if (onUseful != null ||
+                    onNotUseful != null ||
+                    feedback != null) ...[
+                  const SizedBox(height: AppSpacing.lg),
+                  InsightFeedbackControl(
+                    insightType: insight.tipo,
+                    feedback: feedback,
+                    showReasons: showFeedbackReasons,
+                    onUseful: onUseful,
+                    onNotUseful: onNotUseful,
+                    onSelectReason: onSelectFeedbackReason,
+                    onClear: onClearFeedback,
+                  ),
+                ],
               ],
             ),
-            const SizedBox(height: AppSpacing.md),
-            if (_dadosInsuficientes)
-              _InsufficientNotice(color: accentColor)
-            else if (secondaryMetrics.isNotEmpty)
-              Wrap(
-                spacing: AppSpacing.sm,
-                runSpacing: AppSpacing.sm,
-                children: secondaryMetrics
-                    .map(
-                      (entry) => _Metric(
-                        label: _metricLabel(entry.key),
-                        value: _metricValue(entry.key, entry.value),
-                        color: accentColor,
-                      ),
-                    )
-                    .toList(),
-              ),
-            const SizedBox(height: AppSpacing.md),
-            Wrap(
-              spacing: AppSpacing.sm,
-              runSpacing: AppSpacing.sm,
-              children: [
-                _Badge(
-                  icon: LucideIcons.database,
-                  label:
-                      '${insight.amostra} ${insight.amostra == 1 ? 'sessão' : 'sessões'}',
-                ),
-                _Badge(
-                  icon: LucideIcons.telescope,
-                  label: insight.natureza == 'comprovado'
-                      ? 'Comprovado'
-                      : 'Padrão observado',
-                ),
-              ],
-            ),
-            if (insight.acao != null) ...[
-              const SizedBox(height: AppSpacing.lg),
-              ShadButton(
-                key: ValueKey('action-${insight.tipo}'),
-                width: double.infinity,
-                backgroundColor: AppColors.brandPrimary,
-                hoverBackgroundColor: AppColors.brandPrimaryDark,
-                foregroundColor: AppColors.textInverted,
-                expands: false,
-                leading: const Icon(
-                  LucideIcons.calendarPlus,
-                  size: AppSizes.iconMd,
-                ),
-                onPressed: onAction,
-                child: Flexible(
-                  child: Text(
-                    insight.acao!.label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ),
-            ],
-            if (onUseful != null ||
-                onNotUseful != null ||
-                feedback != null) ...[
-              const SizedBox(height: AppSpacing.lg),
-              _InsightFeedbackControl(
-                insightType: insight.tipo,
-                feedback: feedback,
-                showReasons: showFeedbackReasons,
-                onUseful: onUseful,
-                onNotUseful: onNotUseful,
-                onSelectReason: onSelectFeedbackReason,
-                onClear: onClearFeedback,
-              ),
-            ],
-          ],
+          ),
         ),
       ),
     );
@@ -375,7 +385,7 @@ class InsightCard extends StatelessWidget {
   }
 }
 
-class _InsightFeedbackControl extends StatelessWidget {
+class InsightFeedbackControl extends StatelessWidget {
   static const _reasons = [
     'Semana atípica',
     'Não concordo',
@@ -391,7 +401,8 @@ class _InsightFeedbackControl extends StatelessWidget {
   final ValueChanged<String>? onSelectReason;
   final VoidCallback? onClear;
 
-  const _InsightFeedbackControl({
+  const InsightFeedbackControl({
+    super.key,
     required this.insightType,
     required this.feedback,
     required this.showReasons,

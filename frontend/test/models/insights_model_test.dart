@@ -22,6 +22,20 @@ void main() {
         'disciplina_id': 'disc-1',
         'horario_sugerido': 'manha',
       },
+      'grafico': {
+        'tipo': 'barras',
+        'labels': ['Manhã', 'Noite'],
+        'valores': [4.1, 2.4],
+        'destaqueIndex': 0,
+      },
+      'sessoesEvidencia': [
+        {
+          'data': '2026-06-18',
+          'disciplina': 'Cálculo',
+          'duracaoMin': 50,
+          'produtividade': 4.1,
+        },
+      ],
     });
 
     expect(insight.tipo, 'melhor_horario');
@@ -36,6 +50,13 @@ void main() {
     expect(insight.acao?.label, 'Agendar de manhã');
     expect(insight.acao?.disciplinaId, 'disc-1');
     expect(insight.acao?.horarioSugerido, 'manha');
+    expect(insight.grafico?.tipo, 'barras');
+    expect(insight.grafico?.labels, ['Manhã', 'Noite']);
+    expect(insight.grafico?.valores, [4.1, 2.4]);
+    expect(insight.grafico?.destaqueIndex, 0);
+    expect(insight.sessoesEvidencia, hasLength(1));
+    expect(insight.sessoesEvidencia.single.duracaoMin, 50);
+    expect(insight.sessoesEvidencia.single.produtividade, 4.1);
   });
 
   test('Insight.fromJson defaults nullable subject and action', () {
@@ -49,6 +70,8 @@ void main() {
     expect(insight.categoria, 'tempo');
     expect(insight.disciplina, isNull);
     expect(insight.acao, isNull);
+    expect(insight.grafico, isNull);
+    expect(insight.sessoesEvidencia, isEmpty);
   });
 
   test('Insight.fromJson accepts a null action', () {
@@ -115,6 +138,27 @@ void main() {
       (insight) => insight.confianca == 'insuficiente',
     );
     expect(insufficient.acao, isNull);
+
+    final detailedTypes = insights
+        .where(
+          (insight) =>
+              insight.grafico != null && insight.sessoesEvidencia.isNotEmpty,
+        )
+        .map((insight) => insight.tipo)
+        .toSet();
+    expect(
+      detailedTypes,
+      containsAll({
+        'melhor_horario',
+        'duracao_ideal',
+        'vies_estimativa',
+        'taxa_furo',
+        'cramming',
+        'sono_x_rendimento',
+        'tela_antes_sessao',
+        'equilibrio_metodo',
+      }),
+    );
   });
 
   test('mock keeps actions curated and subject colors local', () {
@@ -146,5 +190,20 @@ void main() {
       containsAll({'Cálculo', 'Banco de Dados', 'ES2', 'Física'}),
     );
     expect(insightDisciplinaCoresLocais.keys, containsAll({'Cálculo', 'ES2'}));
+  });
+
+  test('journey mock connects detection, action and observed improvement', () {
+    final journey = getJornadaMock();
+
+    expect(journey, hasLength(4));
+    expect(journey.map((event) => event.tipo).toSet(), {
+      'detectado',
+      'acao',
+      'melhora',
+    });
+    expect(
+      journey.map((event) => event.insightTipo),
+      containsAll({'taxa_furo', 'efeito_acao', 'progresso'}),
+    );
   });
 }

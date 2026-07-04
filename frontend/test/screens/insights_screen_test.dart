@@ -16,7 +16,10 @@ void main() {
 
     await tester.pumpWidget(const ShadApp(home: InsightsScreen()));
 
-    expect(find.text('Insights'), findsOneWidget);
+    expect(find.text('Insights'), findsNWidgets(2));
+    expect(find.text('Foco da semana'), findsOneWidget);
+    expect(find.text('Resumo dos seus padrões'), findsOneWidget);
+    expect(find.text('Evolução'), findsOneWidget);
     expect(find.text('Seus padrões'), findsOneWidget);
     expect(find.text('Todos'), findsOneWidget);
     expect(find.text('Todas as matérias'), findsOneWidget);
@@ -27,7 +30,7 @@ void main() {
     expect(find.text('Mostrar insights ocultos'), findsNothing);
     expect(find.text('Confiança alta'), findsNothing);
     expect(find.text('Confiança média'), findsNothing);
-    expect(find.textContaining('60% das sessões'), findsOneWidget);
+    expect(find.textContaining('60% das sessões'), findsWidgets);
     expect(
       find.textContaining('Dados insuficientes — continue registrando'),
       findsOneWidget,
@@ -42,6 +45,20 @@ void main() {
       find.text('Estude algumas sessões para desbloquear seus insights.'),
       findsOneWidget,
     );
+  });
+
+  testWidgets('hides weekly focus when there is no eligible insight', (
+    tester,
+  ) async {
+    final insufficient = getInsightsMock().where(
+      (insight) => insight.confianca == 'insuficiente',
+    );
+
+    await tester.pumpWidget(
+      ShadApp(home: InsightsScreen(insights: insufficient.toList())),
+    );
+
+    expect(find.byKey(const ValueKey('weekly-focus-card')), findsNothing);
   });
 
   testWidgets('filters insights by category', (tester) async {
@@ -63,6 +80,44 @@ void main() {
       find.text('Seu rendimento tende a ser maior pela manhã'),
       findsNothing,
     );
+  });
+
+  testWidgets('filters by severity and attention shortcut', (tester) async {
+    tester.view.physicalSize = const Size(1000, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(const ShadApp(home: InsightsScreen()));
+
+    await tester.tap(find.byKey(const ValueKey('summary-critico')));
+    await tester.pump();
+    expect(find.byType(InsightCard), findsNWidgets(2));
+
+    await tester.tap(find.byKey(const ValueKey('summary-needs-attention')));
+    await tester.pump();
+    expect(find.byType(InsightCard), findsNWidgets(9));
+
+    await tester.tap(find.byKey(const ValueKey('summary-needs-attention')));
+    await tester.pump();
+    expect(find.byType(InsightCard), findsNWidgets(17));
+  });
+
+  testWidgets('renders the evolution journey in its own view', (tester) async {
+    tester.view.physicalSize = const Size(1000, 1400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(const ShadApp(home: InsightsScreen()));
+    await tester.tap(find.byKey(const ValueKey('view-evolucao')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Sua evolução'), findsOneWidget);
+    expect(find.text('Detectado'), findsOneWidget);
+    expect(find.text('Ação'), findsOneWidget);
+    expect(find.text('Melhora observada'), findsNWidgets(2));
+    expect(find.byType(InsightCard), findsNothing);
   });
 
   testWidgets('combines category and subject filters', (tester) async {
