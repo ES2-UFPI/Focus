@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../core/theme/app_theme.dart';
+import '../data/insight_disciplina_colors.dart';
 import '../data/insights_mock.dart';
 import '../models/insights_model.dart';
 import '../widgets/insight_card.dart';
+import 'criar_sessao_screen.dart';
 
 class InsightsScreen extends StatefulWidget {
   /// Permite exercitar os estados da tela sem alterar a fonte de produção.
@@ -29,6 +31,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
 
   late List<Insight> _items;
   String? _selectedCategory;
+  String? _selectedDisciplina;
 
   @override
   void initState() {
@@ -50,10 +53,25 @@ class _InsightsScreenState extends State<InsightsScreen> {
       )
       .toList();
 
+  List<String> get _availableDisciplinas {
+    final disciplinas = _items
+        .map((insight) => insight.disciplina)
+        .whereType<String>()
+        .toSet()
+        .toList();
+    disciplinas.sort();
+    return disciplinas;
+  }
+
   List<Insight> get _filteredItems {
-    if (_selectedCategory == null) return _items;
     return _items
-        .where((insight) => insight.categoria == _selectedCategory)
+        .where(
+          (insight) =>
+              (_selectedCategory == null ||
+                  insight.categoria == _selectedCategory) &&
+              (_selectedDisciplina == null ||
+                  insight.disciplina == _selectedDisciplina),
+        )
         .toList();
   }
 
@@ -75,10 +93,14 @@ class _InsightsScreenState extends State<InsightsScreen> {
           else ...[
             SliverToBoxAdapter(child: _buildIntroduction(items)),
             SliverToBoxAdapter(child: _buildCategoryFilters()),
+            SliverToBoxAdapter(child: _buildDisciplinaFilters()),
             if (filteredItems.isEmpty)
               SliverToBoxAdapter(
                 child: _CategoryEmpty(
-                  category: _categoryLabel(_selectedCategory),
+                  category: _selectedCategory == null
+                      ? null
+                      : _categoryLabel(_selectedCategory),
+                  disciplina: _selectedDisciplina,
                 ),
               )
             else
@@ -290,6 +312,119 @@ class _InsightsScreenState extends State<InsightsScreen> {
     );
   }
 
+  Widget _buildDisciplinaFilters() {
+    final disciplinas = [null, ..._availableDisciplinas];
+
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.xs,
+                AppSpacing.lg,
+                AppSpacing.xs,
+              ),
+              child: Text(
+                'FILTRAR POR MATÉRIA',
+                style: AppTypography.sectionTitle.copyWith(
+                  color: AppColors.textMuted,
+                ),
+              ),
+            ),
+            SizedBox(
+              height: 44,
+              child: ListView.separated(
+                padding: AppSpacing.listHorizontal,
+                scrollDirection: Axis.horizontal,
+                itemCount: disciplinas.length,
+                separatorBuilder: (_, _) =>
+                    const SizedBox(width: AppSpacing.sm),
+                itemBuilder: (context, index) {
+                  final disciplina = disciplinas[index];
+                  final selected = disciplina == _selectedDisciplina;
+                  final label = disciplina ?? 'Todas as matérias';
+                  final color = _disciplinaColor(disciplina);
+
+                  final child = Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (disciplina != null) ...[
+                        Container(
+                          width: 7,
+                          height: 7,
+                          decoration: BoxDecoration(
+                            color: selected ? AppColors.textInverted : color,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.xs),
+                      ],
+                      Text(
+                        label,
+                        style: AppTypography.caption.copyWith(
+                          color: selected
+                              ? AppColors.textInverted
+                              : AppColors.textSecondary,
+                          fontWeight: selected
+                              ? FontWeight.w700
+                              : FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  );
+
+                  return Semantics(
+                    selected: selected,
+                    button: true,
+                    child: selected
+                        ? ShadButton(
+                            key: ValueKey(
+                              'subject-filter-${disciplina ?? 'todas'}',
+                            ),
+                            size: ShadButtonSize.sm,
+                            height: 34,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.md,
+                            ),
+                            backgroundColor: AppColors.subjectTeal,
+                            hoverBackgroundColor: AppColors.subjectTeal,
+                            foregroundColor: AppColors.textInverted,
+                            onPressed: () => setState(
+                              () => _selectedDisciplina = disciplina,
+                            ),
+                            child: child,
+                          )
+                        : ShadButton.outline(
+                            key: ValueKey(
+                              'subject-filter-${disciplina ?? 'todas'}',
+                            ),
+                            size: ShadButtonSize.sm,
+                            height: 34,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.md,
+                            ),
+                            backgroundColor: AppColors.surface,
+                            hoverBackgroundColor: AppColors.surfaceMuted,
+                            foregroundColor: AppColors.textSecondary,
+                            onPressed: () => setState(
+                              () => _selectedDisciplina = disciplina,
+                            ),
+                            child: child,
+                          ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildInsightGrid(List<Insight> items) {
     return Center(
       child: ConstrainedBox(
@@ -319,6 +454,12 @@ class _InsightsScreenState extends State<InsightsScreen> {
                       child: InsightCard(
                         key: ValueKey(insight.tipo),
                         insight: insight,
+                        disciplinaColorHex: getInsightDisciplinaColorHex(
+                          insight.disciplina,
+                        ),
+                        onAction: insight.acao == null
+                            ? null
+                            : () => _handleAction(insight),
                       ),
                     ),
                 ],
@@ -328,6 +469,39 @@ class _InsightsScreenState extends State<InsightsScreen> {
         ),
       ),
     );
+  }
+
+  Color _disciplinaColor(String? disciplina) {
+    final hex = getInsightDisciplinaColorHex(disciplina)?.replaceFirst('#', '');
+    if (hex == null || !RegExp(r'^[0-9a-fA-F]{6}$').hasMatch(hex)) {
+      return AppColors.brandPrimary;
+    }
+    return Color(int.parse('FF$hex', radix: 16));
+  }
+
+  void _handleAction(Insight insight) {
+    final acao = insight.acao;
+    if (acao == null) return;
+
+    switch (acao.tipo) {
+      case 'agendar_sessao':
+      case 'reagendar':
+        Navigator.of(context).push(
+          MaterialPageRoute<bool>(
+            builder: (context) => CriarSessaoScreen(
+              disciplinaIdInicial: acao.disciplinaId,
+              horarioSugerido: acao.horarioSugerido,
+            ),
+          ),
+        );
+        return;
+      default:
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Esta ação estará disponível em breve.'),
+          ),
+        );
+    }
   }
 
   String _categoryLabel(String? category) {
@@ -400,9 +574,10 @@ class _EmptyInsights extends StatelessWidget {
 }
 
 class _CategoryEmpty extends StatelessWidget {
-  final String category;
+  final String? category;
+  final String? disciplina;
 
-  const _CategoryEmpty({required this.category});
+  const _CategoryEmpty({this.category, this.disciplina});
 
   @override
   Widget build(BuildContext context) {
@@ -421,7 +596,7 @@ class _CategoryEmpty extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.md),
               Text(
-                'Nenhum insight em $category ainda.',
+                _message,
                 textAlign: TextAlign.center,
                 style: AppTypography.bodyStrong.copyWith(
                   color: AppColors.textMuted,
@@ -432,5 +607,18 @@ class _CategoryEmpty extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String get _message {
+    if (category != null && disciplina != null) {
+      return 'Nenhum insight em $category para $disciplina ainda.';
+    }
+    if (disciplina != null) {
+      return 'Nenhum insight para $disciplina ainda.';
+    }
+    if (category != null) {
+      return 'Nenhum insight em $category ainda.';
+    }
+    return 'Nenhum insight para estes filtros ainda.';
   }
 }

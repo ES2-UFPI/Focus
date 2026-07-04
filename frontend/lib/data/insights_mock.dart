@@ -1,5 +1,10 @@
 import '../models/insights_model.dart';
 
+// IDs das disciplinas da massa de demonstração local. No contrato futuro,
+// esses valores virão em `acao.disciplina_id`.
+const _calculoDisciplinaId = '62bca7f0919a4536b5337fcbf3f777c6';
+const _es2DisciplinaId = '3c2a4a0d5fef4e4f937f7f91bba253bb';
+
 /// Fonte temporária e única dos insights exibidos no painel Insights.
 ///
 /// Quando o endpoint estiver disponível, esta chamada será o ponto de troca
@@ -14,10 +19,17 @@ List<Insight> getInsightsMock() {
           '2,4 à noite.',
       numeros: {'manha': 4.1, 'noite': 2.4, 'delta_pct': 41},
       categoria: 'tempo',
+      disciplina: 'ES2',
       amostra: 18,
       confianca: 'alta',
       natureza: 'observacional',
       severidade: 'positivo',
+      acao: InsightAction(
+        tipo: 'agendar_sessao',
+        label: 'Agendar de manhã',
+        disciplinaId: _es2DisciplinaId,
+        horarioSugerido: 'manha',
+      ),
     ),
     Insight(
       tipo: 'melhor_dia_semana',
@@ -49,6 +61,7 @@ List<Insight> getInsightsMock() {
         'queda_pct': 36,
       },
       categoria: 'foco',
+      disciplina: 'Banco de Dados',
       amostra: 22,
       confianca: 'alta',
       natureza: 'observacional',
@@ -66,6 +79,7 @@ List<Insight> getInsightsMock() {
         'interrupcoes_media': 1.2,
       },
       categoria: 'foco',
+      disciplina: 'ES2',
       amostra: 25,
       confianca: 'alta',
       natureza: 'observacional',
@@ -106,10 +120,17 @@ List<Insight> getInsightsMock() {
           'planejadas.',
       numeros: {'sessoes_sexta_noite': 10, 'canceladas': 6, 'taxa_pct': 60},
       categoria: 'rotina',
+      disciplina: 'ES2',
       amostra: 10,
       confianca: 'alta',
       natureza: 'observacional',
       severidade: 'critico',
+      acao: InsightAction(
+        tipo: 'reagendar',
+        label: 'Reagendar sexta à noite',
+        disciplinaId: _es2DisciplinaId,
+        horarioSugerido: 'noite',
+      ),
     ),
     Insight(
       tipo: 'sequencia_produtiva',
@@ -123,6 +144,7 @@ List<Insight> getInsightsMock() {
         'intervalo_medio_dias': 2,
       },
       categoria: 'rotina',
+      disciplina: 'Cálculo',
       amostra: 5,
       confianca: 'media',
       natureza: 'observacional',
@@ -140,10 +162,16 @@ List<Insight> getInsightsMock() {
         'concentracao_pct': 78,
       },
       categoria: 'planejamento',
+      disciplina: 'Cálculo',
       amostra: 8,
       confianca: 'media',
       natureza: 'observacional',
       severidade: 'atencao',
+      acao: InsightAction(
+        tipo: 'agendar_sessao',
+        label: 'Antecipar estudo antes da prova',
+        disciplinaId: _calculoDisciplinaId,
+      ),
     ),
     // PREVIEW MOCK: os dados de sono abaixo são inteiramente simulados.
     // HealthKit/Health Connect e o pacote health pertencem a uma fase futura.
@@ -167,6 +195,25 @@ List<Insight> getInsightsMock() {
     ),
     Insight(
       tipo: 'ritmo_disciplina',
+      titulo: 'ES2 recebeu menos atenção nas últimas semanas',
+      descricao:
+          'Seu ritmo recente ficou abaixo das duas sessões semanais que você '
+          'costuma manter nessa disciplina.',
+      numeros: {'sessoes_registradas': 2, 'minimo_sugerido': 4},
+      categoria: 'rotina',
+      disciplina: 'ES2',
+      amostra: 9,
+      confianca: 'media',
+      natureza: 'observacional',
+      severidade: 'atencao',
+      acao: InsightAction(
+        tipo: 'agendar_sessao',
+        label: 'Agendar mais sessões de ES2',
+        disciplinaId: _es2DisciplinaId,
+      ),
+    ),
+    Insight(
+      tipo: 'amostra_insuficiente',
       titulo: 'Seu ritmo por disciplina ainda está se formando',
       descricao:
           'Registre mais sessões de uma mesma disciplina para comparar seu '

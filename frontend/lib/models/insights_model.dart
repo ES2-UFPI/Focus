@@ -1,3 +1,30 @@
+/// Próximo passo opcional associado a um insight.
+class InsightAction {
+  final String tipo;
+  final String label;
+  final String? disciplinaId;
+  final String? horarioSugerido;
+
+  const InsightAction({
+    required this.tipo,
+    required this.label,
+    this.disciplinaId,
+    this.horarioSugerido,
+  });
+
+  factory InsightAction.fromJson(Map<String, dynamic> json) {
+    return InsightAction(
+      tipo: json['tipo'] as String? ?? '',
+      label: json['label'] as String? ?? '',
+      disciplinaId:
+          json['disciplina_id'] as String? ?? json['disciplinaId'] as String?,
+      horarioSugerido:
+          json['horario_sugerido'] as String? ??
+          json['horarioSugerido'] as String?,
+    );
+  }
+}
+
 /// Insight observacional sobre os hábitos de estudo do aluno.
 ///
 /// Os nomes dos campos acompanham o contrato previsto para o backend, permitindo
@@ -13,6 +40,7 @@ class Insight {
   final String confianca;
   final String natureza;
   final String severidade;
+  final InsightAction? acao;
 
   const Insight({
     required this.tipo,
@@ -25,10 +53,12 @@ class Insight {
     required this.confianca,
     required this.natureza,
     required this.severidade,
+    this.acao,
   });
 
   factory Insight.fromJson(Map<String, dynamic> json) {
     final numerosJson = json['numeros'];
+    final acaoJson = json['acao'];
 
     return Insight(
       tipo: json['tipo'] as String? ?? '',
@@ -47,6 +77,9 @@ class Insight {
       confianca: json['confianca'] as String? ?? 'insuficiente',
       natureza: json['natureza'] as String? ?? 'observacional',
       severidade: json['severidade'] as String? ?? 'info',
+      acao: acaoJson is Map
+          ? InsightAction.fromJson(Map<String, dynamic>.from(acaoJson))
+          : null,
     );
   }
 }

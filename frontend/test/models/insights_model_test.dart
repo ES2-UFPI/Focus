@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/data/insight_disciplina_colors.dart';
 import 'package:frontend/data/insights_mock.dart';
 import 'package:frontend/models/insights_model.dart';
 
@@ -15,6 +16,12 @@ void main() {
       'confianca': 'alta',
       'natureza': 'observacional',
       'severidade': 'info',
+      'acao': {
+        'tipo': 'agendar_sessao',
+        'label': 'Agendar de manhã',
+        'disciplina_id': 'disc-1',
+        'horario_sugerido': 'manha',
+      },
     });
 
     expect(insight.tipo, 'melhor_horario');
@@ -25,9 +32,13 @@ void main() {
     expect(insight.confianca, 'alta');
     expect(insight.natureza, 'observacional');
     expect(insight.severidade, 'info');
+    expect(insight.acao?.tipo, 'agendar_sessao');
+    expect(insight.acao?.label, 'Agendar de manhã');
+    expect(insight.acao?.disciplinaId, 'disc-1');
+    expect(insight.acao?.horarioSugerido, 'manha');
   });
 
-  test('Insight.fromJson defaults category and nullable subject', () {
+  test('Insight.fromJson defaults nullable subject and action', () {
     final insight = Insight.fromJson({
       'tipo': 'teste',
       'titulo': 'Teste',
@@ -37,12 +48,25 @@ void main() {
 
     expect(insight.categoria, 'tempo');
     expect(insight.disciplina, isNull);
+    expect(insight.acao, isNull);
+  });
+
+  test('Insight.fromJson accepts a null action', () {
+    final insight = Insight.fromJson({
+      'tipo': 'teste',
+      'titulo': 'Teste',
+      'descricao': 'Descrição',
+      'numeros': <String, num>{},
+      'acao': null,
+    });
+
+    expect(insight.acao, isNull);
   });
 
   test('mock covers all categories, sleep preview and insufficient data', () {
     final insights = getInsightsMock();
 
-    expect(insights, hasLength(11));
+    expect(insights, hasLength(12));
     expect(insights.map((insight) => insight.categoria).toSet(), {
       'tempo',
       'foco',
@@ -79,5 +103,39 @@ void main() {
     );
     expect(sleep.categoria, 'saude');
     expect(sleep.numeros['queda_pct'], 35);
+    expect(sleep.acao, isNull);
+
+    final insufficient = insights.singleWhere(
+      (insight) => insight.confianca == 'insuficiente',
+    );
+    expect(insufficient.acao, isNull);
+  });
+
+  test('mock keeps actions curated and subject colors local', () {
+    final insights = getInsightsMock();
+    final actionable = insights
+        .where((insight) => insight.acao != null)
+        .toList();
+
+    expect(actionable, hasLength(4));
+    expect(actionable.map((insight) => insight.tipo), {
+      'melhor_horario',
+      'taxa_furo',
+      'cramming',
+      'ritmo_disciplina',
+    });
+    expect(
+      actionable.every(
+        (insight) =>
+            insight.acao!.tipo == 'agendar_sessao' ||
+            insight.acao!.tipo == 'reagendar',
+      ),
+      isTrue,
+    );
+    expect(
+      insights.map((insight) => insight.disciplina).whereType<String>().toSet(),
+      containsAll({'Cálculo', 'Banco de Dados', 'ES2', 'Física'}),
+    );
+    expect(insightDisciplinaCoresLocais.keys, containsAll({'Cálculo', 'ES2'}));
   });
 }

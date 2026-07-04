@@ -13,6 +13,7 @@ void main() {
     expect(find.text('Insights'), findsOneWidget);
     expect(find.text('Seus padrões'), findsOneWidget);
     expect(find.text('Todos'), findsOneWidget);
+    expect(find.text('Todas as matérias'), findsOneWidget);
     expect(find.text('Tempo'), findsOneWidget);
     expect(find.text('Saúde'), findsOneWidget);
     expect(find.textContaining('60% das sessões'), findsOneWidget);
@@ -48,6 +49,68 @@ void main() {
       find.text('Seu rendimento tende a ser maior pela manhã'),
       findsNothing,
     );
+  });
+
+  testWidgets('combines category and subject filters', (tester) async {
+    tester.view.physicalSize = const Size(1000, 1400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(const ShadApp(home: InsightsScreen()));
+
+    await tester.tap(find.text('Planejamento'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cálculo').first);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Você costuma subestimar Cálculo em cerca de 40%'),
+      findsOneWidget,
+    );
+    expect(
+      find.text('78% do estudo para provas ocorre nas últimas 48h'),
+      findsOneWidget,
+    );
+    expect(
+      find.text('78% das suas tarefas recentes foram concluídas no prazo'),
+      findsNothing,
+    );
+    expect(
+      find.text('Seu rendimento tende a ser maior pela manhã'),
+      findsNothing,
+    );
+  });
+
+  testWidgets('shows the action only for actionable insights', (tester) async {
+    var tapped = false;
+    final actionable = getInsightsMock().firstWhere(
+      (insight) => insight.tipo == 'melhor_horario',
+    );
+    final informational = getInsightsMock().firstWhere(
+      (insight) => insight.tipo == 'duracao_ideal',
+    );
+
+    await tester.pumpWidget(
+      ShadApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: Column(
+              children: [
+                InsightCard(insight: actionable, onAction: () => tapped = true),
+                InsightCard(insight: informational),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Agendar de manhã'), findsOneWidget);
+    expect(find.byType(ShadButton), findsOneWidget);
+
+    await tester.tap(find.text('Agendar de manhã'));
+    expect(tapped, isTrue);
   });
 
   testWidgets('shows a message when the selected category becomes empty', (

@@ -6,8 +6,15 @@ import '../models/insights_model.dart';
 
 class InsightCard extends StatelessWidget {
   final Insight insight;
+  final String? disciplinaColorHex;
+  final VoidCallback? onAction;
 
-  const InsightCard({super.key, required this.insight});
+  const InsightCard({
+    super.key,
+    required this.insight,
+    this.disciplinaColorHex,
+    this.onAction,
+  });
 
   bool get _dadosInsuficientes => insight.confianca == 'insuficiente';
 
@@ -48,6 +55,13 @@ class InsightCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      _SubjectBadge(
+                        label: insight.disciplina ?? 'Geral',
+                        color: insight.disciplina == null
+                            ? AppColors.neutral
+                            : _subjectColor(),
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
                       Text(
                         insight.titulo,
                         style: AppTypography.cardTitle.copyWith(
@@ -110,6 +124,29 @@ class InsightCard extends StatelessWidget {
                 ),
               ],
             ),
+            if (insight.acao != null) ...[
+              const SizedBox(height: AppSpacing.lg),
+              ShadButton(
+                key: ValueKey('action-${insight.tipo}'),
+                width: double.infinity,
+                backgroundColor: AppColors.brandPrimary,
+                hoverBackgroundColor: AppColors.brandPrimaryDark,
+                foregroundColor: AppColors.textInverted,
+                expands: false,
+                leading: const Icon(
+                  LucideIcons.calendarPlus,
+                  size: AppSizes.iconMd,
+                ),
+                onPressed: onAction,
+                child: Flexible(
+                  child: Text(
+                    insight.acao!.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -174,6 +211,15 @@ class InsightCard extends StatelessWidget {
       default:
         return AppColors.neutral;
     }
+  }
+
+  Color _subjectColor() {
+    final hex = disciplinaColorHex?.replaceFirst('#', '');
+    if (hex == null || !RegExp(r'^[0-9a-fA-F]{6}$').hasMatch(hex)) {
+      return AppColors.brandPrimary;
+    }
+
+    return Color(int.parse('FF$hex', radix: 16));
   }
 
   String _confidenceLabel() {
@@ -286,6 +332,46 @@ class InsightCard extends StatelessWidget {
     }
 
     return formatted;
+  }
+}
+
+class _SubjectBadge extends StatelessWidget {
+  final String label;
+  final Color color;
+
+  const _SubjectBadge({required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xs,
+      ),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(AppRadii.sm),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 7,
+            height: 7,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: AppSpacing.xs),
+          Text(
+            label,
+            style: AppTypography.caption.copyWith(
+              color: color,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

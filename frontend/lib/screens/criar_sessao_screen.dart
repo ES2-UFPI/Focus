@@ -8,7 +8,15 @@ import '../widgets/criar_disciplina_dialog.dart';
 
 class CriarSessaoScreen extends StatefulWidget {
   final AgendaItem? sessaoExistente;
-  const CriarSessaoScreen({super.key, this.sessaoExistente});
+  final String? disciplinaIdInicial;
+  final String? horarioSugerido;
+
+  const CriarSessaoScreen({
+    super.key,
+    this.sessaoExistente,
+    this.disciplinaIdInicial,
+    this.horarioSugerido,
+  });
 
 
   @override
@@ -63,8 +71,29 @@ class _CriarSessaoScreenState extends State<CriarSessaoScreen> {
         _horaFim = TimeOfDay.fromDateTime(se.fim!);
         _horaFimController.text = "${_horaFim!.hour.toString().padLeft(2, '0')}:${_horaFim!.minute.toString().padLeft(2, '0')}";
       }
+    } else {
+      _disciplinaSelecionadaId = widget.disciplinaIdInicial;
+      _horaInicio = _horaInicialSugerida(widget.horarioSugerido);
+      if (_horaInicio != null) {
+        _horaInicioController.text =
+            "${_horaInicio!.hour.toString().padLeft(2, '0')}:"
+            "${_horaInicio!.minute.toString().padLeft(2, '0')}";
+      }
     }
     _carregarDisciplinas();
+  }
+
+  TimeOfDay? _horaInicialSugerida(String? periodo) {
+    switch (periodo?.toLowerCase()) {
+      case 'manha':
+        return const TimeOfDay(hour: 8, minute: 0);
+      case 'tarde':
+        return const TimeOfDay(hour: 14, minute: 0);
+      case 'noite':
+        return const TimeOfDay(hour: 20, minute: 0);
+      default:
+        return null;
+    }
   }
 
   @override
@@ -88,7 +117,8 @@ class _CriarSessaoScreenState extends State<CriarSessaoScreen> {
         _disciplinas = lista;
         if (selecionarId != null && lista.any((d) => d.id == selecionarId)) {
           _disciplinaSelecionadaId = selecionarId;
-        } else if (lista.isNotEmpty && _disciplinaSelecionadaId == null) {
+        } else if (lista.isNotEmpty &&
+            !lista.any((d) => d.id == _disciplinaSelecionadaId)) {
           _disciplinaSelecionadaId = lista.first.id;
         }
         _isLoadingDisciplinas = false;
@@ -362,7 +392,7 @@ class _CriarSessaoScreenState extends State<CriarSessaoScreen> {
 
               // 🌟 NOVO CAMPO: Seletor Dinâmico de Status
               DropdownButtonFormField<String>(
-                value: _statusSelecionado, // Variável que criamos no estado da tela
+                initialValue: _statusSelecionado, // Variável que criamos no estado da tela
                 decoration: const InputDecoration(
                   labelText: 'Status da Sessão *',
                   border: OutlineInputBorder(),
