@@ -117,6 +117,31 @@ class EventoService {
     );
   }
 
+  /// Atualiza (PATCH) apenas o status de conclusão de um evento acadêmico.
+  Future<void> definirConcluido({
+    required String eventoId,
+    required bool concluido,
+  }) async {
+    final uri = Uri.parse('$kBaseUrl/api/eventos-academicos/$eventoId/');
+
+    late http.Response response;
+    try {
+      response = await http.patch(
+        uri,
+        headers: kDefaultHeaders,
+        body: json.encode({'concluido': concluido}),
+      );
+    } catch (e) {
+      throw AgendaServiceException('Erro de conexão: $e');
+    }
+
+    if (response.statusCode == 200 || response.statusCode == 204) return;
+
+    throw AgendaServiceException(
+      _extrairMensagemErro(response.body),
+    );
+  }
+
   /// Exclui um evento acadêmico no backend.
   Future<void> excluirEvento(String eventoId) async {
     final uri = Uri.parse('$kBaseUrl/api/eventos-academicos/$eventoId/');
