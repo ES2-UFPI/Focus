@@ -168,7 +168,7 @@ class _ConsistenciaScreenState extends State<ConsistenciaScreen> {
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
-                        color: cor.withOpacity(0.7),
+                        color: cor.withValues(alpha: 0.7),
                       ),
                     ),
                   ],
@@ -264,7 +264,7 @@ class _ConsistenciaScreenState extends State<ConsistenciaScreen> {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: cor.withOpacity(0.15),
+              color: cor.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(icone, color: cor, size: 22),
@@ -310,7 +310,7 @@ class _ConsistenciaScreenState extends State<ConsistenciaScreen> {
         decoration: BoxDecoration(
           color: corDim,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: cor.withOpacity(0.4)),
+          border: Border.all(color: cor.withValues(alpha: 0.4)),
         ),
         padding: const EdgeInsets.all(14),
         child: Column(
