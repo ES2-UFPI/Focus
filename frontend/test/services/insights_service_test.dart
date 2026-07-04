@@ -19,6 +19,15 @@ void main() {
     expect(journey.first, isA<InsightJourneyEvent>());
   });
 
+  test('fetchDashboard resolves comparisons and experiments', () async {
+    final dashboard = await service.fetchDashboard();
+
+    expect(dashboard, isA<InsightsDashboard>());
+    expect(dashboard.dimensoes, hasLength(5));
+    expect(dashboard.comparacoes, hasLength(3));
+    expect(dashboard.experimentos, hasLength(3));
+  });
+
   test('submitFeedback completes without throwing', () async {
     await expectLater(
       service.submitFeedback(insightId: 'ins-123', useful: false, reason: 'x'),

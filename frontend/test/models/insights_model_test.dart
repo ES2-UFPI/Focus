@@ -109,6 +109,57 @@ void main() {
     expect(insight.acao, isNull);
   });
 
+  test('InsightsDashboard.fromJson reads temporal and experiment data', () {
+    final dashboard = InsightsDashboard.fromJson({
+      'periodo': '24 a 30 de junho',
+      'atualizado_em': 'Hoje',
+      'dimensoes': [
+        {
+          'id': 'tempo',
+          'titulo': 'Tempo',
+          'resumo': 'Resumo',
+          'tendencia': '+18%',
+          'direcao': 'subindo',
+          'severidade': 'positivo',
+          'insight_tipo': 'efeito_acao',
+        },
+      ],
+      'comparacoes': [
+        {
+          'id': 'produtividade',
+          'titulo': 'Produtividade',
+          'contexto': 'ES2',
+          'antes': 3.4,
+          'agora': 4.0,
+          'unidade': '/5',
+          'variacao': '+18%',
+          'serie': [3.4, 3.7, 4.0],
+        },
+      ],
+      'experimentos': [
+        {
+          'id': 'manha',
+          'titulo': 'Estudar de manhã',
+          'hipotese': 'A produtividade melhora.',
+          'disciplina': 'ES2',
+          'estado': 'resultado',
+          'inicio': 'Há 2 semanas',
+          'metrica': 'Produtividade',
+          'valor_inicial': 3.4,
+          'valor_atual': 4.0,
+          'unidade': '/5',
+          'variacao': '+18%',
+          'amostra': 11,
+          'confianca': 'media',
+        },
+      ],
+    });
+
+    expect(dashboard.dimensoes.single.insightTipo, 'efeito_acao');
+    expect(dashboard.comparacoes.single.serie, [3.4, 3.7, 4.0]);
+    expect(dashboard.experimentos.single.valorAtual, 4.0);
+  });
+
   test('mock covers all categories, sleep preview and insufficient data', () {
     final insights = getInsightsMock();
 
@@ -227,12 +278,7 @@ void main() {
     });
     expect(
       journey.map((event) => event.insightTipo),
-      containsAll({
-        'melhor_horario',
-        'efeito_acao',
-        'progresso',
-        'taxa_furo',
-      }),
+      containsAll({'melhor_horario', 'efeito_acao', 'progresso', 'taxa_furo'}),
     );
   });
 }

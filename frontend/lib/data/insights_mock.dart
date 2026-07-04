@@ -529,6 +529,146 @@ List<Insight> getInsightsMock() {
   ];
 }
 
+/// Resumo mockado usado nas leituras de panorama, comparação e experimento.
+InsightsDashboard getInsightsDashboardMock() {
+  return const InsightsDashboard(
+    periodo: '24 a 30 de junho',
+    atualizadoEm: 'Atualizado hoje, 08:40',
+    dimensoes: [
+      StudyDimension(
+        id: 'tempo',
+        titulo: 'Tempo',
+        resumo: 'Seu melhor período está ficando mais claro.',
+        tendencia: '+18% após mudar ES2 para a manhã',
+        direcao: 'subindo',
+        severidade: 'positivo',
+        insightTipo: 'efeito_acao',
+      ),
+      StudyDimension(
+        id: 'foco',
+        titulo: 'Foco',
+        resumo: 'Blocos de até 50 min preservam melhor seu ritmo.',
+        tendencia: 'Queda de 36% após esse limite',
+        direcao: 'atencao',
+        severidade: 'atencao',
+        insightTipo: 'duracao_ideal',
+      ),
+      StudyDimension(
+        id: 'planejamento',
+        titulo: 'Planejamento',
+        resumo: 'As estimativas de Cálculo ainda estão apertadas.',
+        tendencia: '+40% de tempo além do planejado',
+        direcao: 'atencao',
+        severidade: 'atencao',
+        insightTipo: 'vies_estimativa',
+      ),
+      StudyDimension(
+        id: 'consistencia',
+        titulo: 'Consistência',
+        resumo: 'Você está faltando menos às sessões críticas.',
+        tendencia: 'Cancelamentos caíram de 60% para 10%',
+        direcao: 'subindo',
+        severidade: 'positivo',
+        insightTipo: 'progresso',
+      ),
+      StudyDimension(
+        id: 'recuperacao',
+        titulo: 'Recuperação',
+        resumo: 'Sono curto e sessões longas apareceram juntos.',
+        tendencia: 'Produtividade recente caiu 24%',
+        direcao: 'caindo',
+        severidade: 'critico',
+        insightTipo: 'desgaste',
+      ),
+    ],
+    comparacoes: [
+      InsightComparison(
+        id: 'produtividade-es2',
+        titulo: 'Produtividade em ES2',
+        contexto: 'Depois de mover sessões para a manhã',
+        antes: 3.4,
+        agora: 4.0,
+        unidade: '/5',
+        variacao: '+18%',
+        serie: [3.2, 3.4, 3.5, 3.7, 4.0],
+        insightTipo: 'efeito_acao',
+      ),
+      InsightComparison(
+        id: 'cancelamentos-sexta',
+        titulo: 'Cancelamentos na sexta',
+        contexto: 'Sessões de ES2 no período da noite',
+        antes: 60,
+        agora: 10,
+        unidade: '%',
+        variacao: '-50 p.p.',
+        melhoraQuandoDiminui: true,
+        serie: [60, 52, 43, 25, 10],
+        insightTipo: 'progresso',
+      ),
+      InsightComparison(
+        id: 'tarefas-no-prazo',
+        titulo: 'Tarefas no prazo',
+        contexto: 'Todas as matérias nas últimas semanas',
+        antes: 65,
+        agora: 78,
+        unidade: '%',
+        variacao: '+13 p.p.',
+        serie: [65, 68, 70, 74, 78],
+        insightTipo: 'tarefas_no_prazo',
+      ),
+    ],
+    experimentos: [
+      InsightExperiment(
+        id: 'es2-manha',
+        titulo: 'ES2 pela manhã',
+        hipotese: 'Mover tarefas exigentes para a manhã melhora o rendimento.',
+        disciplina: 'ES2',
+        estado: 'resultado',
+        inicio: 'Iniciado há 2 semanas',
+        metrica: 'Produtividade média',
+        valorInicial: 3.4,
+        valorAtual: 4.0,
+        unidade: '/5',
+        variacao: '+18%',
+        amostra: 11,
+        confianca: 'media',
+        insightTipo: 'efeito_acao',
+      ),
+      InsightExperiment(
+        id: 'sexta-es2',
+        titulo: 'Novo horário para sexta',
+        hipotese: 'Antecipar a sessão reduz os cancelamentos de sexta.',
+        disciplina: 'ES2',
+        estado: 'testando',
+        inicio: 'Em teste há 8 dias',
+        metrica: 'Taxa de cancelamento',
+        valorInicial: 60,
+        valorAtual: 10,
+        unidade: '%',
+        variacao: '-50 p.p.',
+        amostra: 10,
+        confianca: 'media',
+        insightTipo: 'progresso',
+      ),
+      InsightExperiment(
+        id: 'blocos-bd',
+        titulo: 'Blocos de até 50 minutos',
+        hipotese: 'Encerrar o bloco antes da queda preserva a produtividade.',
+        disciplina: 'Banco de Dados',
+        estado: 'pronto',
+        inicio: 'Pronto para testar',
+        metrica: 'Produtividade após 50 min',
+        valorInicial: 2.7,
+        unidade: '/5',
+        variacao: 'Aguardando resultado',
+        amostra: 0,
+        confianca: 'insuficiente',
+        insightTipo: 'duracao_ideal',
+      ),
+    ],
+  );
+}
+
 /// Jornada mockada da demo. Na fase de dados, estes eventos virão do backend
 /// junto dos insights de progresso e efeito observado após uma ação.
 List<InsightJourneyEvent> getJornadaMock() {
@@ -544,8 +684,7 @@ List<InsightJourneyEvent> getJornadaMock() {
     InsightJourneyEvent(
       data: 'Há 2 semanas',
       tipo: 'acao',
-      texto:
-          'Você aceitou a recomendação e passou a agendar Cálculo pela manhã.',
+      texto: 'Você aceitou a recomendação e passou a agendar ES2 pela manhã.',
       insightTipo: 'melhor_horario',
     ),
     InsightJourneyEvent(

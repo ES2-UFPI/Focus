@@ -110,6 +110,207 @@ class InsightJourneyEvent {
   }
 }
 
+/// Visão resumida que orienta a leitura dos insights por decisão e evolução.
+///
+/// O backend futuro pode entregar este bloco junto dos insights para manter a
+/// priorização e as comparações determinísticas fora da camada visual.
+class InsightsDashboard {
+  final String periodo;
+  final String atualizadoEm;
+  final List<StudyDimension> dimensoes;
+  final List<InsightComparison> comparacoes;
+  final List<InsightExperiment> experimentos;
+
+  const InsightsDashboard({
+    required this.periodo,
+    required this.atualizadoEm,
+    this.dimensoes = const [],
+    this.comparacoes = const [],
+    this.experimentos = const [],
+  });
+
+  factory InsightsDashboard.fromJson(Map<String, dynamic> json) {
+    final dimensoesJson = json['dimensoes'];
+    final comparacoesJson = json['comparacoes'];
+    final experimentosJson = json['experimentos'];
+
+    return InsightsDashboard(
+      periodo: json['periodo'] as String? ?? '',
+      atualizadoEm:
+          json['atualizado_em'] as String? ??
+          json['atualizadoEm'] as String? ??
+          '',
+      dimensoes: dimensoesJson is List
+          ? List<StudyDimension>.unmodifiable(
+              dimensoesJson.whereType<Map>().map(
+                (item) =>
+                    StudyDimension.fromJson(Map<String, dynamic>.from(item)),
+              ),
+            )
+          : const [],
+      comparacoes: comparacoesJson is List
+          ? List<InsightComparison>.unmodifiable(
+              comparacoesJson.whereType<Map>().map(
+                (item) =>
+                    InsightComparison.fromJson(Map<String, dynamic>.from(item)),
+              ),
+            )
+          : const [],
+      experimentos: experimentosJson is List
+          ? List<InsightExperiment>.unmodifiable(
+              experimentosJson.whereType<Map>().map(
+                (item) =>
+                    InsightExperiment.fromJson(Map<String, dynamic>.from(item)),
+              ),
+            )
+          : const [],
+    );
+  }
+}
+
+/// Uma dimensão independente da saúde do estudo.
+///
+/// Não existe pontuação geral: tempo, foco, planejamento, consistência e
+/// recuperação são apresentados separadamente para não misturar grandezas.
+class StudyDimension {
+  final String id;
+  final String titulo;
+  final String resumo;
+  final String tendencia;
+  final String direcao;
+  final String severidade;
+  final String? insightTipo;
+
+  const StudyDimension({
+    required this.id,
+    required this.titulo,
+    required this.resumo,
+    required this.tendencia,
+    required this.direcao,
+    required this.severidade,
+    this.insightTipo,
+  });
+
+  factory StudyDimension.fromJson(Map<String, dynamic> json) {
+    return StudyDimension(
+      id: json['id'] as String? ?? '',
+      titulo: json['titulo'] as String? ?? '',
+      resumo: json['resumo'] as String? ?? '',
+      tendencia: json['tendencia'] as String? ?? '',
+      direcao: json['direcao'] as String? ?? 'estavel',
+      severidade: json['severidade'] as String? ?? 'info',
+      insightTipo:
+          json['insight_tipo'] as String? ?? json['insightTipo'] as String?,
+    );
+  }
+}
+
+/// Comparação temporal usada na leitura "antes × agora".
+class InsightComparison {
+  final String id;
+  final String titulo;
+  final String contexto;
+  final num antes;
+  final num agora;
+  final String unidade;
+  final String variacao;
+  final bool melhoraQuandoDiminui;
+  final List<num> serie;
+  final String? insightTipo;
+
+  const InsightComparison({
+    required this.id,
+    required this.titulo,
+    required this.contexto,
+    required this.antes,
+    required this.agora,
+    required this.unidade,
+    required this.variacao,
+    this.melhoraQuandoDiminui = false,
+    this.serie = const [],
+    this.insightTipo,
+  });
+
+  factory InsightComparison.fromJson(Map<String, dynamic> json) {
+    final serieJson = json['serie'];
+
+    return InsightComparison(
+      id: json['id'] as String? ?? '',
+      titulo: json['titulo'] as String? ?? '',
+      contexto: json['contexto'] as String? ?? '',
+      antes: json['antes'] as num? ?? 0,
+      agora: json['agora'] as num? ?? 0,
+      unidade: json['unidade'] as String? ?? '',
+      variacao: json['variacao'] as String? ?? '',
+      melhoraQuandoDiminui:
+          json['melhora_quando_diminui'] as bool? ??
+          json['melhoraQuandoDiminui'] as bool? ??
+          false,
+      serie: serieJson is List
+          ? List<num>.unmodifiable(serieJson.whereType<num>())
+          : const [],
+      insightTipo:
+          json['insight_tipo'] as String? ?? json['insightTipo'] as String?,
+    );
+  }
+}
+
+/// Ciclo observacional de hipótese → ação → resultado.
+class InsightExperiment {
+  final String id;
+  final String titulo;
+  final String hipotese;
+  final String disciplina;
+  final String estado;
+  final String inicio;
+  final String metrica;
+  final num valorInicial;
+  final num? valorAtual;
+  final String unidade;
+  final String variacao;
+  final int amostra;
+  final String confianca;
+  final String? insightTipo;
+
+  const InsightExperiment({
+    required this.id,
+    required this.titulo,
+    required this.hipotese,
+    required this.disciplina,
+    required this.estado,
+    required this.inicio,
+    required this.metrica,
+    required this.valorInicial,
+    this.valorAtual,
+    required this.unidade,
+    required this.variacao,
+    required this.amostra,
+    required this.confianca,
+    this.insightTipo,
+  });
+
+  factory InsightExperiment.fromJson(Map<String, dynamic> json) {
+    return InsightExperiment(
+      id: json['id'] as String? ?? '',
+      titulo: json['titulo'] as String? ?? '',
+      hipotese: json['hipotese'] as String? ?? '',
+      disciplina: json['disciplina'] as String? ?? '',
+      estado: json['estado'] as String? ?? 'pronto',
+      inicio: json['inicio'] as String? ?? '',
+      metrica: json['metrica'] as String? ?? '',
+      valorInicial:
+          json['valor_inicial'] as num? ?? json['valorInicial'] as num? ?? 0,
+      valorAtual: json['valor_atual'] as num? ?? json['valorAtual'] as num?,
+      unidade: json['unidade'] as String? ?? '',
+      variacao: json['variacao'] as String? ?? '',
+      amostra: (json['amostra'] as num?)?.toInt() ?? 0,
+      confianca: json['confianca'] as String? ?? 'insuficiente',
+      insightTipo:
+          json['insight_tipo'] as String? ?? json['insightTipo'] as String?,
+    );
+  }
+}
+
 /// Insight observacional sobre os hábitos de estudo do aluno.
 ///
 /// Os nomes dos campos acompanham o contrato previsto para o backend, permitindo

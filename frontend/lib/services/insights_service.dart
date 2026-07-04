@@ -17,6 +17,10 @@ class InsightsService {
   /// Marcos da jornada exibidos na aba Evolução.
   Future<List<InsightJourneyEvent>> fetchJourney() async => getJornadaMock();
 
+  /// Resumo temporal usado no panorama, comparações e experimentos.
+  Future<InsightsDashboard> fetchDashboard() async =>
+      getInsightsDashboardMock();
+
   /// Envia o feedback do usuário sobre um insight.
   ///
   /// No mock é um no-op; na fase de dados vira
