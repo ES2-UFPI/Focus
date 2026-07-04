@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/core/theme/app_theme.dart';
 import 'package:frontend/data/insights_mock.dart';
 import 'package:frontend/models/insights_model.dart';
 import 'package:frontend/screens/insights_screen.dart';
@@ -141,6 +142,11 @@ void main() {
 
     expect(find.text('O que não bateu?'), findsOneWidget);
     expect(find.text('Semana atípica'), findsOneWidget);
+    final reasonButton = tester.widget<ShadButton>(
+      find.byKey(const ValueKey('feedback-reason-melhor_horario-Já resolvi')),
+    );
+    expect(reasonButton.hoverBackgroundColor, AppColors.surfaceMuted);
+    expect(reasonButton.hoverForegroundColor, AppColors.textPrimary);
 
     await tester.tap(
       find.byKey(

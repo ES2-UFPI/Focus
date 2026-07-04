@@ -500,7 +500,11 @@ class _InsightFeedbackControl extends StatelessWidget {
                       horizontal: AppSpacing.sm,
                     ),
                     backgroundColor: AppColors.surface,
+                    hoverBackgroundColor: AppColors.surfaceMuted,
+                    pressedBackgroundColor: AppColors.surfaceSubtle,
                     foregroundColor: AppColors.textSecondary,
+                    hoverForegroundColor: AppColors.textPrimary,
+                    pressedForegroundColor: AppColors.textPrimary,
                     onPressed: () => onSelectReason?.call(reason),
                     child: Text(
                       reason,
