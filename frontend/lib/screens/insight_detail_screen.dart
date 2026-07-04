@@ -1,12 +1,11 @@
-import 'dart:math' as math;
-
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../core/theme/app_theme.dart';
 import '../models/insights_model.dart';
-import '../widgets/insight_card.dart';
+import '../widgets/insights/insight_feedback_control.dart';
+import '../widgets/insights/insight_hero_chart.dart';
+import '../widgets/insights/insight_presentation.dart';
 
 class InsightDetailScreen extends StatefulWidget {
   final Insight insight;
@@ -32,19 +31,7 @@ class _InsightDetailScreenState extends State<InsightDetailScreen> {
 
   Insight get _insight => widget.insight;
 
-  Color get _accentColor {
-    switch (_insight.severidade) {
-      case 'positivo':
-        return AppColors.success;
-      case 'atencao':
-        return AppColors.warning;
-      case 'critico':
-        return AppColors.danger;
-      case 'info':
-      default:
-        return AppColors.info;
-    }
-  }
+  Color get _accentColor => severityColor(_insight.severidade);
 
   @override
   void initState() {
@@ -80,9 +67,10 @@ class _InsightDetailScreenState extends State<InsightDetailScreen> {
                           icon: LucideIcons.chartNoAxesColumnIncreasing,
                           child: SizedBox(
                             height: 280,
-                            child: _InsightChartView(
+                            child: AnnotatedInsightChart(
                               chart: chart,
                               color: _accentColor,
+                              semanticLabel: 'Gráfico de ${_insight.titulo}',
                             ),
                           ),
                         )
@@ -155,66 +143,57 @@ class _InsightDetailScreenState extends State<InsightDetailScreen> {
   }
 
   Widget _buildOverview() {
-    return Container(
-      width: double.infinity,
-      padding: AppSpacing.card,
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppRadii.lg),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
-            children: [
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          spacing: AppSpacing.sm,
+          runSpacing: AppSpacing.sm,
+          children: [
+            _DetailBadge(
+              label: categoryLabel(_insight.categoria),
+              icon: LucideIcons.layers3,
+              color: _accentColor,
+            ),
+            if (_insight.disciplina != null)
               _DetailBadge(
-                label: _categoryLabel(_insight.categoria),
-                icon: LucideIcons.layers3,
-                color: _accentColor,
+                label: _insight.disciplina!,
+                icon: LucideIcons.bookOpen,
+                color: AppColors.brandPrimary,
               ),
-              if (_insight.disciplina != null)
-                _DetailBadge(
-                  label: _insight.disciplina!,
-                  icon: LucideIcons.bookOpen,
-                  color: AppColors.brandPrimary,
-                ),
-              _DetailBadge(
-                label: _severityLabel(_insight.severidade),
-                icon: LucideIcons.activity,
-                color: _accentColor,
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          Text(
-            _insight.titulo,
-            style: AppTypography.pageTitle.copyWith(
-              color: AppColors.textPrimary,
-              height: 1.25,
+            _DetailBadge(
+              label: severityLabel(_insight.severidade),
+              icon: LucideIcons.activity,
+              color: _accentColor,
             ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        Text(
+          _insight.titulo,
+          style: AppTypography.pageTitle.copyWith(
+            color: AppColors.textPrimary,
+            height: 1.25,
           ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            _insight.descricao,
-            style: AppTypography.body.copyWith(
-              color: AppColors.textMuted,
-              height: 1.5,
-            ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Text(
+          _insight.descricao,
+          style: AppTypography.body.copyWith(
+            color: AppColors.textMuted,
+            height: 1.5,
           ),
-          const SizedBox(height: AppSpacing.md),
-          Text(
-            'Este é um padrão observacional dos seus registros, não uma '
-            'relação comprovada de causa e efeito.',
-            style: AppTypography.caption.copyWith(
-              color: AppColors.textMuted,
-              fontStyle: FontStyle.italic,
-            ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        Text(
+          'Este é um padrão observacional dos seus registros, não uma '
+          'relação comprovada de causa e efeito.',
+          style: AppTypography.caption.copyWith(
+            color: AppColors.textMuted,
+            fontStyle: FontStyle.italic,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -238,9 +217,9 @@ class _InsightDetailScreenState extends State<InsightDetailScreen> {
                 color: AppColors.textMuted,
               ),
               _DetailBadge(
-                label: _confidenceLabel(_insight.confianca),
+                label: confidenceLabel(_insight.confianca),
                 icon: LucideIcons.shieldCheck,
-                color: _confidenceColor(_insight.confianca),
+                color: confidenceColor(_insight.confianca),
               ),
             ],
           ),
@@ -362,164 +341,6 @@ class _InsightDetailScreenState extends State<InsightDetailScreen> {
   }
 }
 
-class _InsightChartView extends StatelessWidget {
-  final InsightChart chart;
-  final Color color;
-
-  const _InsightChartView({required this.chart, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    final length = math.min(chart.labels.length, chart.valores.length);
-    if (length == 0) return const SizedBox.shrink();
-
-    final labels = chart.labels.take(length).toList();
-    final values = chart.valores
-        .take(length)
-        .map((value) => value.toDouble())
-        .toList();
-
-    if (chart.tipo == 'linha') {
-      return _buildLineChart(labels, values);
-    }
-    return _buildBarChart(labels, values);
-  }
-
-  Widget _buildBarChart(List<String> labels, List<double> values) {
-    final maxValue = values.reduce(math.max);
-    final highlightIndex = _highlightIndex(values.length);
-
-    return BarChart(
-      BarChartData(
-        minY: 0,
-        maxY: maxValue == 0 ? 1 : maxValue * 1.25,
-        alignment: BarChartAlignment.spaceAround,
-        gridData: FlGridData(
-          show: true,
-          drawVerticalLine: false,
-          getDrawingHorizontalLine: (_) =>
-              const FlLine(color: AppColors.borderSubtle, strokeWidth: 1),
-        ),
-        borderData: FlBorderData(show: false),
-        titlesData: _titles(labels),
-        barTouchData: BarTouchData(enabled: true),
-        barGroups: List.generate(
-          values.length,
-          (index) => BarChartGroupData(
-            x: index,
-            barRods: [
-              BarChartRodData(
-                toY: values[index],
-                width: values.length > 4 ? 18 : 28,
-                color: index == highlightIndex
-                    ? color
-                    : color.withValues(alpha: 0.32),
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(AppRadii.sm),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLineChart(List<String> labels, List<double> values) {
-    final maxValue = values.reduce(math.max);
-    final minValue = values.reduce(math.min);
-    final highlightIndex = _highlightIndex(values.length);
-
-    return LineChart(
-      LineChartData(
-        minX: 0,
-        maxX: (values.length - 1).toDouble(),
-        minY: math.max(0, minValue - 1),
-        maxY: maxValue + 1,
-        gridData: FlGridData(
-          show: true,
-          drawVerticalLine: false,
-          getDrawingHorizontalLine: (_) =>
-              const FlLine(color: AppColors.borderSubtle, strokeWidth: 1),
-        ),
-        borderData: FlBorderData(show: false),
-        titlesData: _titles(labels),
-        lineTouchData: LineTouchData(enabled: true),
-        lineBarsData: [
-          LineChartBarData(
-            spots: List.generate(
-              values.length,
-              (index) => FlSpot(index.toDouble(), values[index]),
-            ),
-            isCurved: true,
-            color: color,
-            barWidth: 3,
-            belowBarData: BarAreaData(
-              show: true,
-              color: color.withValues(alpha: 0.1),
-            ),
-            dotData: FlDotData(
-              show: true,
-              getDotPainter: (spot, _, _, _) {
-                final highlighted = spot.x.toInt() == highlightIndex;
-                return FlDotCirclePainter(
-                  radius: highlighted ? 6 : 3,
-                  color: highlighted ? color : AppColors.surface,
-                  strokeWidth: 2,
-                  strokeColor: color,
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  FlTitlesData _titles(List<String> labels) {
-    return FlTitlesData(
-      leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-      rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-      topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-      bottomTitles: AxisTitles(
-        sideTitles: SideTitles(
-          showTitles: true,
-          interval: 1,
-          reservedSize: 52,
-          getTitlesWidget: (value, meta) {
-            final index = value.toInt();
-            if (index < 0 || index >= labels.length || value != index) {
-              return const SizedBox.shrink();
-            }
-            return SideTitleWidget(
-              meta: meta,
-              space: AppSpacing.sm,
-              child: SizedBox(
-                width: labels.length > 4 ? 54 : 84,
-                child: Text(
-                  labels[index],
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTypography.caption.copyWith(
-                    color: AppColors.textMuted,
-                    fontSize: labels.length > 4 ? 9 : 11,
-                  ),
-                ),
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  int _highlightIndex(int length) {
-    final requested = chart.destaqueIndex ?? length - 1;
-    return requested.clamp(0, length - 1);
-  }
-}
-
 class _SectionCard extends StatelessWidget {
   final String title;
   final IconData icon;
@@ -533,35 +354,26 @@ class _SectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: AppSpacing.card,
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppRadii.lg),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, size: AppSizes.iconMd, color: AppColors.subjectTeal),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Text(
-                  title,
-                  style: AppTypography.cardTitle.copyWith(
-                    color: AppColors.textPrimary,
-                  ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, size: AppSizes.iconMd, color: AppColors.subjectTeal),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Text(
+                title,
+                style: AppTypography.cardTitle.copyWith(
+                  color: AppColors.textPrimary,
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          child,
-        ],
-      ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        child,
+      ],
     );
   }
 }
@@ -594,7 +406,6 @@ class _NumbersFallback extends StatelessWidget {
               decoration: BoxDecoration(
                 color: color.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(AppRadii.md),
-                border: Border.all(color: color.withValues(alpha: 0.16)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -627,13 +438,8 @@ class _EvidenceRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceMuted,
-        borderRadius: BorderRadius.circular(AppRadii.md),
-        border: Border.all(color: AppColors.borderSubtle),
-      ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
       child: Row(
         children: [
           Container(
@@ -718,7 +524,6 @@ class _DetailBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.09),
         borderRadius: BorderRadius.circular(AppRadii.sm),
-        border: Border.all(color: color.withValues(alpha: 0.18)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -749,58 +554,4 @@ String _formatDate(String value) {
 String _formatNumber(num value) {
   if (value % 1 == 0) return value.toInt().toString();
   return value.toStringAsFixed(1).replaceAll('.', ',');
-}
-
-String _categoryLabel(String value) {
-  switch (value) {
-    case 'tempo':
-      return 'Tempo';
-    case 'foco':
-      return 'Foco';
-    case 'planejamento':
-      return 'Planejamento';
-    case 'rotina':
-      return 'Rotina';
-    case 'saude':
-      return 'Saúde';
-    case 'metodo':
-      return 'Método';
-    default:
-      return value;
-  }
-}
-
-String _severityLabel(String value) {
-  switch (value) {
-    case 'positivo':
-      return 'Conquista';
-    case 'atencao':
-      return 'Atenção';
-    case 'critico':
-      return 'Crítico';
-    default:
-      return 'Informativo';
-  }
-}
-
-String _confidenceLabel(String value) {
-  switch (value) {
-    case 'alta':
-      return 'Confiança alta';
-    case 'media':
-      return 'Confiança média';
-    default:
-      return 'Dados insuficientes';
-  }
-}
-
-Color _confidenceColor(String value) {
-  switch (value) {
-    case 'alta':
-      return AppColors.success;
-    case 'media':
-      return AppColors.warningStrong;
-    default:
-      return AppColors.neutral;
-  }
 }

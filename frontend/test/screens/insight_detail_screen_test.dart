@@ -4,15 +4,21 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/data/insights_mock.dart';
 import 'package:frontend/screens/insight_detail_screen.dart';
 import 'package:frontend/screens/insights_screen.dart';
+import 'package:frontend/widgets/insights/insight_feedback_control.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
-void main() {
-  testWidgets('renders bar chart, evidence and metadata', (tester) async {
-    tester.view.physicalSize = const Size(1000, 1800);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
+void _configureLargeView(WidgetTester tester) {
+  tester.view.physicalSize = const Size(1000, 1800);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+}
 
+void main() {
+  testWidgets('renders annotated bar chart, evidence and metadata', (
+    tester,
+  ) async {
+    _configureLargeView(tester);
     final insight = getInsightsMock().firstWhere(
       (item) => item.tipo == 'melhor_horario',
     );
@@ -29,6 +35,13 @@ void main() {
 
     expect(find.text('Detalhe do insight'), findsOneWidget);
     expect(find.byType(BarChart), findsOneWidget);
+    expect(find.byKey(const ValueKey('chart-callout')), findsOneWidget);
+    expect(find.text('9-12h · 4,2'), findsOneWidget);
+    final chart = tester.widget<BarChart>(find.byType(BarChart));
+    expect(chart.data.alignment, BarChartAlignment.spaceEvenly);
+    expect(chart.data.extraLinesData.horizontalLines, hasLength(1));
+    expect(chart.data.extraLinesData.horizontalLines.single.dashArray, [4, 4]);
+
     expect(find.text('Sessões que sustentam o padrão'), findsOneWidget);
     expect(find.text('18 sessões na amostra'), findsOneWidget);
     expect(find.text('Confiança alta'), findsOneWidget);
@@ -42,7 +55,7 @@ void main() {
     expect(actionTapped, isTrue);
   });
 
-  testWidgets('renders line chart for duration insight', (tester) async {
+  testWidgets('renders an annotated line chart', (tester) async {
     final insight = getInsightsMock().firstWhere(
       (item) => item.tipo == 'duracao_ideal',
     );
@@ -52,7 +65,10 @@ void main() {
     );
 
     expect(find.byType(LineChart), findsOneWidget);
-    expect(find.text('50 min'), findsOneWidget);
+    expect(find.byKey(const ValueKey('chart-callout')), findsOneWidget);
+    expect(find.text('50 min · 4,1'), findsOneWidget);
+    final chart = tester.widget<LineChart>(find.byType(LineChart));
+    expect(chart.data.extraLinesData.horizontalLines, hasLength(1));
   });
 
   testWidgets('falls back to numbers when chart and evidence are absent', (
@@ -75,30 +91,16 @@ void main() {
     );
   });
 
-  testWidgets('opens detail from a grid card and weekly plan', (tester) async {
-    tester.view.physicalSize = const Size(1000, 1600);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-
+  testWidgets('opens detail from a feed row', (tester) async {
+    _configureLargeView(tester);
     await tester.pumpWidget(
-      const ShadApp(home: InsightsScreen(initiallyShowPatternLibrary: true)),
+      ShadApp(home: InsightsScreen(insights: getInsightsMock())),
     );
-    await tester.pumpAndSettle();
+    await tester.pump();
 
-    final gridCard = find.byKey(
-      const ValueKey('insight-card-tap-melhor_horario'),
-    );
-    final outerScroll = find
-        .descendant(
-          of: find.byType(CustomScrollView),
-          matching: find.byType(Scrollable),
-        )
-        .first;
-    await tester.scrollUntilVisible(gridCard, 500, scrollable: outerScroll);
-    await tester.ensureVisible(gridCard);
-    await tester.pumpAndSettle();
-    await tester.tap(gridCard);
+    final row = find.byKey(const ValueKey('feed-row-melhor_horario'));
+    await tester.ensureVisible(row);
+    await tester.tap(row);
     await tester.pumpAndSettle();
 
     expect(find.text('Detalhe do insight'), findsOneWidget);
@@ -106,33 +108,30 @@ void main() {
       find.text('Seu rendimento tende a ser maior pela manhã'),
       findsOneWidget,
     );
+  });
 
-    await tester.pageBack();
-    await tester.pumpAndSettle();
+  testWidgets('reports feedback changes from the detail', (tester) async {
+    _configureLargeView(tester);
+    final insight = getInsightsMock().first;
+    InsightFeedbackState? feedback;
+
     await tester.pumpWidget(
-      const ShadApp(key: ValueKey('fresh-app'), home: InsightsScreen()),
+      ShadApp(
+        home: InsightDetailScreen(
+          insight: insight,
+          onFeedbackChanged: (value) => feedback = value,
+        ),
+      ),
     );
-    await tester.pumpAndSettle();
-    final weeklyPlan = find.byKey(const ValueKey('weekly-plan-melhor_horario'));
-    await tester.scrollUntilVisible(
-      weeklyPlan,
-      300,
-      scrollable: find
-          .descendant(
-            of: find.byType(CustomScrollView),
-            matching: find.byType(Scrollable),
-          )
-          .first,
-    );
-    await tester.ensureVisible(weeklyPlan);
-    await tester.pumpAndSettle();
-    await tester.tap(weeklyPlan);
-    await tester.pumpAndSettle();
 
-    expect(find.text('Detalhe do insight'), findsOneWidget);
-    expect(
-      find.text('Seu rendimento tende a ser maior pela manhã'),
-      findsOneWidget,
+    final button = find.byKey(
+      const ValueKey('feedback-up-detail-melhor_horario'),
     );
+    await tester.ensureVisible(button);
+    await tester.tap(button);
+    await tester.pump();
+
+    expect(feedback?.status, InsightFeedbackStatus.useful);
+    expect(find.text('Valeu! Vamos priorizar insights assim.'), findsOneWidget);
   });
 }
