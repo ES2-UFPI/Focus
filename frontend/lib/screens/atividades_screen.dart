@@ -51,7 +51,10 @@ class _AcademicTodo {
 }
 
 class AtividadesScreen extends StatefulWidget {
-  const AtividadesScreen({super.key});
+  /// Service usado para marcar/desmarcar conclusão — injetável nos testes.
+  final EventoService? eventoService;
+
+  const AtividadesScreen({super.key, this.eventoService});
 
   @override
   State<AtividadesScreen> createState() => _AtividadesScreenState();
@@ -64,7 +67,8 @@ class _AtividadesScreenState extends State<AtividadesScreen> {
   bool _mostrarConcluidas = false;
   final Map<String, List<_AcademicTodo>> _todosByEventId = {};
   final Set<String> _expandedIds = {};
-  final EventoService _eventoService = EventoService();
+  late final EventoService _eventoService =
+      widget.eventoService ?? EventoService();
   final Set<String> _concluindoIds = {};
 
   @override

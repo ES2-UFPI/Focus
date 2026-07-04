@@ -15,6 +15,7 @@ import 'package:frontend/models/agenda_model.dart';
 import 'package:frontend/providers/agenda_provider.dart';
 import 'package:frontend/screens/atividades_screen.dart';
 import 'package:frontend/services/agenda_service.dart';
+import 'package:frontend/services/evento_service.dart';
 
 // ---------------------------------------------------------------------------
 // Dados e fakes (sem rede)
@@ -91,11 +92,43 @@ class FakeAgendaService extends AgendaService {
   }
 }
 
-Widget _appComTela(AgendaProvider provider) {
+/// Grava as chamadas de definirConcluido e reflete a mudança nos itens do
+/// FakeAgendaService, simulando o backend persistindo o PATCH.
+class FakeEventoService extends EventoService {
+  final FakeAgendaService agendaService;
+  final List<({String eventoId, bool concluido})> patches = [];
+
+  FakeEventoService(this.agendaService);
+
+  @override
+  Future<void> definirConcluido({
+    required String eventoId,
+    required bool concluido,
+  }) async {
+    patches.add((eventoId: eventoId, concluido: concluido));
+    agendaService.itens = agendaService.itens.map((i) {
+      if (i.id != eventoId) return i;
+      return AgendaItem(
+        tipo: i.tipo,
+        id: i.id,
+        titulo: i.titulo,
+        data: i.data,
+        timestamp: i.timestamp,
+        disciplinaNome: i.disciplinaNome,
+        tipoEvento: i.tipoEvento,
+        urgencia: i.urgencia,
+        diasRestantes: i.diasRestantes,
+        concluido: concluido,
+      );
+    }).toList();
+  }
+}
+
+Widget _appComTela(AgendaProvider provider, {EventoService? eventoService}) {
   return ChangeNotifierProvider<AgendaProvider>.value(
     value: provider,
-    child: const MaterialApp(
-      home: Scaffold(body: AtividadesScreen()),
+    child: MaterialApp(
+      home: Scaffold(body: AtividadesScreen(eventoService: eventoService)),
     ),
   );
 }
@@ -308,6 +341,53 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Prova de Cálculo I'), findsOneWidget);
+    });
+
+    testWidgets('marcar atividade como concluída faz o PATCH e move o card',
+        (tester) async {
+      final agendaService = FakeAgendaService(itens: [
+        _evento(
+          id: 'ev-1',
+          titulo: 'Prova de Cálculo I',
+          tipoEvento: 'PROVA',
+          diasRestantes: 2,
+        ),
+      ]);
+      final eventoService = FakeEventoService(agendaService);
+      final provider = AgendaProvider(service: agendaService);
+
+      await tester.pumpWidget(
+        _appComTela(provider, eventoService: eventoService),
+      );
+      await tester.pumpAndSettle();
+
+      // Pendente: aparece na coluna "Esta semana".
+      expect(find.text('Prova de Cálculo I'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Marcar como concluída'));
+      await tester.pumpAndSettle();
+
+      // PATCH enviado só com o campo concluido.
+      expect(eventoService.patches, hasLength(1));
+      expect(eventoService.patches.single.eventoId, 'ev-1');
+      expect(eventoService.patches.single.concluido, isTrue);
+
+      // A agenda foi recarregada e o card saiu das colunas de urgência.
+      expect(agendaService.chamadas, 2);
+      expect(find.text('Prova de Cálculo I'), findsNothing);
+      expect(find.text('"Prova de Cálculo I" marcada como concluída.'),
+          findsOneWidget); // SnackBar
+
+      // Com o switch ligado, ela reaparece na faixa de concluídas.
+      await tester.tap(find.byType(Switch));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('Prova de Cálculo I'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text('Prova de Cálculo I'), findsOneWidget);
+      expect(find.byTooltip('Voltar para pendentes'), findsOneWidget);
     });
 
     testWidgets('sem atividades mostra o estado vazio', (tester) async {
