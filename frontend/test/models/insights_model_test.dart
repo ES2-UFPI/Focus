@@ -59,6 +59,29 @@ void main() {
     expect(insight.sessoesEvidencia.single.produtividade, 4.1);
   });
 
+  test('Insight.fromJson reads the stable id used by feedback', () {
+    final insight = Insight.fromJson({
+      'id': 'ins-123',
+      'tipo': 'melhor_horario',
+      'titulo': 'Título',
+      'descricao': 'Descrição',
+      'numeros': <String, num>{},
+    });
+
+    expect(insight.id, 'ins-123');
+  });
+
+  test('Insight.fromJson defaults id to empty when absent', () {
+    final insight = Insight.fromJson({
+      'tipo': 'melhor_horario',
+      'titulo': 'Título',
+      'descricao': 'Descrição',
+      'numeros': <String, num>{},
+    });
+
+    expect(insight.id, '');
+  });
+
   test('Insight.fromJson defaults nullable subject and action', () {
     final insight = Insight.fromJson({
       'tipo': 'teste',

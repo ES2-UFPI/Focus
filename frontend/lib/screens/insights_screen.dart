@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
@@ -5,6 +7,7 @@ import '../core/theme/app_theme.dart';
 import '../data/insight_disciplina_colors.dart';
 import '../data/insights_mock.dart';
 import '../models/insights_model.dart';
+import '../services/insights_service.dart';
 import '../widgets/insight_card.dart';
 import 'criar_sessao_screen.dart';
 import 'insight_detail_screen.dart';
@@ -15,7 +18,11 @@ class InsightsScreen extends StatefulWidget {
   /// Permite exercitar os estados da tela sem alterar a fonte de produção.
   final List<Insight>? insights;
 
-  const InsightsScreen({super.key, this.insights});
+  /// Fonte de dados. Padrão: [InsightsService] (serve o mock hoje; a fase de
+  /// dados troca só a implementação do serviço, sem mexer nesta tela).
+  final InsightsService? service;
+
+  const InsightsScreen({super.key, this.insights, this.service});
 
   @override
   State<InsightsScreen> createState() => _InsightsScreenState();
@@ -33,8 +40,11 @@ class _InsightsScreenState extends State<InsightsScreen> {
     'metodo',
   ];
 
-  late List<Insight> _items;
-  late List<InsightJourneyEvent> _journey;
+  List<Insight> _items = const [];
+  List<InsightJourneyEvent> _journey = const [];
+  bool _loading = false;
+  Object? _error;
+  late final InsightsService _service;
   _InsightsView _selectedView = _InsightsView.insights;
   String? _selectedCategory;
   String? _selectedDisciplina;
@@ -52,15 +62,56 @@ class _InsightsScreenState extends State<InsightsScreen> {
   @override
   void initState() {
     super.initState();
-    _items = widget.insights ?? getInsightsMock();
-    _journey = getJornadaMock();
+    _service = widget.service ?? const InsightsService();
+    if (widget.insights != null) {
+      // Injeção síncrona (testes/estados): sem carregamento assíncrono.
+      _items = widget.insights!;
+      _journey = getJornadaMock();
+    } else {
+      _loading = true;
+      _fetch();
+    }
   }
 
   @override
   void didUpdateWidget(covariant InsightsScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.insights != widget.insights) {
-      _items = widget.insights ?? getInsightsMock();
+    if (oldWidget.insights != widget.insights && widget.insights != null) {
+      _items = widget.insights!;
+      _loading = false;
+      _error = null;
+    }
+  }
+
+  /// Reexecuta o carregamento (usado pelo botão "tentar novamente").
+  void _reload() {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    _fetch();
+  }
+
+  /// Ponto único de busca de dados. Hoje resolve o serviço (mock); a fase de
+  /// dados apenas troca a implementação do serviço.
+  Future<void> _fetch() async {
+    try {
+      final results = await Future.wait([
+        _service.fetchInsights(),
+        _service.fetchJourney(),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        _items = results[0] as List<Insight>;
+        _journey = results[1] as List<InsightJourneyEvent>;
+        _loading = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _error = error;
+        _loading = false;
+      });
     }
   }
 
@@ -125,46 +176,63 @@ class _InsightsScreenState extends State<InsightsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final items = _items;
-    final filteredItems = _filteredItems;
-    final weeklyFocus = _weeklyFocus;
-
     return Scaffold(
       backgroundColor: AppColors.appBackground,
       body: CustomScrollView(
         slivers: [
           _buildHeader(),
-          SliverToBoxAdapter(child: _buildViewSelector()),
-          if (_selectedView == _InsightsView.evolucao)
-            SliverToBoxAdapter(child: _buildEvolution())
-          else if (items.isEmpty)
+          if (_loading)
             const SliverFillRemaining(
               hasScrollBody: false,
-              child: _EmptyInsights(),
+              child: _InsightsLoading(),
+            )
+          else if (_error != null)
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: _InsightsError(onRetry: _reload),
             )
           else ...[
-            SliverToBoxAdapter(child: _buildIntroduction(items)),
-            if (weeklyFocus != null)
-              SliverToBoxAdapter(child: _buildWeeklyFocus(weeklyFocus)),
-            SliverToBoxAdapter(child: _buildSeveritySummary()),
-            SliverToBoxAdapter(child: _buildCategoryFilters()),
-            SliverToBoxAdapter(child: _buildDisciplinaFilters()),
-            if (filteredItems.isEmpty)
-              SliverToBoxAdapter(
-                child: _CategoryEmpty(
-                  category: _selectedCategory == null
-                      ? null
-                      : _categoryLabel(_selectedCategory),
-                  disciplina: _selectedDisciplina,
-                ),
-              )
-            else
-              SliverToBoxAdapter(child: _buildInsightGrid(filteredItems)),
-            const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xxxl)),
+            SliverToBoxAdapter(child: _buildViewSelector()),
+            ..._buildLoadedSlivers(),
           ],
         ],
       ),
     );
+  }
+
+  List<Widget> _buildLoadedSlivers() {
+    final items = _items;
+    final filteredItems = _filteredItems;
+    final weeklyFocus = _weeklyFocus;
+
+    if (_selectedView == _InsightsView.evolucao) {
+      return [SliverToBoxAdapter(child: _buildEvolution())];
+    }
+    if (items.isEmpty) {
+      return const [
+        SliverFillRemaining(hasScrollBody: false, child: _EmptyInsights()),
+      ];
+    }
+    return [
+      SliverToBoxAdapter(child: _buildIntroduction(items)),
+      if (weeklyFocus != null)
+        SliverToBoxAdapter(child: _buildWeeklyFocus(weeklyFocus)),
+      SliverToBoxAdapter(child: _buildSeveritySummary()),
+      SliverToBoxAdapter(child: _buildCategoryFilters()),
+      SliverToBoxAdapter(child: _buildDisciplinaFilters()),
+      if (filteredItems.isEmpty)
+        SliverToBoxAdapter(
+          child: _CategoryEmpty(
+            category: _selectedCategory == null
+                ? null
+                : _categoryLabel(_selectedCategory),
+            disciplina: _selectedDisciplina,
+          ),
+        )
+      else
+        SliverToBoxAdapter(child: _buildInsightGrid(filteredItems)),
+      const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xxxl)),
+    ];
   }
 
   Widget _buildHeader() {
@@ -693,6 +761,9 @@ class _InsightsScreenState extends State<InsightsScreen> {
   }
 
   void _markUseful(Insight insight) {
+    unawaited(
+      _service.submitFeedback(insightId: insight.id, useful: true),
+    );
     setState(() {
       _feedbackByType[insight.tipo] = const InsightFeedbackState(
         status: InsightFeedbackStatus.useful,
@@ -708,6 +779,13 @@ class _InsightsScreenState extends State<InsightsScreen> {
   }
 
   void _rejectInsight(Insight insight, String reason) {
+    unawaited(
+      _service.submitFeedback(
+        insightId: insight.id,
+        useful: false,
+        reason: reason,
+      ),
+    );
     setState(() {
       _feedbackByType[insight.tipo] = InsightFeedbackState(
         status: InsightFeedbackStatus.rejected,
@@ -1345,6 +1423,82 @@ String _severityLabel(String severity) {
     case 'info':
     default:
       return 'Informativo';
+  }
+}
+
+class _InsightsLoading extends StatelessWidget {
+  const _InsightsLoading();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Padding(
+        padding: EdgeInsets.all(AppSpacing.xxxl),
+        child: CircularProgressIndicator(color: AppColors.subjectTeal),
+      ),
+    );
+  }
+}
+
+class _InsightsError extends StatelessWidget {
+  final VoidCallback onRetry;
+
+  const _InsightsError({required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 420),
+        child: Padding(
+          padding: AppSpacing.screen,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: AppColors.danger.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(AppRadii.xl),
+                ),
+                child: const Icon(
+                  LucideIcons.triangleAlert,
+                  color: AppColors.danger,
+                  size: 30,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              Text(
+                'Não foi possível carregar seus insights',
+                textAlign: TextAlign.center,
+                style: AppTypography.cardTitle.copyWith(
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                'Verifique sua conexão e tente novamente.',
+                textAlign: TextAlign.center,
+                style: AppTypography.body.copyWith(
+                  color: AppColors.textMuted,
+                  height: 1.45,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              ShadButton(
+                key: const ValueKey('insights-retry'),
+                backgroundColor: AppColors.subjectTeal,
+                hoverBackgroundColor: AppColors.subjectTeal,
+                foregroundColor: AppColors.textInverted,
+                onPressed: onRetry,
+                child: const Text('Tentar novamente'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 

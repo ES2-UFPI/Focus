@@ -82,6 +82,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     await tester.pumpWidget(const ShadApp(home: InsightsScreen()));
+    await tester.pumpAndSettle();
 
     final gridCard = find.byKey(
       const ValueKey('insight-card-tap-melhor_horario'),

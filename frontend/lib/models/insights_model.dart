@@ -115,6 +115,9 @@ class InsightJourneyEvent {
 /// Os nomes dos campos acompanham o contrato previsto para o backend, permitindo
 /// que a fonte mock seja substituída sem adaptar os componentes visuais.
 class Insight {
+  /// Identificador estável do insight. Vazio no mock; no contrato do backend
+  /// vem preenchido e é usado em `POST /api/insights/{id}/feedback`.
+  final String id;
   final String tipo;
   final String titulo;
   final String descricao;
@@ -130,6 +133,7 @@ class Insight {
   final List<InsightEvidenceSession> sessoesEvidencia;
 
   const Insight({
+    this.id = '',
     required this.tipo,
     required this.titulo,
     required this.descricao,
@@ -152,6 +156,7 @@ class Insight {
     final sessoesJson = json['sessoesEvidencia'] ?? json['sessoes_evidencia'];
 
     return Insight(
+      id: json['id'] as String? ?? '',
       tipo: json['tipo'] as String? ?? '',
       titulo: json['titulo'] as String? ?? '',
       descricao: json['descricao'] as String? ?? '',

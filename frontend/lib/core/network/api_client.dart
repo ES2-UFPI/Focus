@@ -1,6 +1,13 @@
 import 'package:flutter/foundation.dart';
 
-const String kBaseUrl = 'http://localhost:8000'; // Ajuste conforme sua URL base
+/// URL base da API. Configurável por ambiente sem alterar o código:
+/// `flutter run --dart-define=FOCUS_API_BASE_URL=http://10.0.2.2:8000`
+/// (ex.: `10.0.2.2` no emulador Android, IP da LAN em dispositivo real).
+/// Sem a flag, mantém o padrão local.
+const String kBaseUrl = String.fromEnvironment(
+  'FOCUS_API_BASE_URL',
+  defaultValue: 'http://localhost:8000',
+);
 
 class ApiClient {
   // 🔑 Armazenamento global do token dentro do core de rede

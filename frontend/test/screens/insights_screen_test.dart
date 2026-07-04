@@ -4,10 +4,76 @@ import 'package:frontend/core/theme/app_theme.dart';
 import 'package:frontend/data/insights_mock.dart';
 import 'package:frontend/models/insights_model.dart';
 import 'package:frontend/screens/insights_screen.dart';
+import 'package:frontend/services/insights_service.dart';
 import 'package:frontend/widgets/insight_card.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
+class _DelayedInsightsService extends InsightsService {
+  const _DelayedInsightsService();
+
+  @override
+  Future<List<Insight>> fetchInsights() async {
+    await Future<void>.delayed(const Duration(milliseconds: 60));
+    return getInsightsMock();
+  }
+
+  @override
+  Future<List<InsightJourneyEvent>> fetchJourney() async {
+    await Future<void>.delayed(const Duration(milliseconds: 60));
+    return getJornadaMock();
+  }
+}
+
+class _FailingInsightsService extends InsightsService {
+  const _FailingInsightsService();
+
+  @override
+  Future<List<Insight>> fetchInsights() async {
+    throw Exception('offline');
+  }
+}
+
 void main() {
+  testWidgets('shows a loading indicator before insights resolve', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1000, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      const ShadApp(home: InsightsScreen(service: _DelayedInsightsService())),
+    );
+    await tester.pump();
+
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+    await tester.pumpAndSettle();
+
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.text('Foco da semana'), findsOneWidget);
+  });
+
+  testWidgets('shows an error state with retry when loading fails', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1000, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      const ShadApp(home: InsightsScreen(service: _FailingInsightsService())),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Não foi possível carregar seus insights'),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('insights-retry')), findsOneWidget);
+  });
   testWidgets('renders mocked insights and category filters', (tester) async {
     tester.view.physicalSize = const Size(1000, 1600);
     tester.view.devicePixelRatio = 1;
@@ -15,6 +81,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     await tester.pumpWidget(const ShadApp(home: InsightsScreen()));
+    await tester.pumpAndSettle();
 
     expect(find.text('Insights'), findsNWidgets(2));
     expect(find.text('Foco da semana'), findsOneWidget);
@@ -68,6 +135,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     await tester.pumpWidget(const ShadApp(home: InsightsScreen()));
+    await tester.pumpAndSettle();
 
     await tester.tap(find.text('Saúde'));
     await tester.pumpAndSettle();
@@ -89,6 +157,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     await tester.pumpWidget(const ShadApp(home: InsightsScreen()));
+    await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const ValueKey('summary-critico')));
     await tester.pump();
@@ -110,6 +179,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     await tester.pumpWidget(const ShadApp(home: InsightsScreen()));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('view-evolucao')));
     await tester.pumpAndSettle();
 
@@ -127,6 +197,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     await tester.pumpWidget(const ShadApp(home: InsightsScreen()));
+    await tester.pumpAndSettle();
 
     await tester.tap(find.text('Planejamento'));
     await tester.pumpAndSettle();
@@ -189,6 +260,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     await tester.pumpWidget(const ShadApp(home: InsightsScreen()));
+    await tester.pumpAndSettle();
 
     await tester.tap(
       find.byKey(const ValueKey('feedback-down-melhor_horario')),
@@ -230,6 +302,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     await tester.pumpWidget(const ShadApp(home: InsightsScreen()));
+    await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const ValueKey('feedback-up-melhor_horario')));
     await tester.pump();
@@ -282,6 +355,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     await tester.pumpWidget(const ShadApp(home: InsightsScreen()));
+    await tester.pumpAndSettle();
 
     final wideCards = find.byType(InsightCard);
     final wideFirst = tester.getTopLeft(wideCards.at(0));
