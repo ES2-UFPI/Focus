@@ -15,7 +15,7 @@ void main() {
   test('fetchJourney resolves the journey events', () async {
     final journey = await service.fetchJourney();
 
-    expect(journey, hasLength(4));
+    expect(journey, hasLength(5));
     expect(journey.first, isA<InsightJourneyEvent>());
   });
 

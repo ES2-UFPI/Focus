@@ -534,32 +534,43 @@ List<Insight> getInsightsMock() {
 List<InsightJourneyEvent> getJornadaMock() {
   return const [
     InsightJourneyEvent(
-      data: 'Há 2 semanas',
+      data: 'Há 3 semanas',
       tipo: 'detectado',
       texto:
-          'Foi observado que 60% das sessões de sexta à noite eram canceladas.',
-      insightTipo: 'taxa_furo',
-    ),
-    InsightJourneyEvent(
-      data: '12 dias atrás',
-      tipo: 'acao',
-      texto:
-          'Você reorganizou as sessões de ES2 e passou a estudar pela manhã.',
+          'Você rendia bem menos à noite: produtividade média 2,4 contra 4,0 '
+          'pela manhã, na mesma disciplina.',
       insightTipo: 'melhor_horario',
     ),
     InsightJourneyEvent(
-      data: 'Semana passada',
+      data: 'Há 2 semanas',
+      tipo: 'acao',
+      texto:
+          'Você aceitou a recomendação e passou a agendar Cálculo pela manhã.',
+      insightTipo: 'melhor_horario',
+    ),
+    InsightJourneyEvent(
+      data: 'Há 8 dias',
       tipo: 'melhora',
       texto:
-          'Após a mudança de horário, foi observada produtividade média 18% maior.',
+          'Nas sessões que você moveu, a produtividade subiu de 2,4 para 3,9 — '
+          'observado nas suas próprias sessões.',
       insightTipo: 'efeito_acao',
     ),
     InsightJourneyEvent(
-      data: 'Esta semana',
+      data: 'Há 3 dias',
       tipo: 'melhora',
       texto:
-          'Nos registros mais recentes, os cancelamentos de sexta caíram para 10%.',
+          'O ganho se manteve pela semana toda: +18% de produtividade média e '
+          'nenhuma dessas sessões foi cancelada.',
       insightTipo: 'progresso',
+    ),
+    InsightJourneyEvent(
+      data: 'Ontem',
+      tipo: 'detectado',
+      texto:
+          'Um novo padrão já apareceu pra cuidar: 60% das sessões de sexta à '
+          'noite vêm sendo canceladas.',
+      insightTipo: 'taxa_furo',
     ),
   ];
 }

@@ -184,7 +184,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Sua evolução'), findsOneWidget);
-    expect(find.text('Detectado'), findsOneWidget);
+    expect(find.text('Detectado'), findsNWidgets(2));
     expect(find.text('Ação'), findsOneWidget);
     expect(find.text('Melhora observada'), findsNWidgets(2));
     expect(find.byType(InsightCard), findsNothing);
