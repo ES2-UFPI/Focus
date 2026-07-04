@@ -91,6 +91,29 @@ void main() {
     );
     expect(find.byKey(const ValueKey('insights-retry')), findsOneWidget);
   });
+  testWidgets('calm mode compresses the top into a single summary', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1000, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(const ShadApp(home: InsightsScreen()));
+    await tester.pumpAndSettle();
+
+    // Padrão: modo detalhado, com os blocos densos do topo.
+    expect(find.text('Três decisões, sem sobrecarga'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('calm-toggle')));
+    await tester.pumpAndSettle();
+
+    // Modo calmo: um resumo único, sem os blocos densos.
+    expect(find.text('Sua semana em foco'), findsOneWidget);
+    expect(find.text('Três decisões, sem sobrecarga'), findsNothing);
+    expect(find.text('Saúde do seu estudo'), findsNothing);
+  });
+
   testWidgets('renders mocked insights and category filters', (tester) async {
     tester.view.physicalSize = const Size(1000, 1600);
     tester.view.devicePixelRatio = 1;

@@ -60,6 +60,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
   String? _selectedSeverity;
   bool _attentionOnly = false;
   bool _showPatternLibrary = false;
+  bool _calmMode = false;
   String? _reasonPickerFor;
   String? _selectedEvolutionDisciplina;
 
@@ -285,6 +286,14 @@ class _InsightsScreenState extends State<InsightsScreen> {
         SliverFillRemaining(hasScrollBody: false, child: _EmptyInsights()),
       ];
     }
+    if (_calmMode) {
+      return [
+        SliverToBoxAdapter(child: _buildCalmSummary()),
+        ..._libraryPatternSlivers(items, filteredItems),
+        const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xxxl)),
+      ];
+    }
+
     return [
       SliverToBoxAdapter(child: _buildWeeklyOverview()),
       if (_criticalAlert != null)
@@ -292,6 +301,18 @@ class _InsightsScreenState extends State<InsightsScreen> {
       if (_weeklyPlan.isNotEmpty) SliverToBoxAdapter(child: _buildWeeklyPlan()),
       if (_dashboard.dimensoes.isNotEmpty)
         SliverToBoxAdapter(child: _buildStudyPanorama()),
+      ..._libraryPatternSlivers(items, filteredItems),
+      const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xxxl)),
+    ];
+  }
+
+  /// Bloco recolhível da biblioteca de padrões (filtros + grid), reutilizado
+  /// pelos modos detalhado e calmo.
+  List<Widget> _libraryPatternSlivers(
+    List<Insight> items,
+    List<Insight> filteredItems,
+  ) {
+    return [
       SliverToBoxAdapter(child: _buildPatternLibraryToggle(items.length)),
       if (_showPatternLibrary) ...[
         SliverToBoxAdapter(child: _buildIntroduction(items)),
@@ -310,8 +331,36 @@ class _InsightsScreenState extends State<InsightsScreen> {
         else
           SliverToBoxAdapter(child: _buildInsightGrid(filteredItems)),
       ],
-      const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xxxl)),
     ];
+  }
+
+  /// Topo do modo calmo: um único resumo, no lugar dos quatro blocos densos.
+  Widget _buildCalmSummary() {
+    final counts = <String, int>{
+      for (final severity in ['positivo', 'atencao', 'critico'])
+        severity: _items
+            .where((insight) => insight.severidade == severity)
+            .length,
+    };
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.xxl,
+            AppSpacing.lg,
+            AppSpacing.md,
+          ),
+          child: _CalmSummary(
+            critical: _criticalAlert,
+            plan: _weeklyPlan,
+            counts: counts,
+            onOpen: _openDetail,
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildHeader() {
@@ -321,6 +370,16 @@ class _InsightsScreenState extends State<InsightsScreen> {
       backgroundColor: AppColors.subjectTeal,
       foregroundColor: AppColors.textInverted,
       surfaceTintColor: Colors.transparent,
+      actions: [
+        IconButton(
+          key: const ValueKey('calm-toggle'),
+          tooltip: _calmMode ? 'Ver modo detalhado' : 'Ver modo calmo',
+          color: AppColors.textInverted,
+          icon: Icon(_calmMode ? LucideIcons.layoutList : LucideIcons.wind),
+          onPressed: () => setState(() => _calmMode = !_calmMode),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+      ],
       flexibleSpace: FlexibleSpaceBar(
         titlePadding: const EdgeInsets.fromLTRB(
           AppSpacing.lg,
@@ -3041,6 +3100,178 @@ Color _insightSeverityColor(String severity) {
     case 'info':
     default:
       return AppColors.info;
+  }
+}
+
+class _CalmSummary extends StatelessWidget {
+  final Insight? critical;
+  final List<_WeeklyPlanEntry> plan;
+  final Map<String, int> counts;
+  final void Function(Insight insight) onOpen;
+
+  const _CalmSummary({
+    required this.critical,
+    required this.plan,
+    required this.counts,
+    required this.onOpen,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final positivo = counts['positivo'] ?? 0;
+    final atencao = counts['atencao'] ?? 0;
+    final critico = counts['critico'] ?? 0;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadii.xl),
+        border: Border.all(color: AppColors.borderSubtle),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Sua semana em foco',
+            style: AppTypography.cardTitle.copyWith(color: AppColors.textPrimary),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            _summaryLine(positivo, atencao, critico),
+            style: AppTypography.body.copyWith(color: AppColors.textMuted),
+          ),
+          if (critical != null) ...[
+            const SizedBox(height: AppSpacing.lg),
+            _CalmRow(
+              key: const ValueKey('calm-critical'),
+              accent: AppColors.danger,
+              icon: LucideIcons.triangleAlert,
+              label: 'Atenção',
+              title: critical!.titulo,
+              onTap: () => onOpen(critical!),
+            ),
+          ],
+          if (plan.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.lg),
+            Text(
+              'O QUE FAZER',
+              style: AppTypography.sectionTitle.copyWith(
+                color: AppColors.textMuted,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            for (var i = 0; i < plan.length; i++) ...[
+              if (i > 0) const SizedBox(height: AppSpacing.sm),
+              _CalmRow(
+                key: ValueKey('calm-plan-${plan[i].insight.tipo}'),
+                accent: plan[i].color,
+                icon: plan[i].icon,
+                label: plan[i].label,
+                title: plan[i].insight.titulo,
+                onTap: () => onOpen(plan[i].insight),
+              ),
+            ],
+          ],
+          if (critical == null && plan.isEmpty) ...[
+            const SizedBox(height: AppSpacing.lg),
+            Text(
+              'Tudo tranquilo — nenhum ponto de atenção esta semana.',
+              style: AppTypography.body.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  String _summaryLine(int positivo, int atencao, int critico) {
+    final parts = <String>[];
+    if (critico > 0) parts.add('$critico crítico${critico > 1 ? 's' : ''}');
+    if (atencao > 0) parts.add('$atencao de atenção');
+    if (positivo > 0) {
+      parts.add('$positivo ${positivo > 1 ? 'conquistas' : 'conquista'}');
+    }
+    if (parts.isEmpty) return 'Sem padrões relevantes ainda.';
+    return parts.join(' · ');
+  }
+}
+
+class _CalmRow extends StatelessWidget {
+  final Color accent;
+  final IconData icon;
+  final String label;
+  final String title;
+  final VoidCallback onTap;
+
+  const _CalmRow({
+    super.key,
+    required this.accent,
+    required this.icon,
+    required this.label,
+    required this.title,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.surfaceMuted,
+      borderRadius: BorderRadius.circular(AppRadii.lg),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppRadii.lg),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(AppRadii.md),
+                ),
+                child: Icon(icon, size: AppSizes.iconMd, color: accent),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: AppTypography.caption.copyWith(
+                        color: accent,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.bodyStrong.copyWith(
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              const Icon(
+                LucideIcons.chevronRight,
+                size: AppSizes.iconSm,
+                color: AppColors.textMuted,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
