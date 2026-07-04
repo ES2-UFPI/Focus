@@ -8,6 +8,11 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 
 void main() {
   testWidgets('renders mocked insights and category filters', (tester) async {
+    tester.view.physicalSize = const Size(1000, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
     await tester.pumpWidget(const ShadApp(home: InsightsScreen()));
 
     expect(find.text('Insights'), findsOneWidget);
@@ -16,8 +21,16 @@ void main() {
     expect(find.text('Todas as matérias'), findsOneWidget);
     expect(find.text('Tempo'), findsOneWidget);
     expect(find.text('Saúde'), findsOneWidget);
+    expect(find.text('Método'), findsOneWidget);
+    expect(find.text('Fontes de dados'), findsNothing);
+    expect(find.text('Mostrar insights ocultos'), findsNothing);
+    expect(find.text('Confiança alta'), findsNothing);
+    expect(find.text('Confiança média'), findsNothing);
     expect(find.textContaining('60% das sessões'), findsOneWidget);
-    expect(find.text('Dados insuficientes'), findsOneWidget);
+    expect(
+      find.textContaining('Dados insuficientes — continue registrando'),
+      findsOneWidget,
+    );
     expect(find.text('+41%'), findsOneWidget);
   });
 
@@ -113,9 +126,64 @@ void main() {
     expect(tapped, isTrue);
   });
 
+  testWidgets('marks an insight as not useful and allows undo', (tester) async {
+    tester.view.physicalSize = const Size(1000, 1400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(const ShadApp(home: InsightsScreen()));
+
+    await tester.tap(
+      find.byKey(const ValueKey('feedback-down-melhor_horario')),
+    );
+    await tester.pump();
+
+    expect(find.text('O que não bateu?'), findsOneWidget);
+    expect(find.text('Semana atípica'), findsOneWidget);
+
+    await tester.tap(
+      find.byKey(
+        const ValueKey('feedback-reason-melhor_horario-Semana atípica'),
+      ),
+    );
+    await tester.pump();
+
+    expect(
+      find.text('Seu rendimento tende a ser maior pela manhã'),
+      findsOneWidget,
+    );
+    expect(find.text('Marcado como não útil · Semana atípica'), findsOneWidget);
+
+    await tester.tap(find.text('Desfazer'));
+    await tester.pump();
+
+    expect(find.text('Isso faz sentido pra você?'), findsWidgets);
+    expect(find.textContaining('Marcado como não útil'), findsNothing);
+  });
+
+  testWidgets('thanks the user after useful feedback', (tester) async {
+    tester.view.physicalSize = const Size(1000, 1400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(const ShadApp(home: InsightsScreen()));
+
+    await tester.tap(find.byKey(const ValueKey('feedback-up-melhor_horario')));
+    await tester.pump();
+
+    expect(find.text('Valeu! Vamos priorizar insights assim.'), findsOneWidget);
+  });
+
   testWidgets('shows a message when the selected category becomes empty', (
     tester,
   ) async {
+    tester.view.physicalSize = const Size(1000, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
     final insights = ValueNotifier<List<Insight>>(getInsightsMock());
     addTearDown(insights.dispose);
 

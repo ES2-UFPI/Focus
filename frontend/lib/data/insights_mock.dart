@@ -212,6 +212,98 @@ List<Insight> getInsightsMock() {
         disciplinaId: _es2DisciplinaId,
       ),
     ),
+    // PREVIEW MOCK: a captura real de uso de apps seria Android-only via
+    // UsageStatsManager e dependeria de permissão explícita do usuário.
+    Insight(
+      tipo: 'tela_antes_sessao',
+      titulo:
+          'Muito tempo de tela aparece antes das sessões mais interrompidas',
+      descricao:
+          'Sessões iniciadas após mais de 1h em redes sociais tiveram, em '
+          'média, o dobro de pausas e nota de foco menor.',
+      numeros: {
+        'tempo_tela_min': 68,
+        'aumento_pausas_pct': 100,
+        'foco_apos_tela': 2.5,
+      },
+      categoria: 'saude',
+      amostra: 14,
+      confianca: 'media',
+      natureza: 'observacional',
+      severidade: 'atencao',
+      acao: InsightAction(
+        tipo: 'silenciar_celular',
+        label: 'Silenciar o celular 15 min antes',
+      ),
+    ),
+    Insight(
+      tipo: 'equilibrio_metodo',
+      titulo: 'Seu estudo está concentrado em leitura',
+      descricao:
+          'Você dedicou 85% do tempo à leitura e 15% a questões. Perto da '
+          'prova, experimente dar mais espaço à prática.',
+      numeros: {'leitura_pct': 85, 'questoes_pct': 15},
+      categoria: 'metodo',
+      disciplina: 'Cálculo',
+      amostra: 20,
+      confianca: 'alta',
+      natureza: 'observacional',
+      severidade: 'atencao',
+      acao: InsightAction(
+        tipo: 'agendar_sessao',
+        label: 'Agendar sessão de exercícios',
+        disciplinaId: _calculoDisciplinaId,
+      ),
+    ),
+    Insight(
+      tipo: 'efeito_acao',
+      titulo: 'Seu rendimento melhorou após a mudança de horário',
+      descricao:
+          'Desde que você passou a estudar ES2 pela manhã, observamos uma '
+          'produtividade média 18% maior.',
+      numeros: {
+        'ganho_pct': 18,
+        'produtividade_antes': 3.4,
+        'produtividade_depois': 4.0,
+      },
+      categoria: 'tempo',
+      disciplina: 'ES2',
+      amostra: 11,
+      confianca: 'media',
+      natureza: 'observacional',
+      severidade: 'positivo',
+    ),
+    Insight(
+      tipo: 'progresso',
+      titulo: 'Seus cancelamentos de sexta à noite diminuíram',
+      descricao:
+          'Há duas semanas, 60% dessas sessões eram canceladas; nos registros '
+          'mais recentes, a taxa observada ficou em 10%.',
+      numeros: {
+        'taxa_anterior_pct': 60,
+        'taxa_atual_pct': 10,
+        'reducao_pct': 83,
+      },
+      categoria: 'rotina',
+      disciplina: 'ES2',
+      amostra: 10,
+      confianca: 'media',
+      natureza: 'observacional',
+      severidade: 'positivo',
+    ),
+    Insight(
+      tipo: 'desgaste',
+      titulo: 'Seus registros recentes mostram sinais de cansaço',
+      descricao:
+          'Sessões longas em sequência, sono curto e produtividade caindo '
+          'apareceram juntos. Considere uma pausa para se recuperar.',
+      numeros: {'sessoes_longas': 4, 'horas_sono_media': 5.5, 'queda_pct': 24},
+      categoria: 'saude',
+      amostra: 9,
+      confianca: 'media',
+      natureza: 'observacional',
+      severidade: 'critico',
+    ),
     Insight(
       tipo: 'amostra_insuficiente',
       titulo: 'Seu ritmo por disciplina ainda está se formando',

@@ -27,11 +27,20 @@ class _InsightsScreenState extends State<InsightsScreen> {
     'planejamento',
     'rotina',
     'saude',
+    'metodo',
   ];
 
   late List<Insight> _items;
   String? _selectedCategory;
   String? _selectedDisciplina;
+  String? _reasonPickerFor;
+
+  // Fase de dados: este mapa local vira
+  // POST /api/insights/{id}/feedback (modelo InsightFeedback). A resposta
+  // alimentará personalização determinística: reduzir a prioridade de itens
+  // rejeitados, ajustar limiares e reavaliar o insight após um período —
+  // sem "IA que aprende".
+  final Map<String, InsightFeedbackState> _feedbackByType = {};
 
   @override
   void initState() {
@@ -460,6 +469,13 @@ class _InsightsScreenState extends State<InsightsScreen> {
                         onAction: insight.acao == null
                             ? null
                             : () => _handleAction(insight),
+                        feedback: _feedbackByType[insight.tipo],
+                        showFeedbackReasons: _reasonPickerFor == insight.tipo,
+                        onUseful: () => _markUseful(insight),
+                        onNotUseful: () => _openReasonPicker(insight),
+                        onSelectFeedbackReason: (reason) =>
+                            _rejectInsight(insight, reason),
+                        onClearFeedback: () => _clearFeedback(insight),
                       ),
                     ),
                 ],
@@ -469,6 +485,38 @@ class _InsightsScreenState extends State<InsightsScreen> {
         ),
       ),
     );
+  }
+
+  void _markUseful(Insight insight) {
+    setState(() {
+      _feedbackByType[insight.tipo] = const InsightFeedbackState(
+        status: InsightFeedbackStatus.useful,
+      );
+      _reasonPickerFor = null;
+    });
+  }
+
+  void _openReasonPicker(Insight insight) {
+    setState(() {
+      _reasonPickerFor = _reasonPickerFor == insight.tipo ? null : insight.tipo;
+    });
+  }
+
+  void _rejectInsight(Insight insight, String reason) {
+    setState(() {
+      _feedbackByType[insight.tipo] = InsightFeedbackState(
+        status: InsightFeedbackStatus.rejected,
+        reason: reason,
+      );
+      _reasonPickerFor = null;
+    });
+  }
+
+  void _clearFeedback(Insight insight) {
+    setState(() {
+      _feedbackByType.remove(insight.tipo);
+      _reasonPickerFor = null;
+    });
   }
 
   Color _disciplinaColor(String? disciplina) {
@@ -516,6 +564,8 @@ class _InsightsScreenState extends State<InsightsScreen> {
         return 'Rotina';
       case 'saude':
         return 'Saúde';
+      case 'metodo':
+        return 'Método';
       default:
         return 'esta categoria';
     }

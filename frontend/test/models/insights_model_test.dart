@@ -66,13 +66,14 @@ void main() {
   test('mock covers all categories, sleep preview and insufficient data', () {
     final insights = getInsightsMock();
 
-    expect(insights, hasLength(12));
+    expect(insights, hasLength(17));
     expect(insights.map((insight) => insight.categoria).toSet(), {
       'tempo',
       'foco',
       'planejamento',
       'rotina',
       'saude',
+      'metodo',
     });
     expect(
       insights.map((insight) => insight.tipo),
@@ -87,6 +88,11 @@ void main() {
         'sequencia_produtiva',
         'cramming',
         'sono_x_rendimento',
+        'tela_antes_sessao',
+        'equilibrio_metodo',
+        'efeito_acao',
+        'progresso',
+        'desgaste',
       ]),
     );
     expect(
@@ -117,18 +123,21 @@ void main() {
         .where((insight) => insight.acao != null)
         .toList();
 
-    expect(actionable, hasLength(4));
+    expect(actionable, hasLength(6));
     expect(actionable.map((insight) => insight.tipo), {
       'melhor_horario',
       'taxa_furo',
       'cramming',
       'ritmo_disciplina',
+      'tela_antes_sessao',
+      'equilibrio_metodo',
     });
     expect(
       actionable.every(
         (insight) =>
             insight.acao!.tipo == 'agendar_sessao' ||
-            insight.acao!.tipo == 'reagendar',
+            insight.acao!.tipo == 'reagendar' ||
+            insight.acao!.tipo == 'silenciar_celular',
       ),
       isTrue,
     );

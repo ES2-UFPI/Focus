@@ -4,16 +4,37 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 import '../core/theme/app_theme.dart';
 import '../models/insights_model.dart';
 
+enum InsightFeedbackStatus { useful, rejected }
+
+class InsightFeedbackState {
+  final InsightFeedbackStatus status;
+  final String? reason;
+
+  const InsightFeedbackState({required this.status, this.reason});
+}
+
 class InsightCard extends StatelessWidget {
   final Insight insight;
   final String? disciplinaColorHex;
   final VoidCallback? onAction;
+  final InsightFeedbackState? feedback;
+  final bool showFeedbackReasons;
+  final VoidCallback? onUseful;
+  final VoidCallback? onNotUseful;
+  final ValueChanged<String>? onSelectFeedbackReason;
+  final VoidCallback? onClearFeedback;
 
   const InsightCard({
     super.key,
     required this.insight,
     this.disciplinaColorHex,
     this.onAction,
+    this.feedback,
+    this.showFeedbackReasons = false,
+    this.onUseful,
+    this.onNotUseful,
+    this.onSelectFeedbackReason,
+    this.onClearFeedback,
   });
 
   bool get _dadosInsuficientes => insight.confianca == 'insuficiente';
@@ -29,7 +50,11 @@ class InsightCard extends StatelessWidget {
         .toList();
 
     return Opacity(
-      opacity: _dadosInsuficientes ? 0.68 : 1,
+      opacity: feedback?.status == InsightFeedbackStatus.rejected
+          ? 0.58
+          : _dadosInsuficientes
+          ? 0.68
+          : 1,
       child: Container(
         width: double.infinity,
         padding: AppSpacing.card,
@@ -110,13 +135,6 @@ class InsightCard extends StatelessWidget {
                       '${insight.amostra} ${insight.amostra == 1 ? 'sessão' : 'sessões'}',
                 ),
                 _Badge(
-                  icon: _dadosInsuficientes
-                      ? LucideIcons.circleAlert
-                      : LucideIcons.shieldCheck,
-                  label: _confidenceLabel(),
-                  color: _confidenceColor(),
-                ),
-                _Badge(
                   icon: LucideIcons.telescope,
                   label: insight.natureza == 'comprovado'
                       ? 'Comprovado'
@@ -147,6 +165,20 @@ class InsightCard extends StatelessWidget {
                 ),
               ),
             ],
+            if (onUseful != null ||
+                onNotUseful != null ||
+                feedback != null) ...[
+              const SizedBox(height: AppSpacing.lg),
+              _InsightFeedbackControl(
+                insightType: insight.tipo,
+                feedback: feedback,
+                showReasons: showFeedbackReasons,
+                onUseful: onUseful,
+                onNotUseful: onNotUseful,
+                onSelectReason: onSelectFeedbackReason,
+                onClear: onClearFeedback,
+              ),
+            ],
           ],
         ),
       ),
@@ -166,6 +198,11 @@ class InsightCard extends StatelessWidget {
       'cramming': 'concentracao_pct',
       'sono_x_rendimento': 'queda_pct',
       'ritmo_disciplina': 'sessoes_registradas',
+      'tela_antes_sessao': 'aumento_pausas_pct',
+      'equilibrio_metodo': 'leitura_pct',
+      'efeito_acao': 'ganho_pct',
+      'progresso': 'taxa_atual_pct',
+      'desgaste': 'queda_pct',
     };
 
     final preferredKey = heroKeys[insight.tipo];
@@ -184,7 +221,7 @@ class InsightCard extends StatelessWidget {
             insight.tipo == 'melhor_dia_semana' ||
             insight.tipo == 'vies_estimativa');
 
-    return isPositiveDelta ? '+$value' : value;
+    return isPositiveDelta || metric.key == 'ganho_pct' ? '+$value' : value;
   }
 
   Color _severityColor() {
@@ -201,18 +238,6 @@ class InsightCard extends StatelessWidget {
     }
   }
 
-  Color _confidenceColor() {
-    switch (insight.confianca) {
-      case 'alta':
-        return AppColors.success;
-      case 'media':
-        return AppColors.warningStrong;
-      case 'insuficiente':
-      default:
-        return AppColors.neutral;
-    }
-  }
-
   Color _subjectColor() {
     final hex = disciplinaColorHex?.replaceFirst('#', '');
     if (hex == null || !RegExp(r'^[0-9a-fA-F]{6}$').hasMatch(hex)) {
@@ -220,18 +245,6 @@ class InsightCard extends StatelessWidget {
     }
 
     return Color(int.parse('FF$hex', radix: 16));
-  }
-
-  String _confidenceLabel() {
-    switch (insight.confianca) {
-      case 'alta':
-        return 'Confiança alta';
-      case 'media':
-        return 'Confiança média';
-      case 'insuficiente':
-      default:
-        return 'Dados insuficientes';
-    }
   }
 
   IconData _insightIcon() {
@@ -256,6 +269,16 @@ class InsightCard extends StatelessWidget {
         return LucideIcons.hourglass;
       case 'sono_x_rendimento':
         return LucideIcons.moon;
+      case 'tela_antes_sessao':
+        return LucideIcons.smartphone;
+      case 'equilibrio_metodo':
+        return LucideIcons.bookOpenCheck;
+      case 'efeito_acao':
+        return LucideIcons.trendingUp;
+      case 'progresso':
+        return LucideIcons.award;
+      case 'desgaste':
+        return LucideIcons.batteryWarning;
       default:
         return LucideIcons.sparkles;
     }
@@ -293,6 +316,19 @@ class InsightCard extends StatelessWidget {
       'rendimento_bom_sono': 'Após noite longa',
       'sessoes_registradas': 'Registradas',
       'minimo_sugerido': 'Amostra sugerida',
+      'tempo_tela_min': 'Tela antes da sessão',
+      'aumento_pausas_pct': 'Mais pausas',
+      'foco_apos_tela': 'Foco após tela',
+      'leitura_pct': 'Leitura',
+      'questoes_pct': 'Questões',
+      'ganho_pct': 'Melhora observada',
+      'produtividade_antes': 'Antes da mudança',
+      'produtividade_depois': 'Após a mudança',
+      'taxa_anterior_pct': 'Há duas semanas',
+      'taxa_atual_pct': 'Agora',
+      'reducao_pct': 'Redução',
+      'sessoes_longas': 'Sessões longas',
+      'horas_sono_media': 'Sono médio',
     };
 
     return labels[key] ?? key.replaceAll('_', ' ');
@@ -317,14 +353,18 @@ class InsightCard extends StatelessWidget {
         key == 'media_outros_dias' ||
         key == 'produtividade_media' ||
         key == 'rendimento_pouco_sono' ||
-        key == 'rendimento_bom_sono') {
+        key == 'rendimento_bom_sono' ||
+        key == 'foco_apos_tela' ||
+        key == 'produtividade_antes' ||
+        key == 'produtividade_depois') {
       return '$formatted / 5';
     }
     if (key == 'sessoes_sexta_noite' ||
         key == 'canceladas' ||
         key == 'sequencia_sessoes' ||
         key == 'sessoes_registradas' ||
-        key == 'minimo_sugerido') {
+        key == 'minimo_sugerido' ||
+        key == 'sessoes_longas') {
       return '$formatted sessões';
     }
     if (key == 'concluidas' || key == 'total_tarefas') {
@@ -332,6 +372,194 @@ class InsightCard extends StatelessWidget {
     }
 
     return formatted;
+  }
+}
+
+class _InsightFeedbackControl extends StatelessWidget {
+  static const _reasons = [
+    'Semana atípica',
+    'Não concordo',
+    'Já resolvi',
+    'Pouco relevante',
+  ];
+
+  final String insightType;
+  final InsightFeedbackState? feedback;
+  final bool showReasons;
+  final VoidCallback? onUseful;
+  final VoidCallback? onNotUseful;
+  final ValueChanged<String>? onSelectReason;
+  final VoidCallback? onClear;
+
+  const _InsightFeedbackControl({
+    required this.insightType,
+    required this.feedback,
+    required this.showReasons,
+    this.onUseful,
+    this.onNotUseful,
+    this.onSelectReason,
+    this.onClear,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (feedback?.status == InsightFeedbackStatus.useful) {
+      return _FeedbackNotice(
+        icon: LucideIcons.thumbsUp,
+        message: 'Valeu! Vamos priorizar insights assim.',
+        color: AppColors.success,
+        onClear: onClear,
+      );
+    }
+
+    if (feedback?.status == InsightFeedbackStatus.rejected) {
+      return _FeedbackNotice(
+        icon: LucideIcons.eyeOff,
+        message:
+            'Marcado como não útil${feedback?.reason == null ? '' : ' · ${feedback!.reason}'}',
+        color: AppColors.neutral,
+        onClear: onClear,
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.only(top: AppSpacing.md),
+      decoration: const BoxDecoration(
+        border: Border(top: BorderSide(color: AppColors.borderSubtle)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Isso faz sentido pra você?',
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.textMuted,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Tooltip(
+                message: 'Sim, foi útil',
+                child: Semantics(
+                  label: 'Marcar insight como útil',
+                  button: true,
+                  child: ShadButton.outline(
+                    key: ValueKey('feedback-up-$insightType'),
+                    size: ShadButtonSize.sm,
+                    width: 34,
+                    height: 30,
+                    padding: EdgeInsets.zero,
+                    foregroundColor: AppColors.success,
+                    onPressed: onUseful,
+                    child: const Icon(LucideIcons.thumbsUp, size: 15),
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              Tooltip(
+                message: 'Não bateu',
+                child: Semantics(
+                  label: 'Marcar insight como não útil',
+                  button: true,
+                  child: ShadButton.outline(
+                    key: ValueKey('feedback-down-$insightType'),
+                    size: ShadButtonSize.sm,
+                    width: 34,
+                    height: 30,
+                    padding: EdgeInsets.zero,
+                    foregroundColor: AppColors.textMuted,
+                    onPressed: onNotUseful,
+                    child: const Icon(LucideIcons.thumbsDown, size: 15),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (showReasons) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              'O que não bateu?',
+              style: AppTypography.caption.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Wrap(
+              spacing: AppSpacing.xs,
+              runSpacing: AppSpacing.xs,
+              children: [
+                for (final reason in _reasons)
+                  ShadButton.outline(
+                    key: ValueKey('feedback-reason-$insightType-$reason'),
+                    size: ShadButtonSize.sm,
+                    height: 30,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.sm,
+                    ),
+                    backgroundColor: AppColors.surface,
+                    foregroundColor: AppColors.textSecondary,
+                    onPressed: () => onSelectReason?.call(reason),
+                    child: Text(
+                      reason,
+                      style: AppTypography.caption.copyWith(
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _FeedbackNotice extends StatelessWidget {
+  final IconData icon;
+  final String message;
+  final Color color;
+  final VoidCallback? onClear;
+
+  const _FeedbackNotice({
+    required this.icon,
+    required this.message,
+    required this.color,
+    this.onClear,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(AppRadii.md),
+        border: Border.all(color: color.withValues(alpha: 0.16)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: AppSizes.iconSm, color: color),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              message,
+              style: AppTypography.caption.copyWith(
+                color: color,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          if (onClear != null)
+            TextButton(onPressed: onClear, child: const Text('Desfazer')),
+        ],
+      ),
+    );
   }
 }
 
@@ -480,13 +708,8 @@ class _Metric extends StatelessWidget {
 class _Badge extends StatelessWidget {
   final IconData icon;
   final String label;
-  final Color color;
 
-  const _Badge({
-    required this.icon,
-    required this.label,
-    this.color = AppColors.textMuted,
-  });
+  const _Badge({required this.icon, required this.label});
 
   @override
   Widget build(BuildContext context) {
@@ -502,12 +725,12 @@ class _Badge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: AppSizes.iconSm, color: color),
+          Icon(icon, size: AppSizes.iconSm, color: AppColors.textMuted),
           const SizedBox(width: AppSpacing.xs),
           Text(
             label,
             style: AppTypography.caption.copyWith(
-              color: color,
+              color: AppColors.textMuted,
               fontWeight: FontWeight.w600,
             ),
           ),
