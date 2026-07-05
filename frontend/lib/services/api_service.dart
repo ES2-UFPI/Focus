@@ -3,17 +3,16 @@ import 'package:http/http.dart' as http;
 import '../models/disciplina.dart';
 import '../models/material_estudo.dart';
 import '../models/dashboard_model.dart';
+import 'package:flutter/foundation.dart';
 
 
 class ApiService {
   static const String _baseUrl = 'http://localhost:8000/api';
-
-  // 🔑 O SEGREDO ESTÁ AQUI: Adicione o modificador static!
   static String? _token;
 
   void setToken(String token) {
     _token = token;
-    print("🔑 [ApiService] Token guardado na memória global: $_token");
+    debugPrint("🔑 [ApiService] Token guardado na memória global: $_token");
   }
 
   void clearToken() => _token = null;
@@ -25,9 +24,9 @@ class ApiService {
 
     if (_token != null) {
       headers['Authorization'] = 'Token $_token';
-      print("🚀 [ApiService] Enviando requisição COM Token: Token $_token");
+      debugPrint("🚀 [ApiService] Enviando requisição COM Token: Token $_token");
     } else {
-      print("⚠️ [ApiService] AVISO: Enviando requisição SEM Token (Anônimo)!");
+      debugPrint("⚠️ [ApiService] AVISO: Enviando requisição SEM Token (Anônimo)!");
     }
 
     return headers;
@@ -107,7 +106,7 @@ class ApiService {
         return DashboardData.fromJson(jsonDecode(response.body));
       }
     } catch (e) {
-      print('Erro ao buscar dashboard: $e');
+      debugPrint('Erro ao buscar dashboard: $e');
     }
     return null;
   }

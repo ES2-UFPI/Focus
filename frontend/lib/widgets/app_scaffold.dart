@@ -75,6 +75,12 @@ class _BottomNavigationBar extends StatelessWidget {
           selectedIcon: Icon(Icons.calendar_month_rounded),
           label: 'Eventos',
         ),
+
+         NavigationDestination(
+          icon: Icon(Icons.flag_outlined),
+          selectedIcon: Icon(Icons.flag_rounded),
+          label: 'Metas',
+        ),
         NavigationDestination(
           icon: Icon(Icons.track_changes_outlined),
           selectedIcon: Icon(Icons.track_changes_rounded),

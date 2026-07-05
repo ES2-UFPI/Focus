@@ -5,6 +5,7 @@ import 'agenda_screen.dart';
 import 'atividades_screen.dart';
 import 'consistencia_screen.dart';
 import 'configuracoes_screen.dart';
+import 'meta_semanais_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -15,6 +16,7 @@ class HomeScreen extends StatelessWidget {
       screens: [
         AtividadesScreen(),
         AgendaScreen(),
+        MetasSemanaisScreen(),
         ConsistenciaScreen(),
         ConfiguracoesScreen(),
       ],

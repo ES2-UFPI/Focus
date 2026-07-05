@@ -76,7 +76,7 @@ class _ConfiguracoesScreenState extends State<ConfiguracoesScreen> {
                   child: Row(
                     children: [
                       Consumer<AuthProvider>(
-                        builder: (_, auth, __) {
+                        builder: (_, auth, _) {
                           final inicial = auth.nomeAluno.isNotEmpty
                               ? auth.nomeAluno[0].toUpperCase()
                               : 'U';

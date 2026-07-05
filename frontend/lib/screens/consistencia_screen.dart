@@ -52,6 +52,39 @@ class _ConsistenciaScreenState extends State<ConsistenciaScreen> {
     setState(() => _dashboardFuture = future);
   }
 
+    DateTime get _inicioSemana {
+    final hoje = DateTime.now();
+    return DateTime(
+      hoje.year,
+      hoje.month,
+      hoje.day - hoje.weekday + 1,
+    );
+  }
+
+  DateTime get _fimSemana {
+    return _inicioSemana.add(const Duration(days: 6));
+  }
+
+  String _formatarDataCurta(DateTime data) {
+    return '${data.day.toString().padLeft(2, '0')}/'
+        '${data.month.toString().padLeft(2, '0')}';
+  }
+
+  String get _intervaloSemana {
+    return '${_formatarDataCurta(_inicioSemana)} - ${_formatarDataCurta(_fimSemana)}';
+  }
+
+  int get _diasRestantesNaSemana {
+    final hoje = DateTime.now();
+    final fim = _fimSemana;
+
+    final diferenca = fim.difference(
+      DateTime(hoje.year, hoje.month, hoje.day),
+    ).inDays;
+
+    return diferenca < 0 ? 0 : diferenca + 1;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -72,26 +105,44 @@ class _ConsistenciaScreenState extends State<ConsistenciaScreen> {
           final d = snapshot.data!;
 
           return RefreshIndicator(
-            color: _C.primary,
-            backgroundColor: _C.surface,
-            onRefresh: () async => _carregarDados(),
-            child: CustomScrollView(
-              slivers: [
-                _buildAppBar(),
-                SliverToBoxAdapter(child: _buildHero(d)),
-                SliverToBoxAdapter(child: _buildMetricasRapidas(d)),
-                if (d.alertas.isNotEmpty)
-                  SliverToBoxAdapter(child: _buildAlertas(d)),
-                SliverToBoxAdapter(child: _buildFrequenciaDias(d)),
-                SliverToBoxAdapter(child: _buildMetas(d)),
-                SliverToBoxAdapter(child: _buildComponentesIndice(d)),
-                SliverToBoxAdapter(child: _buildComparacao(d)),
-                SliverToBoxAdapter(child: _buildDistribuicao(d)),
-                SliverToBoxAdapter(child: _buildEvolucao(d)),
-                const SliverToBoxAdapter(child: SizedBox(height: 32)),
-              ],
-            ),
-          );
+  color: _C.primary,
+  backgroundColor: _C.surface,
+  onRefresh: () async => _carregarDados(),
+  child: CustomScrollView(
+    slivers: [
+      _buildAppBar(),
+
+          // Índice geral da semana
+              SliverToBoxAdapter(child: _buildHero(d)),
+
+              // O que o usuário deve estudar agora
+              SliverToBoxAdapter(child: _buildSugestaoFoco(d)),
+
+              // Resumo da semana
+              SliverToBoxAdapter(child: _buildMetricasRapidas(d)),
+
+              // Metas por disciplina
+              SliverToBoxAdapter(child: _buildMetas(d)),
+
+              // Frequência diária
+              SliverToBoxAdapter(child: _buildFrequenciaDias(d)),
+
+              // Comparação com semana passada
+              SliverToBoxAdapter(child: _buildComparacao(d)),
+
+              // Distribuição do tempo estudado
+              SliverToBoxAdapter(child: _buildDistribuicao(d)),
+
+              // Alertas (caso existam)
+              if (d.alertas.isNotEmpty)
+                SliverToBoxAdapter(child: _buildAlertas(d)),
+
+              const SliverToBoxAdapter(
+                child: SizedBox(height: 32),
+              ),
+            ],
+          ),
+        );
         },
       ),
     );
@@ -100,117 +151,241 @@ class _ConsistenciaScreenState extends State<ConsistenciaScreen> {
   // ── App Bar ──────────────────────────────────
 
   Widget _buildAppBar() {
-    return SliverAppBar(
-      pinned: true,
-      backgroundColor: _C.bg,
-      surfaceTintColor: Colors.transparent,
-      title: const Text(
-        'Consistência',
-        style: TextStyle(
-          color: _C.textPrimary,
-          fontWeight: FontWeight.w700,
-          fontSize: 18,
-          letterSpacing: -0.3,
+  return SliverAppBar(
+    pinned: true,
+    backgroundColor: _C.bg,
+    surfaceTintColor: Colors.transparent,
+    title: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Consistência',
+          style: TextStyle(
+            color: _C.textPrimary,
+            fontWeight: FontWeight.w700,
+            fontSize: 18,
+            letterSpacing: -0.3,
+          ),
         ),
-      ),
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.refresh_rounded, color: _C.textSecondary),
-          onPressed: _carregarDados,
+        const SizedBox(height: 2),
+        Text(
+          'Semana $_intervaloSemana',
+          style: const TextStyle(
+            color: _C.textSecondary,
+            fontWeight: FontWeight.w500,
+            fontSize: 12,
+          ),
         ),
       ],
-      bottom: PreferredSize(
-        preferredSize: const Size.fromHeight(1),
-        child: Container(height: 1, color: _C.border),
+    ),
+    actions: [
+      IconButton(
+        icon: const Icon(Icons.refresh_rounded, color: _C.textSecondary),
+        onPressed: _carregarDados,
       ),
-    );
-  }
-
+    ],
+    bottom: PreferredSize(
+      preferredSize: const Size.fromHeight(1),
+      child: Container(height: 1, color: _C.border),
+    ),
+  );
+}
   // ── Hero — Índice de Consistência ────────────
 
-  Widget _buildHero(DashboardData d) {
-    final cor = _corIndice(d.indiceConsistencia);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
-      child: _card(
-        child: Column(
-          children: [
-            const SizedBox(height: 8),
-            Stack(
-              alignment: Alignment.center,
-              children: [
-                SizedBox(
-                  width: 160,
-                  height: 160,
-                  child: CustomPaint(
-                    painter: _ArcPainter(
-                      valor: d.indiceConsistencia / 100,
-                      cor: cor,
-                      corFundo: _C.border,
-                    ),
+Widget _buildHero(DashboardData d) {
+  final cor = _corIndice(d.indiceConsistencia);
+
+  final horasRestantes = math.max(
+    0,
+    d.horasPlanejadas - d.horasEstudadas,
+  );
+
+  final mediaPorDia = _diasRestantesNaSemana > 0
+      ? horasRestantes / _diasRestantesNaSemana
+      : 0;
+
+  return Padding(
+    padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
+    child: _card(
+      child: Column(
+        children: [
+          const SizedBox(height: 8),
+
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              SizedBox(
+                width: 160,
+                height: 160,
+                child: CustomPaint(
+                  painter: _ArcPainter(
+                    valor: d.indiceConsistencia / 100,
+                    cor: cor,
+                    corFundo: _C.border,
                   ),
                 ),
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      '${d.indiceConsistencia.toInt()}',
-                      style: TextStyle(
-                        fontSize: 48,
-                        fontWeight: FontWeight.w800,
-                        color: cor,
-                        letterSpacing: -2,
-                        height: 1,
-                      ),
+              ),
+
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '${d.indiceConsistencia.toInt()}',
+                    style: TextStyle(
+                      fontSize: 48,
+                      fontWeight: FontWeight.w800,
+                      color: cor,
+                      letterSpacing: -2,
+                      height: 1,
                     ),
-                    Text(
-                      '%',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: cor.withOpacity(0.7),
-                      ),
+                  ),
+                  Text(
+                    '%',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: cor.withValues(alpha: 0.7),
                     ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              d.labelIndice,
-              style: TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-                color: cor,
-                letterSpacing: -0.3,
+                  ),
+                ],
               ),
+            ],
+          ),
+
+          const SizedBox(height: 16),
+
+          Text(
+            d.labelIndice,
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+              color: cor,
+              letterSpacing: -0.3,
             ),
-            const SizedBox(height: 6),
-            Text(
-              '${d.horasEstudadas.toStringAsFixed(1)}h estudadas de ${d.horasPlanejadas.toStringAsFixed(1)}h planejadas',
-              style: const TextStyle(
-                fontSize: 13,
-                color: _C.textSecondary,
-              ),
+          ),
+
+          const SizedBox(height: 6),
+
+          Text(
+            '${d.horasEstudadas.toStringAsFixed(1)}h estudadas de ${d.horasPlanejadas.toStringAsFixed(1)}h planejadas',
+            style: const TextStyle(
+              fontSize: 13,
+              color: _C.textSecondary,
             ),
-            const SizedBox(height: 16),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: LinearProgressIndicator(
-                value: d.horasPlanejadas > 0
-                    ? (d.horasEstudadas / d.horasPlanejadas).clamp(0, 1)
-                    : 0,
-                minHeight: 6,
-                backgroundColor: _C.border,
-                valueColor: AlwaysStoppedAnimation(cor),
-              ),
+          ),
+
+          const SizedBox(height: 6),
+
+          Text(
+            horasRestantes > 0
+                ? 'Faltam ${horasRestantes.toStringAsFixed(1)}h • cerca de ${mediaPorDia.toStringAsFixed(1)}h por dia'
+                : '🎯 Parabéns! Você concluiu sua meta semanal.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: horasRestantes > 0
+                  ? _C.textSecondary
+                  : _C.success,
             ),
-            const SizedBox(height: 8),
-          ],
+          ),
+
+          const SizedBox(height: 16),
+
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+              value: d.horasPlanejadas > 0
+                  ? (d.horasEstudadas / d.horasPlanejadas).clamp(0, 1)
+                  : 0,
+              minHeight: 6,
+              backgroundColor: _C.border,
+              valueColor: AlwaysStoppedAnimation(cor),
+            ),
+          ),
+
+          const SizedBox(height: 8),
+        ],
+      ),
+    ),
+  );
+}
+
+  // __ Sugestao foco 
+
+Widget _buildSugestaoFoco(DashboardData d) {
+  if (d.metasDisciplinas.isEmpty) {
+    return const SizedBox.shrink();
+  }
+
+  final pendentes = d.metasDisciplinas
+      .where((m) => !m.atingiu)
+      .toList();
+
+  if (pendentes.isEmpty) {
+    return _card(
+      child: const Text(
+        'Todas as metas da semana foram cumpridas. Excelente ritmo!',
+        style: TextStyle(
+          fontWeight: FontWeight.w700,
+          fontSize: 14,
+          color: _C.textPrimary,
         ),
       ),
     );
   }
+
+  pendentes.sort((a, b) => a.percentual.compareTo(b.percentual));
+
+  final foco = pendentes.first;
+  final faltam = math.max(0.0, foco.meta - foco.horasEstudadas);
+  final mediaDia = _diasRestantesNaSemana > 0
+    ? faltam / _diasRestantesNaSemana
+    : 0.0;
+
+  return _card(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Sugestão de foco',
+          style: TextStyle(
+            fontWeight: FontWeight.w800,
+            fontSize: 15,
+            color: _C.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          foco.nome,
+          style: const TextStyle(
+            fontWeight: FontWeight.w800,
+            fontSize: 18,
+            color: _C.warning,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Você estudou ${foco.horasEstudadas.toStringAsFixed(1)}h de ${foco.meta.toStringAsFixed(1)}h.',
+          style: const TextStyle(
+            fontSize: 12,
+            color: _C.textSecondary,
+            height: 1.4,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Faltam ${faltam.toStringAsFixed(1)}h. Tente estudar cerca de ${mediaDia.toStringAsFixed(1)}h por dia até o fim da semana.',
+         style: const TextStyle(
+          fontSize: 12,
+          color: _C.textSecondary,
+          height: 1.4,
+        ),
+        ),
+      ],
+    ),
+  );
+}
 
   // ── Métricas Rápidas ─────────────────────────
 
@@ -264,7 +439,7 @@ class _ConsistenciaScreenState extends State<ConsistenciaScreen> {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: cor.withOpacity(0.15),
+              color: cor.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(icone, color: cor, size: 22),
@@ -310,7 +485,7 @@ class _ConsistenciaScreenState extends State<ConsistenciaScreen> {
         decoration: BoxDecoration(
           color: corDim,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: cor.withOpacity(0.4)),
+          border: Border.all(color: cor.withValues(alpha: 0.4   )),
         ),
         padding: const EdgeInsets.all(14),
         child: Column(

@@ -362,7 +362,7 @@ class _CriarSessaoScreenState extends State<CriarSessaoScreen> {
 
               // 🌟 NOVO CAMPO: Seletor Dinâmico de Status
               DropdownButtonFormField<String>(
-                value: _statusSelecionado, // Variável que criamos no estado da tela
+                initialValue: _statusSelecionado, // Variável que criamos no estado da tela
                 decoration: const InputDecoration(
                   labelText: 'Status da Sessão *',
                   border: OutlineInputBorder(),
