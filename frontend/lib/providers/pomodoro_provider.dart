@@ -30,9 +30,16 @@ class _MetaDisciplina {
   final String tipo;
   final String titulo;
   final int planejado;
+
   /// Id do EventoAcademico de origem (null quando é o fallback "sem prazo").
   final String? eventoId;
-  const _MetaDisciplina(this.diasRestantes, this.tipo, this.titulo, this.planejado, this.eventoId);
+  const _MetaDisciplina(
+    this.diasRestantes,
+    this.tipo,
+    this.titulo,
+    this.planejado,
+    this.eventoId,
+  );
 }
 
 /// Estado do timer Pomodoro. Disciplinas, metas (via Agenda) e progresso da
@@ -48,9 +55,9 @@ class PomodoroProvider extends ChangeNotifier {
     AgendaService? agendaService,
     SessaoEstudoService? sessaoEstudoService,
     this.somAtivado = true,
-  })  : _disciplinaService = disciplinaService ?? DisciplinaService(),
-        _agendaService = agendaService ?? AgendaService(),
-        _sessaoEstudoService = sessaoEstudoService ?? SessaoEstudoService() {
+  }) : _disciplinaService = disciplinaService ?? DisciplinaService(),
+       _agendaService = agendaService ?? AgendaService(),
+       _sessaoEstudoService = sessaoEstudoService ?? SessaoEstudoService() {
     _carregarTudo();
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) => _tick());
   }
@@ -110,6 +117,14 @@ class PomodoroProvider extends ChangeNotifier {
   /// Sessão específica escolhida pelo usuário para rodar o Pomodoro.
   /// Precisa estar preenchida para o modo Foco poder iniciar.
   SessaoEstudoResumo? sessaoSelecionada;
+  int? energiaInicial;
+  int interrupcoes = 0;
+  int interrupcoesBloco = 0;
+  bool _energiaPromptRespondido = false;
+  DateTime? _inicioBloco;
+  Future<String?>? _blocoPendenteId;
+  bool produtividadePendente = false;
+  bool produtividadePendenteAntecipada = false;
 
   Future<void> _carregarTudo() async {
     try {
@@ -158,23 +173,31 @@ class PomodoroProvider extends ChangeNotifier {
           .toList();
 
       for (final d in disciplinas) {
-        final eventosDaDisciplina = eventosPendentes
-            .where((e) => e.disciplinaId == d.id)
-            .toList()
-          ..sort((a, b) => (a.diasRestantes ?? 999).compareTo(b.diasRestantes ?? 999));
+        final eventosDaDisciplina =
+            eventosPendentes.where((e) => e.disciplinaId == d.id).toList()
+              ..sort(
+                (a, b) =>
+                    (a.diasRestantes ?? 999).compareTo(b.diasRestantes ?? 999),
+              );
 
         final planejado = d.metaHorasSemanais > 0
-            ? max(1, (d.metaHorasSemanais * 60 / durations[PomodoroMode.foco]!).round())
+            ? max(
+                1,
+                (d.metaHorasSemanais * 60 / durations[PomodoroMode.foco]!)
+                    .round(),
+              )
             : 0;
 
         final metas = eventosDaDisciplina
-            .map((e) => _MetaDisciplina(
-                  e.diasRestantes ?? 0,
-                  e.tipoEvento ?? 'Evento',
-                  e.titulo,
-                  planejado,
-                  e.id,
-                ))
+            .map(
+              (e) => _MetaDisciplina(
+                e.diasRestantes ?? 0,
+                e.tipoEvento ?? 'Evento',
+                e.titulo,
+                planejado,
+                e.id,
+              ),
+            )
             .toList();
 
         if (metas.isEmpty && planejado > 0) {
@@ -218,16 +241,21 @@ class PomodoroProvider extends ChangeNotifier {
       concluidas.sort((a, b) => b.inicio.compareTo(a.inicio));
       history
         ..clear()
-        ..addAll(concluidas.take(6).map((s) {
-          final match = disciplinas.where((d) => d.id == s.disciplinaId);
-          final cor = match.isNotEmpty ? _parseHex(match.first.cor) : modeColors[PomodoroMode.foco]!;
-          return PomodoroHistoryEntry(
-            disciplinaNome: s.disciplinaNome,
-            cor: cor,
-            duracaoMinutos: s.duracaoRealizada,
-            hora: '${s.inicio.hour.toString().padLeft(2, '0')}:${s.inicio.minute.toString().padLeft(2, '0')}',
-          );
-        }));
+        ..addAll(
+          concluidas.take(6).map((s) {
+            final match = disciplinas.where((d) => d.id == s.disciplinaId);
+            final cor = match.isNotEmpty
+                ? _parseHex(match.first.cor)
+                : modeColors[PomodoroMode.foco]!;
+            return PomodoroHistoryEntry(
+              disciplinaNome: s.disciplinaNome,
+              cor: cor,
+              duracaoMinutos: s.duracaoRealizada,
+              hora:
+                  '${s.inicio.hour.toString().padLeft(2, '0')}:${s.inicio.minute.toString().padLeft(2, '0')}',
+            );
+          }),
+        );
       notifyListeners();
     } catch (_) {
       // Sem progresso real disponível: mantém weekHours/history/sessionsToday zerados.
@@ -254,6 +282,9 @@ class PomodoroProvider extends ChangeNotifier {
         fim: sessao.fim,
         status: sessao.status,
         duracaoRealizada: novaDuracao,
+        energiaInicial: energiaInicial,
+        interrupcoes: interrupcoes,
+        tipoAtividade: sessao.tipoAtividade,
       );
       // Mantém a sessão selecionada com a duração atualizada, para que os
       // próximos ciclos de foco continuem somando na mesma sessão.
@@ -265,6 +296,9 @@ class PomodoroProvider extends ChangeNotifier {
         fim: sessao.fim,
         duracaoRealizada: novaDuracao,
         status: sessao.status,
+        energiaInicial: energiaInicial,
+        interrupcoes: interrupcoes,
+        tipoAtividade: sessao.tipoAtividade,
       );
       sessaoSelecionada = atualizada;
       final idx = _sessoesAgendadas.indexWhere((s) => s.id == sessao.id);
@@ -282,8 +316,73 @@ class PomodoroProvider extends ChangeNotifier {
     }
   }
 
-  Disciplina? get disciplinaSelecionada =>
-      disciplinas.isEmpty ? null : disciplinas[selectedIndex % disciplinas.length];
+  Future<String?> _persistirBlocoPomodoro({
+    required bool concluido,
+    required int numeroCiclo,
+    required DateTime inicio,
+    required DateTime fim,
+    required int duracaoPlanejadaSegundos,
+    required int duracaoRealizadaSegundos,
+    required int interrupcoesDoBloco,
+  }) async {
+    final sessao = sessaoSelecionada;
+    if (sessao == null) return null;
+    try {
+      return await _sessaoEstudoService.criarBlocoPomodoro(
+        sessaoId: sessao.id,
+        numeroCiclo: numeroCiclo,
+        inicio: inicio,
+        fim: fim,
+        duracaoPlanejadaSegundos: duracaoPlanejadaSegundos,
+        duracaoRealizadaSegundos: duracaoRealizadaSegundos,
+        interrupcoes: interrupcoesDoBloco,
+        status: concluido ? 'CONCLUIDO' : 'INCOMPLETO',
+      );
+    } on AgendaServiceException catch (e) {
+      error = 'Bloco Pomodoro não foi salvo: ${e.message}';
+      notifyListeners();
+      return null;
+    } catch (_) {
+      error = 'Bloco Pomodoro não foi salvo no servidor.';
+      notifyListeners();
+      return null;
+    }
+  }
+
+  Future<void> responderProdutividade(int? valor) async {
+    if (valor != null && (valor < 1 || valor > 5)) {
+      throw ArgumentError.value(valor, 'valor', 'deve estar entre 1 e 5');
+    }
+
+    final blocoIdFuture = _blocoPendenteId;
+    final encerradoAntecipadamente = produtividadePendenteAntecipada;
+    produtividadePendente = false;
+    produtividadePendenteAntecipada = false;
+    _blocoPendenteId = null;
+    notifyListeners();
+
+    if (valor == null || blocoIdFuture == null) return;
+    final blocoId = await blocoIdFuture;
+    if (blocoId == null) return;
+
+    try {
+      await _sessaoEstudoService.avaliarBlocoPomodoro(
+        blocoId: blocoId,
+        produtividade: valor,
+        status: encerradoAntecipadamente ? 'ENCERRADO_ANTECIPADAMENTE' : null,
+      );
+    } on AgendaServiceException catch (e) {
+      error = 'Produtividade não foi salva: ${e.message}';
+      notifyListeners();
+    } catch (_) {
+      error = 'Produtividade não foi salva no servidor.';
+      notifyListeners();
+    }
+  }
+
+  Disciplina? get disciplinaSelecionada => disciplinas.isEmpty
+      ? null
+      : disciplinas[selectedIndex % disciplinas.length];
 
   /// Sessões AGENDADO da disciplina selecionada, para o segundo seletor
   /// (matéria → sessão). Vazio quando a matéria não tem sessão agendada.
@@ -296,13 +395,26 @@ class PomodoroProvider extends ChangeNotifier {
   /// O timer só pode iniciar o modo Foco depois de uma sessão selecionada.
   bool get podeIniciarFoco => sessaoSelecionada != null;
 
+  bool get deveSolicitarEnergia =>
+      !running &&
+      mode == PomodoroMode.foco &&
+      podeIniciarFoco &&
+      !_energiaPromptRespondido &&
+      remainingSeconds == durations[PomodoroMode.foco]! * 60;
+
+  bool get podeRegistrarInterrupcao =>
+      mode == PomodoroMode.foco &&
+      podeIniciarFoco &&
+      (running || remainingSeconds < durations[PomodoroMode.foco]! * 60);
+
   Color get corSelecionada {
     final d = disciplinaSelecionada;
     if (d == null) return modeColors[PomodoroMode.foco]!;
     return _parseHex(d.cor);
   }
 
-  Color get corSelecionadaSuave => Color.lerp(corSelecionada, Colors.white, 0.85)!;
+  Color get corSelecionadaSuave =>
+      Color.lerp(corSelecionada, Colors.white, 0.85)!;
 
   List<_MetaDisciplina> get _metasDisciplinaSelecionada {
     final d = disciplinaSelecionada;
@@ -337,7 +449,9 @@ class PomodoroProvider extends ChangeNotifier {
           : 'sem meta definida';
     }
     final dd = meta.diasRestantes;
-    final prazo = dd <= 0 ? 'entrega hoje' : (dd == 1 ? 'falta 1 dia' : 'faltam $dd dias');
+    final prazo = dd <= 0
+        ? 'entrega hoje'
+        : (dd == 1 ? 'falta 1 dia' : 'faltam $dd dias');
     final rotulo = meta.titulo.isNotEmpty ? meta.titulo : meta.tipo;
     return '$prazo · $rotulo';
   }
@@ -358,8 +472,11 @@ class PomodoroProvider extends ChangeNotifier {
     return min(1.0, doneCountSelecionado / planejado);
   }
 
-  Color get ringColor => mode == PomodoroMode.foco ? corSelecionada : modeColors[mode]!;
-  Color get ringColorSuave => mode == PomodoroMode.foco ? corSelecionadaSuave : Color.lerp(modeColors[mode]!, Colors.white, 0.85)!;
+  Color get ringColor =>
+      mode == PomodoroMode.foco ? corSelecionada : modeColors[mode]!;
+  Color get ringColorSuave => mode == PomodoroMode.foco
+      ? corSelecionadaSuave
+      : Color.lerp(modeColors[mode]!, Colors.white, 0.85)!;
 
   double get elapsedFraction {
     final total = durations[mode]! * 60;
@@ -402,36 +519,76 @@ class PomodoroProvider extends ChangeNotifier {
       // Término natural do timer (foco ou pausa): toca o alarme.
       // O Pular (skip) chama _completarFase direto, sem som.
       _tocarAlarme();
-      _completarFase();
+      _completarFase(concluidaNaturalmente: true);
     }
     notifyListeners();
   }
 
-  void _completarFase() {
+  void _completarFase({required bool concluidaNaturalmente}) {
     if (mode == PomodoroMode.foco) {
       final d = disciplinaSelecionada;
+      final duracaoPlanejadaSegundos = durations[PomodoroMode.foco]! * 60;
+      final duracaoRealizadaSegundos = concluidaNaturalmente
+          ? duracaoPlanejadaSegundos
+          : (duracaoPlanejadaSegundos - remainingSeconds).clamp(
+              0,
+              duracaoPlanejadaSegundos,
+            );
+      final fimBloco = DateTime.now();
+      final inicioBloco =
+          _inicioBloco ??
+          fimBloco.subtract(Duration(seconds: duracaoRealizadaSegundos));
+
       if (d != null) {
-        final duracaoMin = durations[PomodoroMode.foco]!;
-        history.insert(
-          0,
-          PomodoroHistoryEntry(
-            disciplinaNome: d.nome,
-            cor: _parseHex(d.cor),
-            duracaoMinutos: duracaoMin,
-            hora: _horaAtual(),
-          ),
+        final blocoIdFuture = _persistirBlocoPomodoro(
+          concluido: concluidaNaturalmente,
+          numeroCiclo: cycle,
+          inicio: inicioBloco,
+          fim: fimBloco,
+          duracaoPlanejadaSegundos: duracaoPlanejadaSegundos,
+          duracaoRealizadaSegundos: duracaoRealizadaSegundos,
+          interrupcoesDoBloco: interrupcoesBloco,
         );
-        if (history.length > 6) history.removeRange(6, history.length);
-        _doneCounts[d.id] = (_doneCounts[d.id] ?? 0) + 1;
-        // Não aguardado de propósito: falha de rede não pode travar o timer.
-        _persistirSessaoConcluida(duracaoMin);
+
+        if (concluidaNaturalmente) {
+          final duracaoMin = durations[PomodoroMode.foco]!;
+          history.insert(
+            0,
+            PomodoroHistoryEntry(
+              disciplinaNome: d.nome,
+              cor: _parseHex(d.cor),
+              duracaoMinutos: duracaoMin,
+              hora: _horaAtual(),
+            ),
+          );
+          if (history.length > 6) history.removeRange(6, history.length);
+          _doneCounts[d.id] = (_doneCounts[d.id] ?? 0) + 1;
+          // Não aguardado de propósito: falha de rede não pode travar o timer.
+          unawaited(_persistirSessaoConcluida(duracaoMin));
+          _blocoPendenteId = blocoIdFuture;
+          produtividadePendente = true;
+          produtividadePendenteAntecipada = false;
+        } else {
+          if (sessaoSelecionada != null) {
+            _blocoPendenteId = blocoIdFuture;
+            produtividadePendente = true;
+            produtividadePendenteAntecipada = true;
+          } else {
+            unawaited(blocoIdFuture);
+          }
+        }
       }
+
+      _inicioBloco = null;
+      interrupcoesBloco = 0;
       final isRoundEnd = cycle % cyclesPerRound == 0;
       final proximoModo = isRoundEnd ? PomodoroMode.longa : PomodoroMode.curta;
-      sessionsToday++;
-      focusSecondsToday += durations[PomodoroMode.foco]! * 60;
-      final hojeIdx = DateTime.now().weekday - 1;
-      weekHours[hojeIdx] += durations[PomodoroMode.foco]! / 60;
+      if (concluidaNaturalmente) {
+        sessionsToday++;
+        focusSecondsToday += durations[PomodoroMode.foco]! * 60;
+        final hojeIdx = DateTime.now().weekday - 1;
+        weekHours[hojeIdx] += durations[PomodoroMode.foco]! / 60;
+      }
 
       mode = proximoModo;
       remainingSeconds = durations[proximoModo]! * 60;
@@ -451,6 +608,9 @@ class PomodoroProvider extends ChangeNotifier {
       notifyListeners();
       return;
     }
+    if (!running && mode == PomodoroMode.foco) {
+      _inicioBloco ??= DateTime.now();
+    }
     running = !running;
     notifyListeners();
   }
@@ -458,12 +618,16 @@ class PomodoroProvider extends ChangeNotifier {
   void reset() {
     remainingSeconds = durations[mode]! * 60;
     running = false;
+    if (mode == PomodoroMode.foco) {
+      _inicioBloco = null;
+      interrupcoesBloco = 0;
+    }
     notifyListeners();
   }
 
   void skip() {
     running = false;
-    _completarFase();
+    _completarFase(concluidaNaturalmente: false);
     notifyListeners();
   }
 
@@ -471,6 +635,11 @@ class PomodoroProvider extends ChangeNotifier {
     if (disciplinas.isEmpty) return;
     selectedIndex = (selectedIndex + 1) % disciplinas.length;
     sessaoSelecionada = null;
+    energiaInicial = null;
+    interrupcoes = 0;
+    interrupcoesBloco = 0;
+    _inicioBloco = null;
+    _energiaPromptRespondido = false;
     notifyListeners();
   }
 
@@ -481,6 +650,11 @@ class PomodoroProvider extends ChangeNotifier {
     if (idx == -1) return;
     selectedIndex = idx;
     sessaoSelecionada = null;
+    energiaInicial = null;
+    interrupcoes = 0;
+    interrupcoesBloco = 0;
+    _inicioBloco = null;
+    _energiaPromptRespondido = false;
     notifyListeners();
   }
 
@@ -488,6 +662,34 @@ class PomodoroProvider extends ChangeNotifier {
   /// dentro da matéria já selecionada.
   void selecionarSessao(SessaoEstudoResumo sessao) {
     sessaoSelecionada = sessao;
+    energiaInicial = sessao.energiaInicial;
+    interrupcoes = sessao.interrupcoes;
+    interrupcoesBloco = 0;
+    _inicioBloco = null;
+    _energiaPromptRespondido = false;
+    notifyListeners();
+  }
+
+  /// Registra a disposição informada antes do primeiro ciclo de foco.
+  void definirEnergiaInicial(int valor) {
+    if (valor < 1 || valor > 5) {
+      throw ArgumentError.value(valor, 'valor', 'deve estar entre 1 e 5');
+    }
+    energiaInicial = valor;
+    _energiaPromptRespondido = true;
+    notifyListeners();
+  }
+
+  /// Mantém a energia opcional sem voltar a interromper a mesma tentativa.
+  void ignorarEnergiaInicial() {
+    _energiaPromptRespondido = true;
+    notifyListeners();
+  }
+
+  void registrarInterrupcao() {
+    if (!podeRegistrarInterrupcao) return;
+    interrupcoes++;
+    interrupcoesBloco++;
     notifyListeners();
   }
 
@@ -507,6 +709,8 @@ class PomodoroProvider extends ChangeNotifier {
     mode = novoModo;
     remainingSeconds = durations[novoModo]! * 60;
     running = false;
+    _inicioBloco = null;
+    interrupcoesBloco = 0;
     notifyListeners();
   }
 
