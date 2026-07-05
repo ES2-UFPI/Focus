@@ -56,6 +56,7 @@ class AppSidebar extends StatelessWidget {
                   LucideIcons.barChart2,
                   'Consistência',
                 ),
+                _buildItem(context, AppPage.pomodoro, LucideIcons.timer, 'Pomodoro'),
                 _buildItem(
                   context,
                   AppPage.ajustes,

@@ -97,7 +97,7 @@ class _ConfiguracoesScreenState extends State<ConfiguracoesScreen> {
                       const SizedBox(width: 16),
                       Expanded(
                         child: Consumer<AuthProvider>(
-                          builder: (_, auth, __) => Column(
+                          builder: (_, auth, _) => Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(

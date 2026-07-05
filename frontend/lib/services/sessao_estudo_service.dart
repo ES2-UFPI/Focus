@@ -3,6 +3,40 @@ import 'package:http/http.dart' as http;
 import '../core/network/api_client.dart';
 import 'agenda_service.dart';
 
+/// Resumo de uma sessao de estudo, usado para os cards de progresso do Pomodoro
+/// (histórico, horas por dia da semana, sessões concluídas hoje).
+class SessaoEstudoResumo {
+  final String id;
+  final String disciplinaId;
+  final String disciplinaNome;
+  final DateTime inicio;
+  final DateTime fim;
+  final int duracaoRealizada;
+  final String status;
+
+  SessaoEstudoResumo({
+    required this.id,
+    required this.disciplinaId,
+    required this.disciplinaNome,
+    required this.inicio,
+    required this.fim,
+    required this.duracaoRealizada,
+    required this.status,
+  });
+
+  factory SessaoEstudoResumo.fromJson(Map<String, dynamic> json) {
+    return SessaoEstudoResumo(
+      id: json['id'] as String,
+      disciplinaId: json['disciplina'] as String,
+      disciplinaNome: json['disciplina_nome'] as String? ?? '',
+      inicio: DateTime.parse(json['inicio'] as String).toLocal(),
+      fim: DateTime.parse(json['fim'] as String).toLocal(),
+      duracaoRealizada: json['duracao_realizada'] as int? ?? 0,
+      status: json['status'] as String? ?? 'AGENDADO',
+    );
+  }
+}
+
 class SessaoEstudoService {
   static String _extrairMensagemErro(String responseBody) {
     try {
@@ -100,6 +134,54 @@ class SessaoEstudoService {
       );
 
       if (response.statusCode == 200 || response.statusCode == 204) return;
+      throw AgendaServiceException(_extrairMensagemErro(response.body));
+    } catch (e) {
+      if (e is AgendaServiceException) rethrow;
+      throw AgendaServiceException('Erro ao conectar ao servidor: $e');
+    }
+  }
+
+  /// Lista todas as sessões de estudo do aluno logado (usado pelo Pomodoro
+  /// para o seletor de matéria → sessão agendada).
+  Future<List<SessaoEstudoResumo>> listarSessoes() async {
+    final uri = Uri.parse('$kBaseUrl/api/sessoes-estudo/');
+
+    try {
+      final response = await http.get(uri, headers: kDefaultHeaders);
+
+      if (response.statusCode == 200) {
+        final decoded = json.decode(response.body);
+        final lista = decoded is List
+            ? decoded
+            : (decoded as Map<String, dynamic>)['results'] as List<dynamic>;
+        return lista
+            .map((e) => SessaoEstudoResumo.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+
+      throw AgendaServiceException(_extrairMensagemErro(response.body));
+    } catch (e) {
+      if (e is AgendaServiceException) rethrow;
+      throw AgendaServiceException('Erro ao conectar ao servidor: $e');
+    }
+  }
+
+  /// Busca as sessões de estudo da semana atual (usado pelo Pomodoro para
+  /// horas por dia, sessões concluídas hoje e histórico).
+  Future<List<SessaoEstudoResumo>> getSemanaAtual() async {
+    final uri = Uri.parse('$kBaseUrl/api/sessoes-estudo/semana_atual/');
+
+    try {
+      final response = await http.get(uri, headers: kDefaultHeaders);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body) as Map<String, dynamic>;
+        final results = data['results'] as List<dynamic>;
+        return results
+            .map((e) => SessaoEstudoResumo.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+
       throw AgendaServiceException(_extrairMensagemErro(response.body));
     } catch (e) {
       if (e is AgendaServiceException) rethrow;

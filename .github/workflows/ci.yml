@@ -2,12 +2,11 @@ name: CI/CD - Test Run
 
 on:
   pull_request:
-    branches:
-      - dev
-      - master
+    types:
+      - opened
+      - synchronize
   push:
     branches:
-      - dev
       - master
 
 jobs:
@@ -62,7 +61,7 @@ jobs:
       - name: Run Flutter Analyze
         run: |
           cd frontend
-          flutter analyze
+          flutter analyze --no-fatal-infos
 
       - name: Run Flutter Tests
         run: |

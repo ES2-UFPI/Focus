@@ -87,6 +87,11 @@ class _BottomNavigationBar extends StatelessWidget {
           label: 'Consistência',
         ),
         NavigationDestination(
+          icon: Icon(Icons.timer_outlined),
+          selectedIcon: Icon(Icons.timer_rounded),
+          label: 'Pomodoro',
+        ),
+        NavigationDestination(
           icon: Icon(Icons.settings_outlined),
           selectedIcon: Icon(Icons.settings_suggest_rounded),
           label: 'Ajustes',

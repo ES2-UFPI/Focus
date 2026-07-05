@@ -42,9 +42,11 @@ A API fica disponivel em:
 
 Observacao: o arquivo `backend/requirements.txt` existe, mas contem muitas bibliotecas que nao sao necessarias para iniciar esta API. Para uma instalacao minima e validada, use o comando `pip install` acima. Se preferir instalar tudo do arquivo, substitua o comando de instalacao por:
 
-```powershell
+```powershell  (OPCIONAL )(PREFERENCIALMENTE,NÂO EXECUTE)
 python -m pip install -r requirements.txt
 ```
+
+## DE
 
 ## Como iniciar o frontend
 
