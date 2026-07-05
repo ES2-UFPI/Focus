@@ -59,7 +59,7 @@ class AgendaView(APIView):
             else:
                 dt = datetime.datetime.combine(ev.data_evento, datetime.time.min)
             timestamp = timezone.make_aware(dt, timezone.get_current_timezone())
-            
+
             itens.append({
                 'tipo': 'EVENTO_ACADEMICO',
                 'id': str(ev.id),
@@ -91,7 +91,10 @@ class AgendaView(APIView):
                 'inicio': se.inicio.isoformat(),
                 'fim': se.fim.isoformat(),
                 'status': se.status,
-                'duracao_realizada': se.duracao_realizada
+                'duracao_realizada': se.duracao_realizada,
+                'energia_inicial': se.energia_inicial,
+                'interrupcoes': se.interrupcoes,
+                'tipo_atividade': se.tipo_atividade,
             })
 
         # Ordenar os itens cronologicamente usando o timestamp consistente (data e hora completas)
@@ -138,4 +141,4 @@ class AgendaView(APIView):
             'itens': itens,
             'recomendacoes': recomendacoes
         })
-
+
