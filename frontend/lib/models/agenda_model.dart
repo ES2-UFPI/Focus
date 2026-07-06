@@ -50,6 +50,9 @@ class AgendaItem {
 
   /// Duração realizada em minutos.
   final int? duracaoRealizada;
+  final int? energiaInicial;
+  final int interrupcoes;
+  final String? tipoAtividade;
 
   AgendaItem({
     required this.tipo,
@@ -70,6 +73,9 @@ class AgendaItem {
     this.fim,
     this.status,
     this.duracaoRealizada,
+    this.energiaInicial,
+    this.interrupcoes = 0,
+    this.tipoAtividade,
   });
 
   /// Fábrica de deserialização a partir do JSON retornado pela API.
@@ -95,9 +101,12 @@ class AgendaItem {
       // 🌟 CORRIGIDO: Força a conversão para o fuso local do aparelho
       fim: json['fim'] != null
           ? DateTime.parse(json['fim'] as String).toLocal()
-          : null, 
+          : null,
       status: json['status'] as String?,
       duracaoRealizada: json['duracao_realizada'] as int?,
+      energiaInicial: json['energia_inicial'] as int?,
+      interrupcoes: json['interrupcoes'] as int? ?? 0,
+      tipoAtividade: json['tipo_atividade'] as String?,
     );
   }
 
@@ -139,10 +148,7 @@ class AgendaResponse {
   final List<AgendaItem> itens;
   final List<AgendaRecomendacao> recomendacoes;
 
-  AgendaResponse({
-    required this.itens,
-    required this.recomendacoes,
-  });
+  AgendaResponse({required this.itens, required this.recomendacoes});
 
   factory AgendaResponse.fromJson(Map<String, dynamic> json) {
     return AgendaResponse(

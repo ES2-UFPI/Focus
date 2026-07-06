@@ -13,6 +13,9 @@ class SessaoEstudoResumo {
   final DateTime fim;
   final int duracaoRealizada;
   final String status;
+  final int? energiaInicial;
+  final int interrupcoes;
+  final String? tipoAtividade;
 
   SessaoEstudoResumo({
     required this.id,
@@ -22,6 +25,9 @@ class SessaoEstudoResumo {
     required this.fim,
     required this.duracaoRealizada,
     required this.status,
+    this.energiaInicial,
+    this.interrupcoes = 0,
+    this.tipoAtividade,
   });
 
   factory SessaoEstudoResumo.fromJson(Map<String, dynamic> json) {
@@ -33,6 +39,9 @@ class SessaoEstudoResumo {
       fim: DateTime.parse(json['fim'] as String).toLocal(),
       duracaoRealizada: json['duracao_realizada'] as int? ?? 0,
       status: json['status'] as String? ?? 'AGENDADO',
+      energiaInicial: json['energia_inicial'] as int?,
+      interrupcoes: json['interrupcoes'] as int? ?? 0,
+      tipoAtividade: json['tipo_atividade'] as String?,
     );
   }
 }
@@ -67,33 +76,39 @@ class SessaoEstudoService {
     final horas = offset.inHours.abs().toString().padLeft(2, '0');
     final minutos = (offset.inMinutes.abs() % 60).toString().padLeft(2, '0');
     final sinal = offset.isNegative ? '-' : '+';
-    return '$iso$sinal$horas:$minutos'; 
+    return '$iso$sinal$horas:$minutos';
   }
 
   /// Cadastra uma nova sessão de estudo no backend.
   Future<void> criarSessao({
     required String disciplinaId,
-    required DateTime inicio, 
-    required DateTime fim,    
+    required DateTime inicio,
+    required DateTime fim,
     String? descricao,
-    required String status,          
+    required String status,
     required int duracaoRealizada,
+    required int? energiaInicial,
+    required int interrupcoes,
+    required String? tipoAtividade,
   }) async {
     final uri = Uri.parse('$kBaseUrl/api/sessoes-estudo/');
 
     final body = {
       'disciplina': disciplinaId,
       'inicio': _formatarParaBackend(inicio), // 👈 Formatado com fuso local
-      'fim': _formatarParaBackend(fim),       // 👈 Formatado com fuso local
-      'status': status, 
-      'duracao_realizada': duracaoRealizada, 
+      'fim': _formatarParaBackend(fim), // 👈 Formatado com fuso local
+      'status': status,
+      'duracao_realizada': duracaoRealizada,
       'descricao': descricao,
+      'energia_inicial': energiaInicial,
+      'interrupcoes': interrupcoes,
+      'tipo_atividade': tipoAtividade,
     };
 
     try {
       final response = await http.post(
         uri,
-        headers: kDefaultHeaders, 
+        headers: kDefaultHeaders,
         body: json.encode(body),
       );
 
@@ -109,27 +124,33 @@ class SessaoEstudoService {
   Future<void> editarSessao({
     required String sessaoId,
     required String disciplinaId,
-    required DateTime inicio, 
-    required DateTime fim,    
+    required DateTime inicio,
+    required DateTime fim,
     String? descricao,
     required String status,
     required int duracaoRealizada,
+    required int? energiaInicial,
+    required int interrupcoes,
+    required String? tipoAtividade,
   }) async {
     final uri = Uri.parse('$kBaseUrl/api/sessoes-estudo/$sessaoId/');
 
     final body = {
       'disciplina': disciplinaId,
       'inicio': _formatarParaBackend(inicio), // 👈 Formatado com fuso local
-      'fim': _formatarParaBackend(fim),       // 👈 Formatado com fuso local
+      'fim': _formatarParaBackend(fim), // 👈 Formatado com fuso local
       'status': status,
       'duracao_realizada': duracaoRealizada,
       'descricao': descricao,
+      'energia_inicial': energiaInicial,
+      'interrupcoes': interrupcoes,
+      'tipo_atividade': tipoAtividade,
     };
 
     try {
       final response = await http.patch(
         uri,
-        headers: kDefaultHeaders, 
+        headers: kDefaultHeaders,
         body: json.encode(body),
       );
 
@@ -182,6 +203,71 @@ class SessaoEstudoService {
             .toList();
       }
 
+      throw AgendaServiceException(_extrairMensagemErro(response.body));
+    } catch (e) {
+      if (e is AgendaServiceException) rethrow;
+      throw AgendaServiceException('Erro ao conectar ao servidor: $e');
+    }
+  }
+
+  /// Registra um bloco individual do Pomodoro. Blocos concluídos nascem sem
+  /// produtividade para que a UI possa persistir o ciclo imediatamente e
+  /// coletar a nota opcional logo depois.
+  Future<String> criarBlocoPomodoro({
+    required String sessaoId,
+    required int numeroCiclo,
+    required DateTime inicio,
+    required DateTime fim,
+    required int duracaoPlanejadaSegundos,
+    required int duracaoRealizadaSegundos,
+    required int interrupcoes,
+    required String status,
+  }) async {
+    final uri = Uri.parse('$kBaseUrl/api/blocos-pomodoro/');
+    final body = {
+      'sessao_estudo': sessaoId,
+      'numero_ciclo': numeroCiclo,
+      'inicio': _formatarParaBackend(inicio),
+      'fim': _formatarParaBackend(fim),
+      'duracao_planejada_segundos': duracaoPlanejadaSegundos,
+      'duracao_realizada_segundos': duracaoRealizadaSegundos,
+      'interrupcoes': interrupcoes,
+      'status': status,
+      'produtividade': null,
+    };
+
+    try {
+      final response = await http.post(
+        uri,
+        headers: kDefaultHeaders,
+        body: json.encode(body),
+      );
+      if (response.statusCode == 201) {
+        final data = json.decode(response.body) as Map<String, dynamic>;
+        return data['id'] as String;
+      }
+      throw AgendaServiceException(_extrairMensagemErro(response.body));
+    } catch (e) {
+      if (e is AgendaServiceException) rethrow;
+      throw AgendaServiceException('Erro ao conectar ao servidor: $e');
+    }
+  }
+
+  Future<void> avaliarBlocoPomodoro({
+    required String blocoId,
+    required int produtividade,
+    String? status,
+  }) async {
+    final uri = Uri.parse('$kBaseUrl/api/blocos-pomodoro/$blocoId/');
+    final body = <String, dynamic>{'produtividade': produtividade};
+    if (status != null) body['status'] = status;
+    try {
+      final response = await http.patch(
+        uri,
+        headers: kDefaultHeaders,
+        body: json.encode(body),
+      );
+      if (response.statusCode == 200 || response.statusCode == 204) return;
       throw AgendaServiceException(_extrairMensagemErro(response.body));
     } catch (e) {
       if (e is AgendaServiceException) rethrow;

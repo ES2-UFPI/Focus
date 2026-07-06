@@ -2,7 +2,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from django.utils import timezone
 from rest_framework import serializers
 
-from .models import SessaoEstudo
+from .models import BlocoPomodoro, SessaoEstudo
 
 
 class SessaoEstudoSerializer(serializers.ModelSerializer):
@@ -25,7 +25,11 @@ class SessaoEstudoSerializer(serializers.ModelSerializer):
             'inicio', 
             'fim', 
             'duracao_realizada', 
-            'status'
+            'status',
+            'descricao',
+            'energia_inicial',
+            'interrupcoes',
+            'tipo_atividade',
         ]
       
         read_only_fields = ['id', 'semana_estudo']
@@ -50,6 +54,10 @@ class SessaoEstudoSerializer(serializers.ModelSerializer):
                 'fim': self.instance.fim,
                 'status': self.instance.status,
                 'duracao_realizada': self.instance.duracao_realizada,
+                'descricao': self.instance.descricao,
+                'energia_inicial': self.instance.energia_inicial,
+                'interrupcoes': self.instance.interrupcoes,
+                'tipo_atividade': self.instance.tipo_atividade,
             }
             
         # Mescla estritamente com os novos dados modificados vindos do payload
@@ -67,5 +75,67 @@ class SessaoEstudoSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 e.message_dict if hasattr(e, 'message_dict') else e.messages
             )
+
+        return attrs
+
+
+class BlocoPomodoroSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = BlocoPomodoro
+        fields = [
+            'id',
+            'sessao_estudo',
+            'numero_ciclo',
+            'inicio',
+            'fim',
+            'duracao_planejada_segundos',
+            'duracao_realizada_segundos',
+            'interrupcoes',
+            'status',
+            'produtividade',
+            'data_criacao',
+        ]
+        read_only_fields = ['id', 'data_criacao']
+
+    def validate(self, attrs):
+        instance = self.instance
+        sessao = attrs.get(
+            'sessao_estudo',
+            instance.sessao_estudo if instance else None,
+        )
+        status_bloco = attrs.get(
+            'status',
+            instance.status if instance else None,
+        )
+        produtividade = attrs.get(
+            'produtividade',
+            instance.produtividade if instance else None,
+        )
+        inicio = attrs.get('inicio', instance.inicio if instance else None)
+        fim = attrs.get('fim', instance.fim if instance else None)
+
+        request = self.context.get('request')
+        if (
+            request is not None
+            and sessao is not None
+            and sessao.disciplina.aluno_id != request.user.id
+        ):
+            raise serializers.ValidationError({
+                'sessao_estudo': 'Você não tem permissão para usar esta sessão.'
+            })
+
+        if (
+            status_bloco == BlocoPomodoro.StatusBloco.INCOMPLETO
+            and produtividade is not None
+        ):
+            raise serializers.ValidationError({
+                'produtividade': 'Um bloco incompleto não pode ser avaliado.'
+            })
+
+        if inicio is not None and fim is not None and fim < inicio:
+            raise serializers.ValidationError({
+                'fim': 'O término não pode ser anterior ao início do bloco.'
+            })
 
         return attrs

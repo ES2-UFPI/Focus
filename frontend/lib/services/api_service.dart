@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../models/disciplina.dart';
 import '../models/material_estudo.dart';
@@ -13,7 +14,9 @@ class ApiService {
 
   void setToken(String token) {
     _token = token;
-    print("🔑 [ApiService] Token guardado na memória global: $_token");
+    if (kDebugMode) {
+      debugPrint('🔑 [ApiService] Token guardado na memória global.');
+    }
   }
 
   void clearToken() => _token = null;
@@ -25,9 +28,15 @@ class ApiService {
 
     if (_token != null) {
       headers['Authorization'] = 'Token $_token';
-      print("🚀 [ApiService] Enviando requisição COM Token: Token $_token");
+      if (kDebugMode) {
+        debugPrint('🚀 [ApiService] Enviando requisição autenticada.');
+      }
     } else {
-      print("⚠️ [ApiService] AVISO: Enviando requisição SEM Token (Anônimo)!");
+      if (kDebugMode) {
+        debugPrint(
+          '⚠️ [ApiService] AVISO: Enviando requisição sem autenticação.',
+        );
+      }
     }
 
     return headers;
@@ -107,7 +116,9 @@ class ApiService {
         return DashboardData.fromJson(jsonDecode(response.body));
       }
     } catch (e) {
-      print('Erro ao buscar dashboard: $e');
+      if (kDebugMode) {
+        debugPrint('Erro ao buscar dashboard: $e');
+      }
     }
     return null;
   }

@@ -8,8 +8,8 @@ from rest_framework.permissions import AllowAny, IsAuthenticated # Garanta o imp
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from .models import SessaoEstudo
-from .serializers import SessaoEstudoSerializer
+from .models import BlocoPomodoro, SessaoEstudo
+from .serializers import BlocoPomodoroSerializer, SessaoEstudoSerializer
 from disciplinas.models import Disciplina
 from services.consistencia_service import ConsistenciaService
 
@@ -116,3 +116,14 @@ class SessaoEstudoViewSet(viewsets.ModelViewSet):
                 },
                 status=status.HTTP_404_NOT_FOUND
             )
+
+
+class BlocoPomodoroViewSet(viewsets.ModelViewSet):
+    queryset = BlocoPomodoro.objects.none()
+    serializer_class = BlocoPomodoroSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return BlocoPomodoro.objects.filter(
+            sessao_estudo__disciplina__aluno_id=self.request.user.id
+        )
