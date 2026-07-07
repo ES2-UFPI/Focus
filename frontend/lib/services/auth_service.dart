@@ -1,8 +1,9 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import '../core/network/api_client.dart';
 
-const _baseUrl = 'http://localhost:8000/api';
+String get _baseUrl => '$kBaseUrl/api';
 const _tokenKey = 'auth_token';
 const _alunoKey = 'auth_aluno';
 
