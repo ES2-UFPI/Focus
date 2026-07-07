@@ -1,13 +1,14 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import '../core/network/api_client.dart';
 import '../models/disciplina.dart';
 import '../models/material_estudo.dart';
 import '../models/dashboard_model.dart';
 
 
 class ApiService {
-  static const String _baseUrl = 'http://localhost:8000/api';
+  static String get _baseUrl => '$kBaseUrl/api';
 
   // 🔑 O SEGREDO ESTÁ AQUI: Adicione o modificador static!
   static String? _token;
