@@ -11,6 +11,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../core/theme/app_theme.dart';
 import '../providers/agenda_provider.dart';
 import '../widgets/agenda_timeline.dart';
 import '../widgets/recomendacoes_section.dart';
@@ -51,7 +52,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
               ),
               const Divider(height: 1),
               ListTile(
-                leading: const Icon(Icons.event, color: Color(0xFF5C6BC0)),
+                leading: const Icon(Icons.event, color: AppColors.brandPrimary),
                 title: const Text('Cadastrar Evento Acadêmico'),
                 subtitle: const Text('Provas, trabalhos, seminários, etc.'),
                 onTap: () async {
@@ -67,7 +68,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.menu_book, color: Color(0xFF4CAF50)),
+                leading: const Icon(Icons.menu_book, color: AppColors.subjectTeal),
                 title: const Text('Cadastrar Sessão de Estudo'),
                 subtitle: const Text('Tempo dedicado para focar na disciplina'),
                 onTap: () async {
@@ -109,12 +110,20 @@ class _AgendaScreenState extends State<AgendaScreen> {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
+        backgroundColor: AppColors.appBackground,
         appBar: AppBar(
           title: const Text('Agenda Acadêmica'),
           centerTitle: true,
           elevation: 0,
           scrolledUnderElevation: 2,
+          backgroundColor: AppColors.surface,
+          foregroundColor: AppColors.textPrimary,
+          surfaceTintColor: Colors.transparent,
+          shadowColor: AppColors.textPrimary.withValues(alpha: 0.08),
           bottom: const TabBar(
+            labelColor: AppColors.brandPrimary,
+            unselectedLabelColor: AppColors.textMuted,
+            indicatorColor: AppColors.brandPrimary,
             tabs: [
               Tab(icon: Icon(Icons.list_alt_rounded), text: 'Lista & Linha'),
               Tab(icon: Icon(Icons.calendar_view_week_rounded), text: 'Grade Semanal'),
@@ -156,8 +165,8 @@ class _AgendaScreenState extends State<AgendaScreen> {
           onPressed: () => _abrirOpcoesCadastro(context),
           label: const Text('Registrar'),
           icon: const Icon(Icons.add),
-          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-          foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
+          backgroundColor: AppColors.brandPrimary,
+          foregroundColor: AppColors.textInverted,
         ),
       ),
     );
@@ -233,13 +242,16 @@ class _FilterChips extends StatelessWidget {
             selected: isSelected,
             onSelected: (_) => provider.setFilter(f['key']!),
             showCheckmark: false,
-            selectedColor:
-                Theme.of(context).colorScheme.primaryContainer,
+            selectedColor: AppColors.brandPrimary,
+            backgroundColor: AppColors.surface,
+            side: BorderSide(
+              color: isSelected ? AppColors.brandPrimary : AppColors.borderSubtle,
+            ),
             labelStyle: TextStyle(
               fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
               color: isSelected
-                  ? Theme.of(context).colorScheme.onPrimaryContainer
-                  : Colors.grey[600],
+                  ? AppColors.textInverted
+                  : AppColors.textSecondary,
             ),
           );
         }).toList(),
@@ -266,13 +278,13 @@ class _EmptyState extends StatelessWidget {
             Icon(
               Icons.event_available_rounded,
               size: 64,
-              color: Colors.grey[350],
+              color: AppColors.brandPrimary.withValues(alpha: 0.22),
             ),
             const SizedBox(height: 16),
             Text(
               'Nenhum compromisso encontrado.',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: Colors.grey[600],
+                color: AppColors.textPrimary,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -281,7 +293,7 @@ class _EmptyState extends StatelessWidget {
               'Cadastre um evento ou uma sessão de estudo para começar.',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Colors.grey[500],
+                color: AppColors.textMuted,
                 fontSize: 14,
               ),
             ),
@@ -313,14 +325,14 @@ class _ErrorState extends StatelessWidget {
             Icon(
               Icons.wifi_off_rounded,
               size: 56,
-              color: Colors.grey[400],
+              color: AppColors.textMuted.withValues(alpha: 0.55),
             ),
             const SizedBox(height: 16),
             Text(
               message,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[600],
+                color: AppColors.textMuted,
               ),
             ),
             const SizedBox(height: 20),

@@ -101,17 +101,22 @@ class _DateHeader extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: isHoje
-              ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.35)
+              ? AppColors.brandPrimary.withValues(alpha: 0.10)
               : AgendaColors.dateHeaderBg,
           borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isHoje
+                ? AppColors.brandPrimary.withValues(alpha: 0.18)
+                : AppColors.borderSubtle,
+          ),
         ),
         child: Text(
           label,
           style: Theme.of(context).textTheme.titleSmall?.copyWith(
             fontWeight: FontWeight.w700,
             color: isHoje
-                ? Theme.of(context).colorScheme.primary
-                : Colors.grey[700],
+                ? AppColors.brandPrimary
+                : AppColors.textSecondary,
           ),
         ),
       ),
@@ -173,7 +178,7 @@ class _TimelineRow extends StatelessWidget {
                           ? AgendaColors.corPorUrgencia(item.urgencia)
                           : AgendaColors.corPorStatus(item.status),
                       border: Border.all(
-                        color: Colors.white,
+                        color: AppColors.surface,
                         width: 2,
                       ),
                       boxShadow: [

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../core/theme/app_theme.dart';
 import '../models/agenda_model.dart';
 import '../providers/agenda_provider.dart';
 import 'agenda_item_card.dart';
@@ -64,7 +65,10 @@ class WeeklyCalendarGrid extends StatelessWidget {
                               width: columnWidth,
                               decoration: BoxDecoration(
                                 border: Border(
-                                  right: BorderSide(color: Colors.grey[200]!, width: 1),
+                                  right: const BorderSide(
+                                    color: AppColors.borderSubtle,
+                                    width: 1,
+                                  ),
                                 ),
                               ),
                               child: Column(
@@ -90,7 +94,8 @@ class WeeklyCalendarGrid extends StatelessWidget {
                                               decoration: BoxDecoration(
                                                 border: Border(
                                                   bottom: BorderSide(
-                                                    color: Colors.grey[150] ?? Colors.grey[200]!,
+                                                    color: AppColors.borderSubtle
+                                                        .withValues(alpha: 0.72),
                                                     width: 0.5,
                                                   ),
                                                 ),
@@ -140,10 +145,11 @@ class WeeklyCalendarGrid extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(
-          bottom: BorderSide(color: Colors.grey[200]!, width: 1),
+        color: AppColors.surface,
+        border: const Border(
+          bottom: BorderSide(color: AppColors.borderSubtle, width: 1),
         ),
+        boxShadow: AppShadows.cardSoft,
       ),
       child: Stack(
         alignment: Alignment.center,
@@ -153,7 +159,7 @@ class WeeklyCalendarGrid extends StatelessWidget {
             textoPeriodo,
             style: theme.textTheme.titleSmall?.copyWith(
               fontWeight: FontWeight.bold,
-              color: Colors.grey[800],
+              color: AppColors.textPrimary,
             ),
           ),
 
@@ -183,7 +189,7 @@ class WeeklyCalendarGrid extends StatelessWidget {
                     'Hoje',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      color: theme.colorScheme.primary,
+                      color: AppColors.brandPrimary,
                     ),
                   ),
                 ),
@@ -209,9 +215,9 @@ class WeeklyCalendarGrid extends StatelessWidget {
     return Container(
       width: 50.0,
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(
-          right: BorderSide(color: Colors.grey[200]!, width: 1),
+        color: AppColors.surface,
+        border: const Border(
+          right: BorderSide(color: AppColors.borderSubtle, width: 1),
         ),
       ),
       child: Column(
@@ -236,7 +242,7 @@ class WeeklyCalendarGrid extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.w600,
-                      color: Colors.grey[500],
+                      color: AppColors.textMuted,
                     ),
                   ),
                 );
@@ -250,14 +256,15 @@ class WeeklyCalendarGrid extends StatelessWidget {
 
   /// Cabeçalho com o dia da semana e o número (ex: Seg \n 01)
   Widget _buildDayHeader(BuildContext context, DateTime dia, bool isHoje) {
-    final theme = Theme.of(context);
     final diasSemanaNomes = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
     final nomeDia = diasSemanaNomes[dia.weekday - 1];
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8),
       width: double.infinity,
-      color: isHoje ? theme.colorScheme.primaryContainer.withValues(alpha: 0.15) : Colors.transparent,
+      color: isHoje
+          ? AppColors.brandPrimary.withValues(alpha: 0.08)
+          : Colors.transparent,
       child: Column(
         children: [
           Text(
@@ -265,7 +272,7 @@ class WeeklyCalendarGrid extends StatelessWidget {
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.bold,
-              color: isHoje ? theme.colorScheme.primary : Colors.grey[500],
+              color: isHoje ? AppColors.brandPrimary : AppColors.textMuted,
             ),
           ),
           const SizedBox(height: 2),
@@ -273,14 +280,14 @@ class WeeklyCalendarGrid extends StatelessWidget {
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: isHoje ? theme.colorScheme.primary : Colors.transparent,
+              color: isHoje ? AppColors.brandPrimary : Colors.transparent,
             ),
             child: Text(
               dia.day.toString().padLeft(2, '0'),
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
-                color: isHoje ? theme.colorScheme.onPrimary : Colors.grey[800],
+                color: isHoje ? AppColors.textInverted : AppColors.textPrimary,
               ),
             ),
           ),
@@ -295,10 +302,10 @@ class WeeklyCalendarGrid extends StatelessWidget {
       constraints: const BoxConstraints(minHeight: 46.0),
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
       decoration: BoxDecoration(
-        color: Colors.grey[50],
-        border: Border(
-          bottom: BorderSide(color: Colors.grey[200]!, width: 1),
-          top: BorderSide(color: Colors.grey[200]!, width: 1),
+        color: AppColors.surfaceMuted,
+        border: const Border(
+          bottom: BorderSide(color: AppColors.borderSubtle, width: 1),
+          top: BorderSide(color: AppColors.borderSubtle, width: 1),
         ),
       ),
       width: double.infinity,
@@ -311,7 +318,7 @@ class WeeklyCalendarGrid extends StatelessWidget {
                   child: Text(
                     'Sem eventos',
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 8, color: Colors.grey),
+                    style: TextStyle(fontSize: 8, color: AppColors.textMuted),
                   ),
                 )
               ]
