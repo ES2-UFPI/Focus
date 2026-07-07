@@ -389,21 +389,40 @@ class SessaoEstudo(models.Model):
         return f'{self.disciplina.nome} | {self.inicio:%d/%m %H:%M} ({self.status})'
 
     def clean(self):
-        if self.fim <= self.inicio:
-            raise ValidationError('fim deve ser posterior a inicio.')
-
-        if self.disciplina.aluno_id != self.semana_estudo.aluno_id:
-            raise ValidationError('A disciplina não pertence ao aluno desta semana.')
-
-        if self.horario_estudo and self.horario_estudo.disciplina_id != self.disciplina_id:
-            raise ValidationError(
-                'O horário planejado pertence a uma disciplina diferente.'
-            )
-
-        if not self.semana_estudo.contem_data(self.inicio):
-            raise ValidationError(
-                'O início da sessão está fora do período da semana vinculada.'
-            )
+        super().clean()
+        
+        if self.inicio and self.fim:
+            # 1. Validar período (Essencial e independente)
+            if self.fim <= self.inicio:
+                raise ValidationError("A data/hora de término deve ser posterior à data/hora de início.")
+            
+            # 2. Validação nova da equipe: Só roda se a semana existir
+            if self.semana_estudo and self.disciplina and self.disciplina.aluno_id != self.semana_estudo.aluno_id:
+                raise ValidationError("A disciplina deve pertencer ao mesmo aluno dono da semana de estudo.")
+            
+            # 3. Sessão duplicada (Independe da semana, precisa apenas da disciplina)
+            if hasattr(self, 'disciplina') and self.disciplina:
+                duplicates = SessaoEstudo.objects.filter(
+                    disciplina=self.disciplina,
+                    inicio=self.inicio,
+                    fim=self.fim
+                )
+                if self.pk:
+                    duplicates = duplicates.exclude(pk=self.pk)
+                if duplicates.exists():
+                    raise ValidationError("Já existe uma sessão de estudo cadastrada com estes mesmos horários para esta disciplina.")
+                
+                # 4. Sobreposição de horários para o mesmo aluno (Precisa apenas do aluno)
+                aluno = self.disciplina.aluno
+                overlapping = SessaoEstudo.objects.filter(
+                    disciplina__aluno=aluno,
+                    inicio__lt=self.fim,
+                    fim__gt=self.inicio
+                )
+                if self.pk:
+                    overlapping = overlapping.exclude(pk=self.pk)
+                if overlapping.exists():
+                    raise ValidationError("Conflito de agenda: Esta sessão de estudo coincide com outra sessão de estudo do aluno.")
 
     @property
     def duracao_planejada_minutos(self) -> int:

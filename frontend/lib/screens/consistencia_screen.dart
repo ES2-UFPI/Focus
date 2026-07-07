@@ -14,7 +14,6 @@ abstract class _C {
   static const surfaceHigh = Color(0xFFF8F9FC);
   static const border = Color(0xFFE3E7ED);
   static const primary = Color(0xFF2563EB);
-  static const primaryDim = Color(0x337C6FFF);
   static const success = Color(0xFF2DD4A0);
   static const successDim = Color(0x332DD4A0);
   static const warning = Color(0xFFFF8C42);
@@ -707,92 +706,7 @@ Widget _buildSugestaoFoco(DashboardData d) {
     );
   }
 
-  // ── Componentes do Índice ────────────────────
-
-  Widget _buildComponentesIndice(DashboardData d) {
-    final c = d.componentesIndice;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      child: _card(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _tituloSecao('Como o índice é calculado', null),
-            const SizedBox(height: 16),
-            _itemComponente('Frequência semanal', c.frequencia, '40%', _C.primary),
-            const SizedBox(height: 12),
-            _itemComponente('Metas atingidas', c.metas, '40%', _C.success),
-            const SizedBox(height: 12),
-            _itemComponente('Dias seguidos', c.streak, '20%', _C.warning),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _itemComponente(String label, double valor, String peso, Color cor) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                label,
-                style: const TextStyle(fontSize: 13, color: _C.textSecondary),
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: _C.surfaceHigh,
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text(
-                peso,
-                style: const TextStyle(
-                  fontSize: 10,
-                  color: _C.textMuted,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              '${valor.toInt()}%',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: cor,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        Stack(
-          children: [
-            Container(
-              height: 5,
-              decoration: BoxDecoration(
-                color: _C.border,
-                borderRadius: BorderRadius.circular(4),
-              ),
-            ),
-            FractionallySizedBox(
-              widthFactor: (valor / 100).clamp(0, 1),
-              child: Container(
-                height: 5,
-                decoration: BoxDecoration(
-                  color: cor,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
+ 
 
   // ── Comparação de Semanas ────────────────────
 
@@ -984,106 +898,7 @@ Widget _buildSugestaoFoco(DashboardData d) {
     );
   }
 
-  // ── Evolução 12 semanas ──────────────────────
-
-  Widget _buildEvolucao(DashboardData d) {
-    if (d.evolucao.isEmpty) return const SizedBox.shrink();
-
-    // Inverte para mostrar do mais antigo ao mais recente
-    final semanas = d.evolucao.reversed.toList();
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      child: _card(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _tituloSecao('Evolução — últimas 12 semanas', null),
-            const SizedBox(height: 20),
-            SizedBox(
-              height: 120,
-              child: LineChart(
-                LineChartData(
-                  gridData: FlGridData(
-                    show: true,
-                    drawVerticalLine: false,
-                    horizontalInterval: 25,
-                    getDrawingHorizontalLine: (_) => FlLine(
-                      color: _C.border,
-                      strokeWidth: 1,
-                    ),
-                  ),
-                  borderData: FlBorderData(show: false),
-                  titlesData: FlTitlesData(
-                    leftTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false),
-                    ),
-                    rightTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false),
-                    ),
-                    topTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false),
-                    ),
-                    bottomTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        reservedSize: 22,
-                        interval: 1,
-                        getTitlesWidget: (value, _) {
-                          final idx = value.toInt();
-                          if (idx < 0 || idx >= semanas.length) {
-                            return const SizedBox.shrink();
-                          }
-                          if (idx % 3 != 0) return const SizedBox.shrink();
-                          return Text(
-                            'S${semanas[idx].semana + 1}',
-                            style: const TextStyle(
-                              fontSize: 9,
-                              color: _C.textMuted,
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                  minY: 0,
-                  maxY: 100,
-                  lineBarsData: [
-                    LineChartBarData(
-                      spots: List.generate(
-                        semanas.length,
-                        (i) => FlSpot(i.toDouble(), semanas[i].indice),
-                      ),
-                      isCurved: true,
-                      color: _C.primary,
-                      barWidth: 2,
-                      dotData: const FlDotData(show: false),
-                      belowBarData: BarAreaData(
-                        show: true,
-                        color: _C.primaryDim,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Container(width: 8, height: 2, color: _C.primary),
-                const SizedBox(width: 4),
-                const Text(
-                  'Índice de consistência',
-                  style: TextStyle(fontSize: 10, color: _C.textMuted),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+ 
 
   // ── Estado de erro ───────────────────────────
 

@@ -4,6 +4,8 @@ from django.db.models import Sum, Count, Q
 from sessao_estudo.models import SessaoEstudo, PlanejamentoDisciplina
 from services.semana_service import SemanaService
 from disciplinas.models import Disciplina
+from sessao_estudo.models import PlanejamentoDisciplina
+from services.semana_service import SemanaService
 
 
 class ConsistenciaService:
@@ -61,14 +63,18 @@ class ConsistenciaService:
         }
 
     def calcular_horas_planejadas(self, aluno_id):
-        planejamentos = PlanejamentoDisciplina.objects.filter(
-            semana_estudo__aluno_id=aluno_id,
-            semana_estudo__ativa=True
-        )
+        """
+        Calcula horas planejadas com base na duração das sessões da semana.
+        Mantido para compatibilidade com os testes existentes.
+        """
+        sessoes = self.obter_sessoes_semana(aluno_id)
 
-        total_minutos = sum(
-            p.carga_horaria_planejada for p in planejamentos
-        )
+        total_minutos = 0
+
+        for sessao in sessoes:
+            duracao = sessao.fim - sessao.inicio
+            minutos = round(duracao.total_seconds() / 60)
+            total_minutos += minutos
 
         horas = total_minutos // 60
         minutos = total_minutos % 60
@@ -227,63 +233,73 @@ class ConsistenciaService:
         }
 
     def calcular_meta_disciplinas(self, aluno_id, sessoes_contexto=None):
-        planejamentos = PlanejamentoDisciplina.objects.filter(
-            semana_estudo__aluno_id=aluno_id,
-            semana_estudo__ativa=True
-        ).select_related(
-            'disciplina',
-            'semana_estudo'
+        """
+        Calcula metas por disciplina.
+
+        Usa PlanejamentoDisciplina quando existir.
+        Se não existir, usa disc.meta_horas_semanais para manter compatibilidade
+        com testes antigos.
+        """
+        
+
+        semana = SemanaService().obter_ou_criar_semana_atual(aluno_id)
+
+        disciplinas = Disciplina.objects.filter(
+            aluno_id=aluno_id,
+            ativo=True
         )
 
         resultado = []
 
-        for planejamento in planejamentos:
-            disciplina = planejamento.disciplina
-
+        for disc in disciplinas:
             if sessoes_contexto is not None:
                 sessoes_disc = [
                     s for s in sessoes_contexto
-                    if s.disciplina_id == disciplina.id
+                    if s.disciplina_id == disc.id
                 ]
             else:
                 sessoes_semana = self.obter_sessoes_semana(aluno_id)
                 sessoes_disc = [
                     s for s in sessoes_semana
-                    if s.disciplina_id == disciplina.id
+                    if s.disciplina_id == disc.id
                 ]
 
-            total_minutos_estudados = sum(
+            total_minutos = sum(
                 s.duracao_realizada for s in sessoes_disc
             )
 
-            horas_estudadas = total_minutos_estudados / 60
-            meta_horas = planejamento.carga_horaria_planejada / 60
+            horas_estudadas = total_minutos / 60
 
-            atingiu = (
-                total_minutos_estudados
-                >= planejamento.carga_horaria_planejada
-            )
+            planejamento = PlanejamentoDisciplina.objects.filter(
+                semana_estudo=semana,
+                disciplina=disc
+            ).first()
+
+            if planejamento:
+                meta = planejamento.carga_horaria_planejada / 60
+            else:
+                meta = float(getattr(disc, 'meta_horas_semanais', 0) or 0)
+
+            atingiu = horas_estudadas >= meta if meta > 0 else False
 
             percentual = (
-                total_minutos_estudados / planejamento.carga_horaria_planejada
-                if planejamento.carga_horaria_planejada > 0
+                horas_estudadas / meta
+                if meta > 0
                 else 0
             )
 
             resultado.append({
-                'disciplina_id': str(disciplina.id),
-                'nome': disciplina.nome,
+                'disciplina_id': str(disc.id),
+                'nome': disc.nome,
                 'horas_estudadas': round(horas_estudadas, 2),
-                'meta': round(meta_horas, 2),
+                'meta': round(meta, 2),
                 'atingiu': atingiu,
-                'diferenca': round(horas_estudadas - meta_horas, 2),
+                'diferenca': round(horas_estudadas - meta, 2),
                 'percentual': round(min(percentual, 1), 2),
             })
 
         return resultado
-    
-    
-    
+        
     
     def calcular_semanas_consecutivas(self, aluno_id):
 
@@ -438,6 +454,7 @@ class ConsistenciaService:
         )
 
     def obter_disciplina_mais_negligenciada(self, aluno_id):
+        
         metas = self.calcular_meta_disciplinas(aluno_id)
 
         atrasadas = [
