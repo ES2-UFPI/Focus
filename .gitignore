@@ -6,6 +6,8 @@ venv
 
 # Django
 db.sqlite3
+backend/staticfiles/
+relatorio-analise-dados-perfil-estudo.md
 
 # Flutter
 frontend/.dart_tool/

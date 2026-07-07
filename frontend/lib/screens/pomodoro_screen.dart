@@ -7,23 +7,38 @@ import '../providers/pomodoro_provider.dart';
 import '../services/sessao_estudo_service.dart';
 
 class PomodoroScreen extends StatelessWidget {
-  const PomodoroScreen({super.key});
+  final PomodoroProvider? provider;
+
+  const PomodoroScreen({super.key, this.provider});
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => PomodoroProvider(),
+      create: (_) => provider ?? PomodoroProvider(),
       child: const _PomodoroView(),
     );
   }
 }
 
-class _PomodoroView extends StatelessWidget {
+class _PomodoroView extends StatefulWidget {
   const _PomodoroView();
+
+  @override
+  State<_PomodoroView> createState() => _PomodoroViewState();
+}
+
+class _PomodoroViewState extends State<_PomodoroView> {
+  bool _productivityPromptOpen = false;
 
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<PomodoroProvider>();
+    if (provider.produtividadePendente && !_productivityPromptOpen) {
+      _productivityPromptOpen = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _askProductivity(provider);
+      });
+    }
 
     return Scaffold(
       backgroundColor: AppColors.appBackground,
@@ -32,15 +47,18 @@ class _PomodoroView extends StatelessWidget {
             ? const Center(child: CircularProgressIndicator())
             : LayoutBuilder(
                 builder: (context, constraints) {
-                  final isWide = constraints.maxWidth >= AppSizes.desktopBreakpoint;
+                  final isWide =
+                      constraints.maxWidth >= AppSizes.desktopBreakpoint;
                   return SingleChildScrollView(
                     padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _buildHeader(provider),
-                        if (provider.error != null) _buildErrorBanner(provider.error!),
-                        if (provider.disciplinas.isEmpty && provider.error == null)
+                        if (provider.error != null)
+                          _buildErrorBanner(provider.error!),
+                        if (provider.disciplinas.isEmpty &&
+                            provider.error == null)
                           _buildEmptyDisciplinas()
                         else
                           const SizedBox(height: 22),
@@ -49,9 +67,15 @@ class _PomodoroView extends StatelessWidget {
                               ? Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Expanded(flex: 3, child: _TimerCard(provider: provider)),
+                                    Expanded(
+                                      flex: 3,
+                                      child: _TimerCard(provider: provider),
+                                    ),
                                     const SizedBox(width: 22),
-                                    SizedBox(width: 340, child: _SidePanel(provider: provider)),
+                                    SizedBox(
+                                      width: 340,
+                                      child: _SidePanel(provider: provider),
+                                    ),
                                   ],
                                 )
                               : Column(
@@ -70,6 +94,18 @@ class _PomodoroView extends StatelessWidget {
     );
   }
 
+  Future<void> _askProductivity(PomodoroProvider provider) async {
+    final produtividade = await _showProductivityPrompt(
+      context,
+      encerradoAntecipadamente: provider.produtividadePendenteAntecipada,
+    );
+    if (!mounted) return;
+    await provider.responderProdutividade(produtividade);
+    if (mounted) {
+      setState(() => _productivityPromptOpen = false);
+    }
+  }
+
   Widget _buildHeader(PomodoroProvider provider) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
@@ -78,7 +114,12 @@ class _PomodoroView extends StatelessWidget {
         children: const [
           Text(
             'Pomodoro',
-            style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: AppColors.textPrimary, letterSpacing: -0.5),
+            style: TextStyle(
+              fontSize: 26,
+              fontWeight: FontWeight.w800,
+              color: AppColors.textPrimary,
+              letterSpacing: -0.5,
+            ),
           ),
           SizedBox(height: 6),
           Text(
@@ -101,9 +142,18 @@ class _PomodoroView extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.error_outline_rounded, color: AppColors.danger, size: 20),
+          const Icon(
+            Icons.error_outline_rounded,
+            color: AppColors.danger,
+            size: 20,
+          ),
           const SizedBox(width: 10),
-          Expanded(child: Text(message, style: const TextStyle(color: AppColors.danger, fontSize: 13))),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(color: AppColors.danger, fontSize: 13),
+            ),
+          ),
         ],
       ),
     );
@@ -140,8 +190,8 @@ class _TimerCard extends StatelessWidget {
     final subtitulo = (d.codigo?.isNotEmpty ?? false)
         ? d.codigo!
         : (d.descricao?.isNotEmpty ?? false)
-            ? d.descricao!
-            : 'Sessão de foco';
+        ? d.descricao!
+        : 'Sessão de foco';
 
     return _Card(
       padding: const EdgeInsets.fromLTRB(24, 24, 24, 26),
@@ -162,14 +212,22 @@ class _TimerCard extends StatelessWidget {
                     Container(
                       width: 12,
                       height: 12,
-                      decoration: BoxDecoration(color: provider.corSelecionada, shape: BoxShape.circle),
+                      decoration: BoxDecoration(
+                        color: provider.corSelecionada,
+                        shape: BoxShape.circle,
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: Text(subtitulo,
-                          style: const TextStyle(fontSize: 12.5, color: AppColors.textMuted),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis),
+                      child: Text(
+                        subtitulo,
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          color: AppColors.textMuted,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ],
                 ),
@@ -185,6 +243,12 @@ class _TimerCard extends StatelessWidget {
           _TimerRing(provider: provider),
           const SizedBox(height: 26),
           _PrimaryControls(provider: provider),
+          if (provider.mode == PomodoroMode.foco) ...[
+            const SizedBox(height: 12),
+            _EnergyStatusControl(provider: provider),
+            const SizedBox(height: 8),
+            _InterruptionControl(provider: provider),
+          ],
           const SizedBox(height: 22),
           _ModeTabs(provider: provider),
           const SizedBox(height: 18),
@@ -212,7 +276,12 @@ class _MateriaSeletor extends StatelessWidget {
           value: provider.disciplinaSelecionada?.id,
           hint: const Text('Selecione a matéria'),
           items: provider.disciplinas
-              .map((d) => DropdownMenuItem(value: d.id, child: Text(d.nome, overflow: TextOverflow.ellipsis)))
+              .map(
+                (d) => DropdownMenuItem(
+                  value: d.id,
+                  child: Text(d.nome, overflow: TextOverflow.ellipsis),
+                ),
+              )
               .toList(),
           onChanged: (id) {
             if (id == null) return;
@@ -232,9 +301,12 @@ class _SessaoSeletor extends StatelessWidget {
   const _SessaoSeletor({required this.provider});
 
   static String _formatarSessao(SessaoEstudoResumo s) {
-    final data = '${s.inicio.day.toString().padLeft(2, '0')}/${s.inicio.month.toString().padLeft(2, '0')}';
-    final hIni = '${s.inicio.hour.toString().padLeft(2, '0')}:${s.inicio.minute.toString().padLeft(2, '0')}';
-    final hFim = '${s.fim.hour.toString().padLeft(2, '0')}:${s.fim.minute.toString().padLeft(2, '0')}';
+    final data =
+        '${s.inicio.day.toString().padLeft(2, '0')}/${s.inicio.month.toString().padLeft(2, '0')}';
+    final hIni =
+        '${s.inicio.hour.toString().padLeft(2, '0')}:${s.inicio.minute.toString().padLeft(2, '0')}';
+    final hFim =
+        '${s.fim.hour.toString().padLeft(2, '0')}:${s.fim.minute.toString().padLeft(2, '0')}';
     return '$data · $hIni - $hFim';
   }
 
@@ -245,12 +317,17 @@ class _SessaoSeletor extends StatelessWidget {
     if (sessoes.isEmpty) {
       return _SeletorContainer(
         label: 'SESSÃO',
-        child: Text('Não há sessão agendada para esta matéria.',
-            style: TextStyle(fontSize: 13, color: AppColors.textMuted)),
+        child: Text(
+          'Não há sessão agendada para esta matéria.',
+          style: TextStyle(fontSize: 13, color: AppColors.textMuted),
+        ),
       );
     }
 
-    final valorAtual = sessoes.any((s) => s.id == provider.sessaoSelecionada?.id) ? provider.sessaoSelecionada?.id : null;
+    final valorAtual =
+        sessoes.any((s) => s.id == provider.sessaoSelecionada?.id)
+        ? provider.sessaoSelecionada?.id
+        : null;
 
     return _SeletorContainer(
       label: 'SESSÃO',
@@ -260,7 +337,15 @@ class _SessaoSeletor extends StatelessWidget {
           value: valorAtual,
           hint: const Text('Selecione a sessão'),
           items: sessoes
-              .map((s) => DropdownMenuItem(value: s.id, child: Text(_formatarSessao(s), overflow: TextOverflow.ellipsis)))
+              .map(
+                (s) => DropdownMenuItem(
+                  value: s.id,
+                  child: Text(
+                    _formatarSessao(s),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              )
               .toList(),
           onChanged: (id) {
             if (id == null) return;
@@ -283,7 +368,15 @@ class _SeletorContainer extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, letterSpacing: 0.6, color: AppColors.neutral)),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 10.5,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.6,
+            color: AppColors.neutral,
+          ),
+        ),
         const SizedBox(height: 4),
         Container(
           width: double.infinity,
@@ -325,11 +418,22 @@ class _TimerRing extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 4),
-                decoration: BoxDecoration(color: provider.ringColorSuave, borderRadius: BorderRadius.circular(999)),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 13,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: provider.ringColorSuave,
+                  borderRadius: BorderRadius.circular(999),
+                ),
                 child: Text(
                   PomodoroProvider.modeLabels[provider.mode]!.toUpperCase(),
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 0.4, color: provider.ringColor),
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.4,
+                    color: provider.ringColor,
+                  ),
                 ),
               ),
               const SizedBox(height: 8),
@@ -344,7 +448,14 @@ class _TimerRing extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 8),
-              Text(provider.cycleText, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textMuted)),
+              Text(
+                provider.cycleText,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textMuted,
+                ),
+              ),
             ],
           ),
         ],
@@ -400,28 +511,322 @@ class _PrimaryControls extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        _RoundIconButton(icon: Icons.replay_rounded, onTap: provider.reset, tooltip: 'Reiniciar'),
+        _RoundIconButton(
+          icon: Icons.replay_rounded,
+          onTap: provider.reset,
+          tooltip: 'Reiniciar',
+        ),
         const SizedBox(width: 14),
         SizedBox(
           height: 56,
           child: ElevatedButton.icon(
-            onPressed: provider.toggle,
-            icon: Icon(provider.running ? Icons.pause_rounded : Icons.play_arrow_rounded, size: 20),
+            onPressed: () => _handleToggle(context),
+            icon: Icon(
+              provider.running ? Icons.pause_rounded : Icons.play_arrow_rounded,
+              size: 20,
+            ),
             label: Text(provider.running ? 'Pausar' : 'Iniciar'),
             style: ElevatedButton.styleFrom(
               backgroundColor: provider.ringColor,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 34),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
-              textStyle: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(999),
+              ),
+              textStyle: const TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+              ),
               elevation: 6,
               shadowColor: provider.ringColor.withValues(alpha: 0.4),
             ),
           ),
         ),
         const SizedBox(width: 14),
-        _RoundIconButton(icon: Icons.skip_next_rounded, onTap: provider.skip, tooltip: 'Pular'),
+        _RoundIconButton(
+          icon: Icons.skip_next_rounded,
+          onTap: provider.skip,
+          tooltip: 'Pular',
+        ),
       ],
+    );
+  }
+
+  Future<void> _handleToggle(BuildContext context) async {
+    if (provider.running || !provider.deveSolicitarEnergia) {
+      provider.toggle();
+      return;
+    }
+
+    final energia = await _showEnergyPrompt(
+      context,
+      initialValue: provider.energiaInicial,
+    );
+    if (!context.mounted) return;
+
+    if (energia == null) {
+      provider.ignorarEnergiaInicial();
+    } else {
+      provider.definirEnergiaInicial(energia);
+    }
+    provider.toggle();
+  }
+}
+
+Future<int?> _showEnergyPrompt(BuildContext context, {int? initialValue}) {
+  return showModalBottomSheet<int>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: AppColors.surface,
+    barrierColor: Colors.black54,
+    clipBehavior: Clip.antiAlias,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    ),
+    builder: (context) => _RatingPrompt(
+      title: 'Como está sua energia agora?',
+      subtitle: 'Opcional · um toque antes de começar',
+      keyPrefix: 'energia',
+      labels: const ['Muito baixa', 'Baixa', 'Regular', 'Alta', 'Muito alta'],
+      initialValue: initialValue,
+    ),
+  );
+}
+
+Future<int?> _showProductivityPrompt(
+  BuildContext context, {
+  required bool encerradoAntecipadamente,
+}) {
+  return showModalBottomSheet<int>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: AppColors.surface,
+    barrierColor: Colors.black54,
+    clipBehavior: Clip.antiAlias,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    ),
+    builder: (context) => _RatingPrompt(
+      title: 'Como foi seu foco neste bloco?',
+      subtitle: encerradoAntecipadamente
+          ? 'O bloco terminou antes · responder mantém este registro'
+          : 'Opcional · avalie apenas o ciclo que acabou',
+      keyPrefix: 'produtividade',
+      labels: const ['Muito baixo', 'Baixo', 'Regular', 'Bom', 'Excelente'],
+      skipLabel: encerradoAntecipadamente
+          ? 'Não responder e descartar bloco'
+          : 'Agora não',
+    ),
+  );
+}
+
+class _RatingPrompt extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final String keyPrefix;
+  final List<String> labels;
+  final String skipLabel;
+  final int? initialValue;
+
+  const _RatingPrompt({
+    required this.title,
+    required this.subtitle,
+    required this.keyPrefix,
+    required this.labels,
+    this.skipLabel = 'Agora não',
+    this.initialValue,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: AppColors.surface,
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 22, 24, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                subtitle,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.textMuted,
+                ),
+              ),
+              const SizedBox(height: 18),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  const spacing = 8.0;
+                  final columns = constraints.maxWidth >= 520 ? 5 : 3;
+                  final cardWidth =
+                      (constraints.maxWidth - spacing * (columns - 1)) /
+                      columns;
+
+                  return Wrap(
+                    spacing: spacing,
+                    runSpacing: spacing,
+                    children: [
+                      for (var index = 0; index < labels.length; index++)
+                        SizedBox(
+                          width: cardWidth,
+                          height: 72,
+                          child: Semantics(
+                            selected: initialValue == index + 1,
+                            label: '$title ${index + 1}: ${labels[index]}',
+                            button: true,
+                            child: Material(
+                              color: initialValue == index + 1
+                                  ? const Color(0xFFEEF2FF)
+                                  : const Color(0xFFF8FAFC),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                side: BorderSide(
+                                  color: initialValue == index + 1
+                                      ? AppColors.brandPrimary
+                                      : const Color(0xFFCBD5E1),
+                                  width: initialValue == index + 1 ? 2 : 1,
+                                ),
+                              ),
+                              clipBehavior: Clip.antiAlias,
+                              child: InkWell(
+                                key: ValueKey('$keyPrefix-${index + 1}'),
+                                onTap: () =>
+                                    Navigator.of(context).pop(index + 1),
+                                overlayColor: WidgetStatePropertyAll(
+                                  AppColors.brandPrimary.withValues(alpha: 0.1),
+                                ),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      '${index + 1}',
+                                      style: const TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.w800,
+                                        color: AppColors.brandPrimaryDark,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 3),
+                                    Text(
+                                      labels[index],
+                                      textAlign: TextAlign.center,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.textSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  key: ValueKey('$keyPrefix-pular'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.brandPrimaryDark,
+                    textStyle: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text(skipLabel),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EnergyStatusControl extends StatelessWidget {
+  final PomodoroProvider provider;
+
+  const _EnergyStatusControl({required this.provider});
+
+  @override
+  Widget build(BuildContext context) {
+    final energia = provider.energiaInicial;
+    return OutlinedButton.icon(
+      key: const ValueKey('energia-status'),
+      onPressed: provider.podeIniciarFoco && !provider.running
+          ? () => _editEnergy(context)
+          : null,
+      icon: Icon(
+        energia == null
+            ? Icons.battery_unknown_outlined
+            : Icons.battery_charging_full_rounded,
+        size: 18,
+      ),
+      label: Text(
+        energia == null
+            ? 'Informar energia'
+            : 'Energia inicial: $energia/5 · Alterar',
+      ),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: AppColors.brandPrimaryDark,
+        side: const BorderSide(color: Color(0xFFC7D2FE)),
+      ),
+    );
+  }
+
+  Future<void> _editEnergy(BuildContext context) async {
+    final energia = await _showEnergyPrompt(
+      context,
+      initialValue: provider.energiaInicial,
+    );
+    if (!context.mounted || energia == null) return;
+    provider.definirEnergiaInicial(energia);
+  }
+}
+
+class _InterruptionControl extends StatelessWidget {
+  final PomodoroProvider provider;
+
+  const _InterruptionControl({required this.provider});
+
+  @override
+  Widget build(BuildContext context) {
+    final count = provider.interrupcoesBloco;
+    return Tooltip(
+      message: 'Registre quando algo quebrar seu foco.',
+      child: OutlinedButton.icon(
+        key: const ValueKey('registrar-interrupcao'),
+        onPressed: provider.podeRegistrarInterrupcao
+            ? provider.registrarInterrupcao
+            : null,
+        icon: const Icon(Icons.notifications_active_outlined, size: 18),
+        label: Text(
+          count == 0
+              ? 'Registrar interrupção'
+              : '$count ${count == 1 ? 'interrupção' : 'interrupções'}',
+        ),
+      ),
     );
   }
 }
@@ -430,7 +835,11 @@ class _RoundIconButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
   final String tooltip;
-  const _RoundIconButton({required this.icon, required this.onTap, required this.tooltip});
+  const _RoundIconButton({
+    required this.icon,
+    required this.onTap,
+    required this.tooltip,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -471,23 +880,40 @@ class _ModeTabs extends StatelessWidget {
               onTap: () => provider.setMode(m),
               borderRadius: BorderRadius.circular(12),
               child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 12,
+                  horizontal: 8,
+                ),
                 decoration: BoxDecoration(
                   color: selected ? color : AppColors.surface,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: selected ? color : AppColors.border),
+                  border: Border.all(
+                    color: selected ? color : AppColors.border,
+                  ),
                 ),
                 child: Column(
                   children: [
-                    Text(PomodoroProvider.modeLabels[m]!,
-                        style: TextStyle(
-                            fontSize: 14, fontWeight: FontWeight.w700, color: selected ? Colors.white : AppColors.textSecondary)),
+                    Text(
+                      PomodoroProvider.modeLabels[m]!,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: selected
+                            ? Colors.white
+                            : AppColors.textSecondary,
+                      ),
+                    ),
                     const SizedBox(height: 2),
-                    Text('${provider.durations[m]} min',
-                        style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: (selected ? Colors.white : AppColors.textSecondary).withValues(alpha: 0.85))),
+                    Text(
+                      '${provider.durations[m]} min',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color:
+                            (selected ? Colors.white : AppColors.textSecondary)
+                                .withValues(alpha: 0.85),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -508,8 +934,15 @@ class _DurationSteppers extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('DURAÇÕES (MINUTOS)',
-            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1, color: AppColors.neutral)),
+        const Text(
+          'DURAÇÕES (MINUTOS)',
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1,
+            color: AppColors.neutral,
+          ),
+        ),
         const SizedBox(height: 12),
         ...PomodoroMode.values.map((m) {
           final color = PomodoroProvider.modeColors[m]!;
@@ -520,22 +953,48 @@ class _DurationSteppers extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Container(width: 9, height: 9, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+                    Container(
+                      width: 9,
+                      height: 9,
+                      decoration: BoxDecoration(
+                        color: color,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
                     const SizedBox(width: 10),
-                    Text(PomodoroProvider.modeLabels[m]!,
-                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                    Text(
+                      PomodoroProvider.modeLabels[m]!,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
                   ],
                 ),
                 Row(
                   children: [
-                    _StepperButton(icon: Icons.remove, onTap: () => provider.ajustarDuracao(m, -1)),
+                    _StepperButton(
+                      icon: Icons.remove,
+                      onTap: () => provider.ajustarDuracao(m, -1),
+                    ),
                     SizedBox(
                       width: 52,
-                      child: Text('${provider.durations[m]} min',
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(fontFamily: 'monospace', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                      child: Text(
+                        '${provider.durations[m]} min',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
                     ),
-                    _StepperButton(icon: Icons.add, onTap: () => provider.ajustarDuracao(m, 1)),
+                    _StepperButton(
+                      icon: Icons.add,
+                      onTap: () => provider.ajustarDuracao(m, 1),
+                    ),
                   ],
                 ),
               ],
@@ -601,15 +1060,40 @@ class _ResumoHojeCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Resumo de hoje', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+          const Text(
+            'Resumo de hoje',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+            ),
+          ),
           const SizedBox(height: 16),
           Row(
             children: [
-              Expanded(child: _StatBox(value: '${provider.sessionsToday}', label: 'Sessões', color: AppColors.brandPrimary)),
+              Expanded(
+                child: _StatBox(
+                  value: '${provider.sessionsToday}',
+                  label: 'Sessões',
+                  color: AppColors.brandPrimary,
+                ),
+              ),
               const SizedBox(width: 10),
-              Expanded(child: _StatBox(value: provider.focusHojeText, label: 'Foco', color: AppColors.subjectTeal)),
+              Expanded(
+                child: _StatBox(
+                  value: provider.focusHojeText,
+                  label: 'Foco',
+                  color: AppColors.subjectTeal,
+                ),
+              ),
               const SizedBox(width: 10),
-              Expanded(child: _StatBox(value: '${provider.sessionsToday}', label: 'Ciclos', color: AppColors.subjectPurple)),
+              Expanded(
+                child: _StatBox(
+                  value: '${provider.sessionsToday}',
+                  label: 'Ciclos',
+                  color: AppColors.subjectPurple,
+                ),
+              ),
             ],
           ),
         ],
@@ -622,18 +1106,36 @@ class _StatBox extends StatelessWidget {
   final String value;
   final String label;
   final Color color;
-  const _StatBox({required this.value, required this.label, required this.color});
+  const _StatBox({
+    required this.value,
+    required this.label,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
-      decoration: BoxDecoration(color: AppColors.appBackground, borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(
+        color: AppColors.appBackground,
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: Column(
         children: [
-          Text(value, style: TextStyle(fontFamily: 'monospace', fontSize: 22, fontWeight: FontWeight.w700, color: color)),
+          Text(
+            value,
+            style: TextStyle(
+              fontFamily: 'monospace',
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
           const SizedBox(height: 3),
-          Text(label, style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+          ),
         ],
       ),
     );
@@ -650,54 +1152,92 @@ class _HistoricoCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Pomodoros recentes', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+          const Text(
+            'Pomodoros recentes',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+            ),
+          ),
           const SizedBox(height: 4),
-          const Text('Últimas sessões de foco concluídas.', style: TextStyle(fontSize: 12.5, color: AppColors.neutral)),
+          const Text(
+            'Últimas sessões de foco concluídas.',
+            style: TextStyle(fontSize: 12.5, color: AppColors.neutral),
+          ),
           const SizedBox(height: 12),
           if (provider.history.isEmpty)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 20),
               child: Center(
-                child: Text('Nenhuma sessão concluída ainda hoje.', style: TextStyle(color: AppColors.neutral, fontSize: 13)),
+                child: Text(
+                  'Nenhuma sessão concluída ainda hoje.',
+                  style: TextStyle(color: AppColors.neutral, fontSize: 13),
+                ),
               ),
             )
           else
-            ...provider.history.map((h) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 34,
-                        height: 34,
-                        decoration: BoxDecoration(
-                          color: Color.lerp(h.cor, Colors.white, 0.85),
-                          borderRadius: BorderRadius.circular(9),
-                        ),
-                        child: Center(
-                          child: Container(
-                            width: 10,
-                            height: 10,
-                            decoration: BoxDecoration(color: h.cor, shape: BoxShape.circle),
+            ...provider.history.map(
+              (h) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 34,
+                      height: 34,
+                      decoration: BoxDecoration(
+                        color: Color.lerp(h.cor, Colors.white, 0.85),
+                        borderRadius: BorderRadius.circular(9),
+                      ),
+                      child: Center(
+                        child: Container(
+                          width: 10,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            color: h.cor,
+                            shape: BoxShape.circle,
                           ),
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(h.disciplinaNome,
-                                style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis),
-                            Text('${h.duracaoMinutos} min · foco', style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
-                          ],
-                        ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            h.disciplinaNome,
+                            style: const TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            '${h.duracaoMinutos} min · foco',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textMuted,
+                            ),
+                          ),
+                        ],
                       ),
-                      Text(h.hora, style: const TextStyle(fontFamily: 'monospace', fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.neutral)),
-                    ],
-                  ),
-                )),
+                    ),
+                    Text(
+                      h.hora,
+                      style: const TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.neutral,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -722,7 +1262,13 @@ class _Card extends StatelessWidget {
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadii.xl),
         border: Border.all(color: AppColors.border),
-        boxShadow: const [BoxShadow(color: Color(0x0A101828), blurRadius: 2, offset: Offset(0, 1))],
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0A101828),
+            blurRadius: 2,
+            offset: Offset(0, 1),
+          ),
+        ],
       ),
       child: child,
     );

@@ -8,11 +8,8 @@ from django.shortcuts import get_object_or_404
 from disciplinas.models import Disciplina
 
 
-from .models import SessaoEstudo, PlanejamentoDisciplina
-from .serializers import (
-    SessaoEstudoSerializer,
-    PlanejamentoDisciplinaSerializer,
-)
+from .models import BlocoPomodoro, SessaoEstudo, PlanejamentoDisciplina
+from .serializers import BlocoPomodoroSerializer, SessaoEstudoSerializer, PlanejamentoDisciplinaSerializer
 from disciplinas.models import Disciplina
 from services.consistencia_service import ConsistenciaService
 from services.semana_service import SemanaService
@@ -199,3 +196,14 @@ class PlanejamentoDisciplinaViewSet(viewsets.ModelViewSet):
             })
 
         serializer.save()
+
+
+class BlocoPomodoroViewSet(viewsets.ModelViewSet):
+    queryset = BlocoPomodoro.objects.none()
+    serializer_class = BlocoPomodoroSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return BlocoPomodoro.objects.filter(
+            sessao_estudo__disciplina__aluno_id=self.request.user.id
+        )

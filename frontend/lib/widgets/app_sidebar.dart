@@ -33,19 +33,29 @@ class AppSidebar extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 8),
               children: [
                 _buildItem(
+                  
                   context,
+                 
                   AppPage.atividades,
+                 
                   LucideIcons.clipboardList,
+                 
                   'Atividades',
                 ),
                 _buildItem(
+                  
                   context,
+                 
                   AppPage.eventos,
+                 
                   LucideIcons.calendarDays,
+                 
                   'Eventos',
                 ),
                 _buildItem(
+                  
                   context,
+                 
                   AppPage.metas,
                   LucideIcons.target,
                   'Metas Semanais',
@@ -53,14 +63,31 @@ class AppSidebar extends StatelessWidget {
                 _buildItem(
                   context,
                   AppPage.consistencia,
+                 
                   LucideIcons.barChart2,
+                 
                   'Consistência',
                 ),
-                _buildItem(context, AppPage.pomodoro, LucideIcons.timer, 'Pomodoro'),
                 _buildItem(
                   context,
+                  AppPage.perfil,
+                  LucideIcons.sparkles,
+                  'Insights',
+                ),
+                _buildItem(
+                  context,
+                  AppPage.pomodoro,
+                  LucideIcons.timer,
+                  'Pomodoro',
+                ),
+                _buildItem(
+                  
+                  context,
+                 
                   AppPage.ajustes,
+                 
                   LucideIcons.settings,
+                 
                   'Ajustes',
                 ),
               ],
@@ -104,7 +131,12 @@ class AppSidebar extends StatelessWidget {
     );
   }
 
-  Widget _buildItem(BuildContext context, AppPage page, IconData icon, String label) {
+  Widget _buildItem(
+    BuildContext context,
+    AppPage page,
+    IconData icon,
+    String label,
+  ) {
     final isSelected = currentPage == page;
     return InkWell(
       borderRadius: BorderRadius.circular(8),
@@ -118,7 +150,11 @@ class AppSidebar extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(icon, color: isSelected ? Colors.white : const Color(0xFF94a3b8), size: 18),
+            Icon(
+              icon,
+              color: isSelected ? Colors.white : const Color(0xFF94a3b8),
+              size: 18,
+            ),
             const SizedBox(width: 10),
             Expanded(
               child: Text(

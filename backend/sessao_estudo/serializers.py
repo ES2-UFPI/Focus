@@ -1,12 +1,6 @@
 from rest_framework import serializers
 
-from .models import (
-    SemanaEstudo,
-    PlanejamentoDisciplina,
-    HorarioEstudo,
-    SessaoEstudo,
-)
-
+from .models import BlocoPomodoro, SemanaEstudo, PlanejamentoDisciplina, HorarioEstudo, SessaoEstudo
 
 # ──────────────────────────────────────────────
 # SemanaEstudo
@@ -223,91 +217,119 @@ class SessaoEstudoSerializer(serializers.ModelSerializer):
             'disciplina',
             'disciplina_nome',
             'horario_estudo',
-            'inicio',
-            'fim',
-            'duracao_realizada',
-            'duracao_planejada_minutos',
-            'seguiu_planejamento',
+            'inicio', 
+            'fim', 
+            'duracao_realizada', 
             'status',
             'descricao',
-            'criada_em',
-            'atualizada_em',
+            'energia_inicial',
+            'interrupcoes',
+            'tipo_atividade',
         ]
+      
+        read_only_fields = ['id', 'semana_estudo']
+        
+    def get_semana_estudo(self, obj):
+        return timezone.localtime(obj.inicio).isocalendar().week
 
-        read_only_fields = [
-            'id',
-            'semana_estudo',
-            'criada_em',
-            'atualizada_em',
-        ]
+    def get_horario_estudo(self, obj):
+        inicio = timezone.localtime(obj.inicio).strftime('%H:%M')
+        fim = timezone.localtime(obj.fim).strftime('%H:%M')
+        return f'{inicio} - {fim}'
 
     def validate(self, attrs):
+        # Criamos um dicionário temporário a partir dos dados já validados/tratados pelo DRF
+        contexto_validacao = {}
+        
+        if self.instance:
+            contexto_validacao = {
+                'id': self.instance.id, # 🌟 ADICIONE ESTA LINHA AQUI! (Injeta o UUID na validação)
+                'disciplina_id': self.instance.disciplina_id,
+                'inicio': self.instance.inicio,
+                'fim': self.instance.fim,
+                'status': self.instance.status,
+                'duracao_realizada': self.instance.duracao_realizada,
+                'descricao': self.instance.descricao,
+                'energia_inicial': self.instance.energia_inicial,
+                'interrupcoes': self.instance.interrupcoes,
+                'tipo_atividade': self.instance.tipo_atividade,
+            }
+            
+        # Mescla estritamente com os novos dados modificados vindos do payload
+        for campo, valor in attrs.items():
+            if campo == 'disciplina':
+                contexto_validacao['disciplina_id'] = valor.id if hasattr(valor, 'id') else valor
+            else:
+                contexto_validacao[campo] = valor
 
-        inicio = attrs.get(
+        # Criamos o objeto temporário de forma segura repassando o ID
+        try:
+            temp_instance = SessaoEstudo(**contexto_validacao)
+            temp_instance.clean()
+        except DjangoValidationError as e:
+            raise serializers.ValidationError(
+                e.message_dict if hasattr(e, 'message_dict') else e.messages
+            )
+
+        return attrs
+
+class BlocoPomodoroSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = BlocoPomodoro
+        fields = [
+            'id',
+            'sessao_estudo',
+            'numero_ciclo',
             'inicio',
-            getattr(self.instance, 'inicio', None)
-        )
-
-        fim = attrs.get(
             'fim',
-            getattr(self.instance, 'fim', None)
-        )
+            'duracao_planejada_segundos',
+            'duracao_realizada_segundos',
+            'interrupcoes',
+            'status',
+            'produtividade',
+            'data_criacao',
+        ]
+        read_only_fields = ['id', 'data_criacao']
 
-        if inicio and fim and fim <= inicio:
-            raise serializers.ValidationError({
-                'fim':
-                'Deve ser posterior ao início.'
-            })
-
-        disciplina = attrs.get(
-            'disciplina',
-            getattr(self.instance, 'disciplina', None)
+    def validate(self, attrs):
+        instance = self.instance
+        sessao = attrs.get(
+            'sessao_estudo',
+            instance.sessao_estudo if instance else None,
         )
+        status_bloco = attrs.get(
+            'status',
+            instance.status if instance else None,
+        )
+        produtividade = attrs.get(
+            'produtividade',
+            instance.produtividade if instance else None,
+        )
+        inicio = attrs.get('inicio', instance.inicio if instance else None)
+        fim = attrs.get('fim', instance.fim if instance else None)
 
         request = self.context.get('request')
-
         if (
-            disciplina
-            and request
-            and disciplina.aluno_id != request.user.id
+            request is not None
+            and sessao is not None
+            and sessao.disciplina.aluno_id != request.user.id
         ):
             raise serializers.ValidationError({
-                'disciplina':
-                'Você não pode utilizar esta disciplina.'
+                'sessao_estudo': 'Você não tem permissão para usar esta sessão.'
             })
 
-        horario = attrs.get(
-            'horario_estudo',
-            getattr(self.instance, 'horario_estudo', None)
-        )
-
         if (
-            horario
-            and disciplina
-            and horario.disciplina.id != disciplina.id
+            status_bloco == BlocoPomodoro.StatusBloco.INCOMPLETO
+            and produtividade is not None
         ):
             raise serializers.ValidationError({
-                'horario_estudo':
-                'O horário pertence a outra disciplina.'
+                'produtividade': 'Um bloco incompleto não pode ser avaliado.'
             })
 
-        status_sessao = attrs.get(
-            'status',
-            getattr(self.instance, 'status', None)
-        )
-
-        duracao = attrs.get(
-            'duracao_realizada',
-            getattr(self.instance, 'duracao_realizada', 0)
-        )
-
-        if (
-            status_sessao == SessaoEstudo.StatusSessao.CONCLUIDO
-            and duracao <= 0
-        ):
+        if inicio is not None and fim is not None and fim < inicio:
             raise serializers.ValidationError({
-                'duracao_realizada':
-                'Informe a duração real da sessão concluída.'
+                'fim': 'O término não pode ser anterior ao início do bloco.'
             })
 
         return attrs

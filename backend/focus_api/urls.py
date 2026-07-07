@@ -7,7 +7,7 @@ from disciplinas.views import DisciplinaViewSet
 from tarefas_disciplina.views import TarefaDisciplinaViewSet
 from materiais_estudo.views import MaterialEstudoViewSet
 from eventos_academicos.views import EventoAcademicoViewSet, AgendaView
-from sessao_estudo.views import SessaoEstudoViewSet, PlanejamentoDisciplinaViewSet
+from sessao_estudo.views import BlocoPomodoroViewSet, SessaoEstudoViewSet, PlanejamentoDisciplinaViewSet
 from feedback_sessao_estudo.views import FeedbackSessaoEstudoViewSet
 
 
@@ -21,6 +21,7 @@ router.register(r'materiais-estudo', MaterialEstudoViewSet, basename='materiales
 router.register(r'eventos-academicos', EventoAcademicoViewSet, basename='eventoacademico')
 router.register(r'sessoes-estudo', SessaoEstudoViewSet)
 router.register(r'planejamentos-disciplina', PlanejamentoDisciplinaViewSet, basename='planejamento-disciplina')
+router.register(r'blocos-pomodoro', BlocoPomodoroViewSet, basename='blocopomodoro')
 router.register(r'feedbacks-sessao', FeedbackSessaoEstudoViewSet)
 
 urlpatterns = [
@@ -28,5 +29,6 @@ urlpatterns = [
     path('api/auth/registro/', registro, name='registro'),
     path('api/auth/login/', login, name='login'),
     path('api/agenda/', AgendaView.as_view(), name='agenda'),
+    path('api/', include('insights.urls')),
     path('api/', include(router.urls)),
 ]
