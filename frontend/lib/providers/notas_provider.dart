@@ -8,7 +8,9 @@ import '../services/api_service.dart';
 enum NotasView { vazio, detalhe, formulario }
 
 class NotasProvider extends ChangeNotifier {
-  final ApiService _api = ApiService();
+  NotasProvider({ApiService? api}) : _api = api ?? ApiService();
+
+  final ApiService _api;
 
   List<Nota> _notas = [];
   List<Disciplina> _disciplinas = [];
