@@ -1,10 +1,6 @@
-import 'dart:convert';
 import 'dart:ui';
 
 import 'material_estudo.dart';
-
-/// Marcador que identifica um MaterialEstudo cuja descricao guarda uma nota.
-const String kNotaMarker = '_focusNota';
 
 /// Converte a cor hex da disciplina (ex.: '#6366F1') em Color.
 Color corFromHex(String hex) {
@@ -87,31 +83,15 @@ class Nota {
     required this.dataInsercao,
   });
 
-  /// Converte um MaterialEstudo em Nota. Retorna null quando a descricao não
-  /// é o JSON marcado — ou seja, é um material comum.
+  /// Converte um MaterialEstudo (tipo 'Resumo') em Nota. Retorna null quando
+  /// a descricao não contém nenhum cabeçalho de seção conhecido — ou seja, é
+  /// um resumo comum criado fora da tela de Notas.
   static Nota? fromMaterial(MaterialEstudo material) {
     final descricao = material.descricao;
     if (descricao == null || descricao.isEmpty) return null;
 
-    Map<String, dynamic> payload;
-    try {
-      final decoded = jsonDecode(descricao);
-      if (decoded is! Map<String, dynamic> ||
-          !decoded.containsKey(kNotaMarker)) {
-        return null;
-      }
-      payload = decoded;
-    } catch (_) {
-      return null;
-    }
-
-    final secoes = <String, List<String>>{};
-    for (final sec in kNotaSecoes) {
-      final raw = payload[sec.key];
-      secoes[sec.key] = raw is List
-          ? raw.map((e) => e.toString()).toList()
-          : <String>[];
-    }
+    final secoes = _textoParaSecoes(descricao);
+    if (secoes == null) return null;
 
     return Nota(
       id: material.id,
@@ -131,13 +111,56 @@ class Nota {
   }) {
     return {
       'titulo': titulo,
-      'tipo': 'Outro',
+      'tipo': 'Resumo',
       'disciplina': disciplinaId,
-      'descricao': jsonEncode({
-        kNotaMarker: 1,
-        for (final sec in kNotaSecoes) sec.key: secoes[sec.key] ?? <String>[],
-      }),
+      'descricao': _secoesParaTexto(secoes),
     };
+  }
+
+  /// Gera o texto legível gravado em `descricao`: cabeçalho de cada seção
+  /// preenchida seguido dos itens com '- '. Seções vazias são omitidas.
+  static String _secoesParaTexto(Map<String, List<String>> secoes) {
+    final blocos = <String>[];
+    for (final sec in kNotaSecoes) {
+      final itens = secoes[sec.key] ?? const [];
+      if (itens.isEmpty) continue;
+      blocos.add(
+        '${sec.label}:\n${itens.map((i) => '- $i').join('\n')}',
+      );
+    }
+    // Nota sem nenhum item ainda: grava só o primeiro cabeçalho para que o
+    // material continue reconhecível como nota ao ser recarregado.
+    if (blocos.isEmpty) return '${kNotaSecoes.first.label}:';
+    return blocos.join('\n\n');
+  }
+
+  /// Reconstrói as seções a partir do texto de `descricao`. Retorna null se
+  /// nenhum cabeçalho conhecido for encontrado.
+  static Map<String, List<String>>? _textoParaSecoes(String texto) {
+    final secoes = {
+      for (final sec in kNotaSecoes) sec.key: <String>[],
+    };
+    final labelParaKey = {
+      for (final sec in kNotaSecoes) '${sec.label}:': sec.key,
+    };
+
+    String? secaoAtual;
+    var achouCabecalho = false;
+    for (final linhaBruta in texto.split('\n')) {
+      final linha = linhaBruta.trim();
+      if (linha.isEmpty) continue;
+      final key = labelParaKey[linha];
+      if (key != null) {
+        secaoAtual = key;
+        achouCabecalho = true;
+        continue;
+      }
+      if (secaoAtual == null) continue;
+      final item = linha.startsWith('- ') ? linha.substring(2).trim() : linha;
+      if (item.isNotEmpty) secoes[secaoAtual]!.add(item);
+    }
+
+    return achouCabecalho ? secoes : null;
   }
 
   List<String> itensDe(String key) => secoes[key] ?? const [];

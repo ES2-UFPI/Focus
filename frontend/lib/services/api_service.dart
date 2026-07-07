@@ -47,8 +47,13 @@ class ApiService {
       headers: _headers(),
     );
     if (response.statusCode == 200) {
-      final List<dynamic> data = jsonDecode(response.body);
+      final List<dynamic> data = jsonDecode(utf8.decode(response.bodyBytes));
       return data.map((e) => Disciplina.fromJson(e)).toList();
+    }
+    if (kDebugMode) {
+      debugPrint(
+        '⚠️ [ApiService] getDisciplinas falhou: ${response.statusCode}',
+      );
     }
     return [];
   }
@@ -68,7 +73,7 @@ class ApiService {
     final response = await http.get(uri, headers: _headers());
 
     if (response.statusCode == 200) {
-      final List<dynamic> data = jsonDecode(response.body);
+      final List<dynamic> data = jsonDecode(utf8.decode(response.bodyBytes));
       return data.map((e) => MaterialEstudo.fromJson(e)).toList();
     }
     return [];
@@ -81,7 +86,9 @@ class ApiService {
       body: jsonEncode(data),
     );
     if (response.statusCode == 201) {
-      return MaterialEstudo.fromJson(jsonDecode(response.body));
+      return MaterialEstudo.fromJson(
+        jsonDecode(utf8.decode(response.bodyBytes)),
+      );
     }
     return null;
   }
@@ -93,7 +100,9 @@ class ApiService {
       body: jsonEncode(data),
     );
     if (response.statusCode == 200) {
-      return MaterialEstudo.fromJson(jsonDecode(response.body));
+      return MaterialEstudo.fromJson(
+        jsonDecode(utf8.decode(response.bodyBytes)),
+      );
     }
     return null;
   }

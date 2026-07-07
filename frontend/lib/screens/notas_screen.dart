@@ -631,7 +631,9 @@ class _NotaFormState extends State<_NotaForm> {
       for (final sec in kNotaSecoes)
         sec.key: TextEditingController(text: n?.itensDe(sec.key).join('\n') ?? ''),
     };
-    _disciplinaId = n?.disciplinaId;
+    // Nova nota herda a disciplina filtrada no rail, se houver.
+    _disciplinaId =
+        n?.disciplinaId ?? context.read<NotasProvider>().filtroDisciplinaId;
   }
 
   @override

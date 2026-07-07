@@ -69,7 +69,11 @@ class NotasProvider extends ChangeNotifier {
   }
 
   Future<void> loadDisciplinas() async {
-    _disciplinas = await _api.getDisciplinas();
+    try {
+      _disciplinas = await _api.getDisciplinas();
+    } catch (e) {
+      if (kDebugMode) debugPrint('Erro ao carregar disciplinas: $e');
+    }
     notifyListeners();
   }
 
@@ -79,7 +83,7 @@ class NotasProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final materiais = await _api.getMateriais();
+      final materiais = await _api.getMateriais(tipo: 'Resumo');
       _notas = materiais
           .map(Nota.fromMaterial)
           .whereType<Nota>()
