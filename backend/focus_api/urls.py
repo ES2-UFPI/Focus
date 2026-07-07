@@ -28,5 +28,6 @@ urlpatterns = [
     path('api/auth/registro/', registro, name='registro'),
     path('api/auth/login/', login, name='login'),
     path('api/agenda/', AgendaView.as_view(), name='agenda'),
+    path('api/', include('insights.urls')),
     path('api/', include(router.urls)),
 ]
