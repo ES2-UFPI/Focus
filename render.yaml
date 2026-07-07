@@ -20,7 +20,7 @@ services:
       - key: DEBUG
         value: "False"
       - key: ALLOWED_HOSTS
-        value: focus-api.onrender.com
+        value: focus-api-hqbc.onrender.com
       - key: FRONTEND_URL
         sync: false
       - key: DATABASE_URL
