@@ -64,12 +64,6 @@ class AppSidebar extends StatelessWidget {
                 ),
                 _buildItem(
                   context,
-                  AppPage.notas,
-                  LucideIcons.fileText,
-                  'Notas',
-                ),
-                _buildItem(
-                  context,
                   AppPage.ajustes,
                   LucideIcons.settings,
                   'Ajustes',
