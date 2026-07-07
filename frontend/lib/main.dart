@@ -52,6 +52,7 @@ class FocusApp extends StatelessWidget {
         supportedLocales: const [
           Locale('pt', 'BR'),
         ],
+        themeMode: ThemeMode.light,
         theme: ShadThemeData(
           brightness: Brightness.light,
           colorScheme: const ShadSlateColorScheme.light(),
