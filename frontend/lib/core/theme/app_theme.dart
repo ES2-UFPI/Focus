@@ -125,6 +125,59 @@ class AppSizes {
   static const double avatarLg = 32;
 }
 
+class AppShadows {
+  AppShadows._();
+
+  static const List<BoxShadow> card = [
+    BoxShadow(
+      color: Color(0x100F172A),
+      blurRadius: 18,
+      offset: Offset(0, 8),
+    ),
+    BoxShadow(
+      color: Color(0x080F172A),
+      blurRadius: 4,
+      offset: Offset(0, 1),
+    ),
+  ];
+
+  static const List<BoxShadow> cardSoft = [
+    BoxShadow(
+      color: Color(0x0A0F172A),
+      blurRadius: 12,
+      offset: Offset(0, 4),
+    ),
+  ];
+}
+
+class AppDecorations {
+  AppDecorations._();
+
+  static BoxDecoration card({
+    BorderRadiusGeometry? borderRadius,
+    Color color = AppColors.surface,
+  }) {
+    return BoxDecoration(
+      color: color,
+      border: Border.all(color: AppColors.borderSubtle),
+      borderRadius: borderRadius ?? BorderRadius.circular(AppRadii.md),
+      boxShadow: AppShadows.card,
+    );
+  }
+
+  static BoxDecoration softCard({
+    BorderRadiusGeometry? borderRadius,
+    Color color = AppColors.surfaceMuted,
+  }) {
+    return BoxDecoration(
+      color: color,
+      border: Border.all(color: AppColors.borderSubtle.withValues(alpha: 0.7)),
+      borderRadius: borderRadius ?? BorderRadius.circular(AppRadii.sm),
+      boxShadow: AppShadows.cardSoft,
+    );
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Tipografia
 // ---------------------------------------------------------------------------

@@ -349,26 +349,34 @@ class _SectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
+    final cardRadius = BorderRadius.circular(AppRadii.md);
+
+    return DecoratedBox(
+      decoration: AppDecorations.card(borderRadius: cardRadius),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, size: AppSizes.iconMd, color: AppColors.subjectTeal),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: Text(
-                title,
-                style: AppTypography.cardTitle.copyWith(
-                  color: AppColors.textPrimary,
+            Row(
+              children: [
+                Icon(icon, size: AppSizes.iconMd, color: AppColors.subjectTeal),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: AppTypography.cardTitle.copyWith(
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
+            const SizedBox(height: AppSpacing.lg),
+            child,
           ],
         ),
-        const SizedBox(height: AppSpacing.lg),
-        child,
-      ],
+      ),
     );
   }
 }
@@ -398,7 +406,7 @@ class _NumbersFallback extends StatelessWidget {
                 horizontal: AppSpacing.md,
                 vertical: AppSpacing.sm,
               ),
-              decoration: BoxDecoration(
+              decoration: AppDecorations.softCard(
                 color: color.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(AppRadii.md),
               ),

@@ -47,11 +47,7 @@ class InsightFeedRow extends StatelessWidget {
     return Semantics(
       button: onTap != null,
       child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          border: Border.all(color: AppColors.borderSubtle),
-          borderRadius: cardRadius,
-        ),
+        decoration: AppDecorations.card(borderRadius: cardRadius),
         child: Material(
           color: Colors.transparent,
           borderRadius: cardRadius,
@@ -431,8 +427,7 @@ class _InsightStoryBlock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DecoratedBox(
-      decoration: BoxDecoration(
-        color: AppColors.surfaceMuted,
+      decoration: AppDecorations.softCard(
         borderRadius: BorderRadius.circular(AppRadii.sm),
       ),
       child: Padding(

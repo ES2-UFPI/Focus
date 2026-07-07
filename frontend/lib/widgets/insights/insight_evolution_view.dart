@@ -211,11 +211,7 @@ class _ImprovementCard extends StatelessWidget {
     final cardRadius = BorderRadius.circular(AppRadii.md);
 
     return DecoratedBox(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        border: Border.all(color: AppColors.borderSubtle),
-        borderRadius: cardRadius,
-      ),
+      decoration: AppDecorations.card(borderRadius: cardRadius),
       child: Material(
         color: Colors.transparent,
         borderRadius: cardRadius,
@@ -357,7 +353,7 @@ class _MetricStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DecoratedBox(
-      decoration: BoxDecoration(
+      decoration: AppDecorations.softCard(
         color: presentation.accentColor.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(AppRadii.sm),
       ),

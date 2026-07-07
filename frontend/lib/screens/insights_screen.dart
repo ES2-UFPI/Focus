@@ -233,12 +233,16 @@ class _InsightsScreenState extends State<InsightsScreen> {
             AppSpacing.lg,
             AppSpacing.sm,
           ),
-          child: Material(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(AppRadii.lg),
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.xs),
-              child: Row(
+          child: DecoratedBox(
+            decoration: AppDecorations.card(
+              borderRadius: BorderRadius.circular(AppRadii.lg),
+            ),
+            child: Material(
+              color: Colors.transparent,
+              borderRadius: BorderRadius.circular(AppRadii.lg),
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.xs),
+                child: Row(
                 children: [
                   Expanded(
                     child: _ViewButton(
@@ -264,6 +268,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
                     ),
                   ),
                 ],
+                ),
               ),
             ),
           ),
