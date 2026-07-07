@@ -1,7 +1,8 @@
 from rest_framework import serializers
 
 from .models import BlocoPomodoro, SemanaEstudo, PlanejamentoDisciplina, HorarioEstudo, SessaoEstudo
-
+from django.utils import timezone
+from django.core.exceptions import ValidationError as DjangoValidationError
 # ──────────────────────────────────────────────
 # SemanaEstudo
 # ──────────────────────────────────────────────
@@ -207,6 +208,10 @@ class SessaoEstudoSerializer(serializers.ModelSerializer):
         read_only=True
     )
 
+    # 🌟 CORREÇÃO: Declarando os campos calculados explicitamente para o DRF mapear os get_
+    semana_estudo = serializers.SerializerMethodField()
+    horario_estudo = serializers.SerializerMethodField()
+
     class Meta:
         model = SessaoEstudo
 
@@ -225,25 +230,31 @@ class SessaoEstudoSerializer(serializers.ModelSerializer):
             'energia_inicial',
             'interrupcoes',
             'tipo_atividade',
+            'duracao_planejada_minutos',
+            'seguiu_planejamento',
         ]
       
         read_only_fields = ['id', 'semana_estudo']
         
     def get_semana_estudo(self, obj):
-        return timezone.localtime(obj.inicio).isocalendar().week
+        # 🛡️ Deixando o retorno sem o localtime conforme combinado para o Flutter não pular horas!
+        if not obj.inicio:
+            return None
+        return obj.inicio.isocalendar().week
 
     def get_horario_estudo(self, obj):
-        inicio = timezone.localtime(obj.inicio).strftime('%H:%M')
-        fim = timezone.localtime(obj.fim).strftime('%H:%M')
+        if not obj.inicio or not obj.fim:
+            return None
+        inicio = obj.inicio.strftime('%H:%M')
+        fim = obj.fim.strftime('%H:%M')
         return f'{inicio} - {fim}'
 
     def validate(self, attrs):
-        # Criamos um dicionário temporário a partir dos dados já validados/tratados pelo DRF
         contexto_validacao = {}
         
         if self.instance:
             contexto_validacao = {
-                'id': self.instance.id, # 🌟 ADICIONE ESTA LINHA AQUI! (Injeta o UUID na validação)
+                'id': self.instance.id,
                 'disciplina_id': self.instance.disciplina_id,
                 'inicio': self.instance.inicio,
                 'fim': self.instance.fim,
@@ -255,14 +266,12 @@ class SessaoEstudoSerializer(serializers.ModelSerializer):
                 'tipo_atividade': self.instance.tipo_atividade,
             }
             
-        # Mescla estritamente com os novos dados modificados vindos do payload
         for campo, valor in attrs.items():
             if campo == 'disciplina':
                 contexto_validacao['disciplina_id'] = valor.id if hasattr(valor, 'id') else valor
             else:
                 contexto_validacao[campo] = valor
 
-        # Criamos o objeto temporário de forma segura repassando o ID
         try:
             temp_instance = SessaoEstudo(**contexto_validacao)
             temp_instance.clean()
