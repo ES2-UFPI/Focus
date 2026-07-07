@@ -29,6 +29,8 @@ py -3.11 -m venv venv
 .\venv\Scripts\activate
 python -m pip install --upgrade pip setuptools wheel
 python -m pip install Django==5.1.6 djangorestframework==3.17.1 django-cors-headers==4.9.0
+python -m pip install dj-database-url
+python -m pip install whitenoise
 python manage.py migrate
 
 python manage.py runserver 127.0.0.1:8000
