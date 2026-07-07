@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     'sessao_estudo',
     'eventos_academicos',
     'materiais_estudo',
+    'insights',
 ]
 
 MIDDLEWARE = [

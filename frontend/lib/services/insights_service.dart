@@ -1,34 +1,92 @@
-import '../data/insights_mock.dart';
+import 'dart:convert';
+
+import 'package:http/http.dart' as http;
+
+import '../core/network/api_client.dart';
 import '../models/insights_model.dart';
 
 /// Ponto único de acesso aos dados do módulo Insights.
 ///
-/// Hoje serve a massa local (`insights_mock.dart`). A fase de dados troca
-/// apenas o corpo destes métodos por chamadas ao backend
-/// (`GET /api/insights/`, `GET /api/insights/evolucao/`,
-/// `POST /api/insights/{id}/feedback`), **sem alterar a UI** que consome esta
-/// interface — a tela já trata carregamento, erro e reenvio.
+/// Consome o backend real:
+/// - `GET  /api/insights/`               → [fetchInsights]
+/// - `GET  /api/insights/evolucao/`      → [fetchDashboard]
+/// - `POST /api/insights/{id}/feedback/` → [submitFeedback]
+///
+/// A UI que consome esta interface (tela, cards) não precisa saber a origem
+/// dos dados — ela já trata carregamento, erro e reenvio.
 class InsightsService {
-  const InsightsService();
+  /// Cliente HTTP injetável (facilita testes). Quando nulo, usa um cliente
+  /// padrão a cada chamada. Mantido opcional para preservar o construtor
+  /// `const` usado pela tela e pelos testes de widget.
+  final http.Client? client;
+
+  const InsightsService({this.client});
+
+  http.Client get _http => client ?? http.Client();
 
   /// Lista de insights do aluno autenticado.
-  Future<List<Insight>> fetchInsights() async => getInsightsMock();
+  Future<List<Insight>> fetchInsights() async {
+    final uri = Uri.parse('$kBaseUrl/api/insights/');
+    final response = await _http.get(uri, headers: kDefaultHeaders);
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body) as List<dynamic>;
+      return data
+          .whereType<Map<String, dynamic>>()
+          .map(Insight.fromJson)
+          .toList();
+    }
+    throw InsightsServiceException(
+      'Erro ao buscar insights. Status: ${response.statusCode}',
+    );
+  }
 
   /// Marcos da jornada exibidos na aba Evolução.
-  Future<List<InsightJourneyEvent>> fetchJourney() async => getJornadaMock();
+  ///
+  /// A jornada (diagnóstico → ação → melhora) depende do rastro de origem de
+  /// recomendação, que faz parte da Fase 4 do backend (ver
+  /// `docs/plano-backend-insights.md`). Enquanto essa fase não é implementada,
+  /// retorna vazio — a UI já trata a lista vazia.
+  Future<List<InsightJourneyEvent>> fetchJourney() async => const [];
 
   /// Resumo temporal usado no panorama, comparações e experimentos.
-  Future<InsightsDashboard> fetchDashboard() async =>
-      getInsightsDashboardMock();
+  Future<InsightsDashboard> fetchDashboard() async {
+    final uri = Uri.parse('$kBaseUrl/api/insights/evolucao/');
+    final response = await _http.get(uri, headers: kDefaultHeaders);
+    if (response.statusCode == 200) {
+      return InsightsDashboard.fromJson(
+        jsonDecode(response.body) as Map<String, dynamic>,
+      );
+    }
+    throw InsightsServiceException(
+      'Erro ao buscar evolução. Status: ${response.statusCode}',
+    );
+  }
 
-  /// Envia o feedback do usuário sobre um insight.
-  ///
-  /// No mock é um no-op; na fase de dados vira
-  /// `POST /api/insights/{id}/feedback`, alimentando personalização
-  /// determinística (rebaixar rejeitados, ajustar limiares, reavaliar depois).
+  /// Envia o feedback do usuário sobre um insight
+  /// (`POST /api/insights/{id}/feedback/`).
   Future<void> submitFeedback({
     required String insightId,
     required bool useful,
     String? reason,
-  }) async {}
+  }) async {
+    final uri = Uri.parse('$kBaseUrl/api/insights/$insightId/feedback/');
+    final response = await _http.post(
+      uri,
+      headers: kDefaultHeaders,
+      body: jsonEncode({'useful': useful, 'reason': ?reason}),
+    );
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      throw InsightsServiceException(
+        'Erro ao enviar feedback. Status: ${response.statusCode}',
+      );
+    }
+  }
+}
+
+class InsightsServiceException implements Exception {
+  final String message;
+  const InsightsServiceException(this.message);
+
+  @override
+  String toString() => message;
 }
