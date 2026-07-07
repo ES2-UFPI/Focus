@@ -32,30 +32,6 @@ String severityLabel(String severity) {
   }
 }
 
-String confidenceLabel(String confidence) {
-  switch (confidence) {
-    case 'alta':
-      return 'Confiança alta';
-    case 'media':
-      return 'Confiança média';
-    case 'insuficiente':
-    default:
-      return 'Dados insuficientes';
-  }
-}
-
-Color confidenceColor(String confidence) {
-  switch (confidence) {
-    case 'alta':
-      return AppColors.success;
-    case 'media':
-      return AppColors.warningStrong;
-    case 'insuficiente':
-    default:
-      return AppColors.neutral;
-  }
-}
-
 String categoryLabel(String category) {
   switch (category) {
     case 'tempo':

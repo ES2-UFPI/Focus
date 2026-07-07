@@ -8,14 +8,14 @@ void main() {
   test('fetchInsights resolves the insights list', () async {
     final insights = await service.fetchInsights();
 
-    expect(insights, hasLength(17));
+    expect(insights, hasLength(6));
     expect(insights.first, isA<Insight>());
   });
 
   test('fetchJourney resolves the journey events', () async {
     final journey = await service.fetchJourney();
 
-    expect(journey, hasLength(5));
+    expect(journey, hasLength(6));
     expect(journey.first, isA<InsightJourneyEvent>());
   });
 

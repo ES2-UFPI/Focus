@@ -160,58 +160,36 @@ void main() {
     expect(dashboard.experimentos.single.valorAtual, 4.0);
   });
 
-  test('mock covers all categories, sleep preview and insufficient data', () {
+  test('mock keeps the student profile compact and coherent', () {
     final insights = getInsightsMock();
 
-    expect(insights, hasLength(17));
+    expect(insights, hasLength(6));
     expect(insights.map((insight) => insight.categoria).toSet(), {
       'tempo',
       'foco',
       'planejamento',
       'rotina',
       'saude',
-      'metodo',
     });
     expect(
       insights.map((insight) => insight.tipo),
       containsAll([
         'melhor_horario',
-        'melhor_dia_semana',
         'duracao_ideal',
-        'foco_sem_interrupcoes',
-        'vies_estimativa',
         'tarefas_no_prazo',
         'taxa_furo',
-        'sequencia_produtiva',
-        'cramming',
-        'sono_x_rendimento',
-        'tela_antes_sessao',
-        'equilibrio_metodo',
-        'efeito_acao',
-        'progresso',
         'desgaste',
+        'efeito_acao',
       ]),
     );
     expect(
       insights.where((insight) => insight.confianca == 'insuficiente'),
-      hasLength(1),
+      isEmpty,
     );
     expect(
       insights.every((insight) => insight.natureza == 'observacional'),
       isTrue,
     );
-
-    final sleep = insights.singleWhere(
-      (insight) => insight.tipo == 'sono_x_rendimento',
-    );
-    expect(sleep.categoria, 'saude');
-    expect(sleep.numeros['queda_pct'], 35);
-    expect(sleep.acao, isNull);
-
-    final insufficient = insights.singleWhere(
-      (insight) => insight.confianca == 'insuficiente',
-    );
-    expect(insufficient.acao, isNull);
 
     final detailedTypes = insights
         .where(
@@ -225,12 +203,7 @@ void main() {
       containsAll({
         'melhor_horario',
         'duracao_ideal',
-        'vies_estimativa',
         'taxa_furo',
-        'cramming',
-        'sono_x_rendimento',
-        'tela_antes_sessao',
-        'equilibrio_metodo',
       }),
     );
   });
@@ -241,35 +214,33 @@ void main() {
         .where((insight) => insight.acao != null)
         .toList();
 
-    expect(actionable, hasLength(6));
-    expect(actionable.map((insight) => insight.tipo), {
+    expect(actionable, hasLength(2));
+    expect(actionable.map((insight) => insight.tipo).toSet(), {
       'melhor_horario',
       'taxa_furo',
-      'cramming',
-      'ritmo_disciplina',
-      'tela_antes_sessao',
-      'equilibrio_metodo',
     });
     expect(
       actionable.every(
         (insight) =>
             insight.acao!.tipo == 'agendar_sessao' ||
-            insight.acao!.tipo == 'reagendar' ||
-            insight.acao!.tipo == 'silenciar_celular',
+            insight.acao!.tipo == 'reagendar',
       ),
       isTrue,
     );
     expect(
       insights.map((insight) => insight.disciplina).whereType<String>().toSet(),
-      containsAll({'Cálculo', 'Banco de Dados', 'ES2', 'Física'}),
+      containsAll({'Estruturas de Dados', 'Banco de Dados'}),
     );
-    expect(insightDisciplinaCoresLocais.keys, containsAll({'Cálculo', 'ES2'}));
+    expect(
+      insightDisciplinaCoresLocais.keys,
+      containsAll({'Estruturas de Dados', 'Banco de Dados'}),
+    );
   });
 
   test('journey mock connects detection, action and observed improvement', () {
     final journey = getJornadaMock();
 
-    expect(journey, hasLength(5));
+    expect(journey, hasLength(4));
     expect(journey.first.tipo, 'detectado');
     expect(journey.map((event) => event.tipo).toSet(), {
       'detectado',
@@ -278,7 +249,7 @@ void main() {
     });
     expect(
       journey.map((event) => event.insightTipo),
-      containsAll({'melhor_horario', 'efeito_acao', 'progresso', 'taxa_furo'}),
+      containsAll({'melhor_horario', 'efeito_acao', 'taxa_furo'}),
     );
   });
 }

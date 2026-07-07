@@ -216,11 +216,6 @@ class _InsightDetailScreenState extends State<InsightDetailScreen> {
                 icon: LucideIcons.database,
                 color: AppColors.textMuted,
               ),
-              _DetailBadge(
-                label: confidenceLabel(_insight.confianca),
-                icon: LucideIcons.shieldCheck,
-                color: confidenceColor(_insight.confianca),
-              ),
             ],
           ),
           const SizedBox(height: AppSpacing.md),
@@ -292,7 +287,7 @@ class _InsightDetailScreenState extends State<InsightDetailScreen> {
         return 'Considere blocos de até 50 minutos, seguidos por uma pausa '
             'curta, e compare sua produtividade nas próximas sessões.';
       case 'vies_estimativa':
-        return 'Ao planejar Cálculo, acrescente uma margem de aproximadamente '
+        return 'Ao planejar uma tarefa mais pesada, acrescente uma margem de '
             '40% ao tempo inicial e ajuste com seus próximos registros.';
       case 'taxa_furo':
         return 'Teste outro horário para as sessões de sexta e acompanhe se a '

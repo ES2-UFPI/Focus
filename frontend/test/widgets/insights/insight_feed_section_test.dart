@@ -31,14 +31,14 @@ void main() {
   test('applies the subject filter to both priority groups', () {
     final groups = groupInsightsByPriority(
       getInsightsMock(),
-      disciplina: 'ES2',
+      disciplina: 'Estruturas de Dados',
     );
 
     expect(
       [
         ...groups.attention,
         ...groups.discoveries,
-      ].every((item) => item.disciplina == 'ES2'),
+      ].every((item) => item.disciplina == 'Estruturas de Dados'),
       isTrue,
     );
   });

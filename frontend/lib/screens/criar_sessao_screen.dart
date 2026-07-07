@@ -584,7 +584,7 @@ class _CriarSessaoScreenState extends State<CriarSessaoScreen> {
                       decoration: const InputDecoration(
                         labelText: 'Descrição / Tópicos de Foco (Opcional)',
                         hintText:
-                            'Ex: Ler cap. 2 de Cálculo, fazer exercícios da lista.',
+                            'Ex: revisar árvores binárias, praticar SQL.',
                         border: OutlineInputBorder(),
                         alignLabelWithHint: true,
                         prefixIcon: Padding(

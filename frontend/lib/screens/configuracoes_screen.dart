@@ -246,7 +246,7 @@ class _ConfiguracoesScreenState extends State<ConfiguracoesScreen> {
               ListTile(
                 leading: const Icon(Icons.info_outline, color: Colors.grey),
                 title: const Text('Sobre o Focus'),
-                subtitle: const Text('Versão 1.0.0 — ES2'),
+                subtitle: const Text('Versão 1.0.0 — perfil do estudante'),
                 onTap: () {},
               ),
               ListTile(
