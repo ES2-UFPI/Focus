@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -20,12 +21,19 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-h8xbi!8zof+1bhrlf5&#6l+*1hs+cv@u97a693ej)hswu+8wy('
+SECRET_KEY = os.environ.get(
+    'SECRET_KEY',
+    'django-insecure-h8xbi!8zof+1bhrlf5&#6l+*1hs+cv@u97a693ej)hswu+8wy(',
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.environ.get('ALLOWED_HOSTS', '*').split(',')
+    if host.strip()
+]
 
 
 # Application definition
@@ -47,10 +55,12 @@ INSTALLED_APPS = [
     'sessao_estudo',
     'eventos_academicos',
     'materiais_estudo',
+    'insights',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -84,11 +94,13 @@ WSGI_APPLICATION = 'focus_api.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
+import dj_database_url
+
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.config(
+        default=f'sqlite:///{BASE_DIR / "db.sqlite3"}',
+        conn_max_age=600,
+    )
 }
 
 
@@ -126,6 +138,12 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STORAGES = {
+    'staticfiles': {
+        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+    },
+}
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
@@ -143,8 +161,16 @@ REST_FRAMEWORK = {
     ],
 }
 
-# CORS — permite todas as origens em ambiente de desenvolvimento
-CORS_ALLOW_ALL_ORIGINS = True
+# CORS — em desenvolvimento (sem FRONTEND_URL definida) libera tudo;
+# em produção restringe à origem do frontend via env var.
+_frontend_urls = [
+    url.strip() for url in os.environ.get('FRONTEND_URL', '').split(',') if url.strip()
+]
+
+if _frontend_urls:
+    CORS_ALLOWED_ORIGINS = _frontend_urls
+else:
+    CORS_ALLOW_ALL_ORIGINS = True
 
 CORS_ALLOW_CREDENTIALS = True
 
@@ -152,4 +178,5 @@ CORS_ALLOW_CREDENTIALS = True
 CSRF_TRUSTED_ORIGINS = [
     'http://localhost:63607',
     'http://127.0.0.1:63607',
+    *_frontend_urls,
 ]
