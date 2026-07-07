@@ -435,8 +435,51 @@ class _NotaCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontSize: 12, color: AppColors.neutral),
             ),
+            if (nota.itensDe('duvidas').isNotEmpty) ...[
+              const SizedBox(height: 7),
+              _DuvidasBadge(count: nota.itensDe('duvidas').length),
+            ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Selo com a quantidade de itens em "Dúvidas pendentes" — permite varrer a
+/// lista e ver de longe quais notas ainda precisam de revisão.
+class _DuvidasBadge extends StatelessWidget {
+  final int count;
+
+  const _DuvidasBadge({required this.count});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: AppColors.recommendationBackground,
+        border: Border.all(color: AppColors.recommendationBorder),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            LucideIcons.helpCircle,
+            size: 11,
+            color: AppColors.warningStrong,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            count == 1 ? '1 dúvida pendente' : '$count dúvidas pendentes',
+            style: const TextStyle(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w700,
+              color: AppColors.warningStrong,
+            ),
+          ),
+        ],
       ),
     );
   }
