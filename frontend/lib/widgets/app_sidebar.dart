@@ -81,6 +81,12 @@ class AppSidebar extends StatelessWidget {
                   'Pomodoro',
                 ),
                 _buildItem(
+                  context,
+                  AppPage.notas,
+                  LucideIcons.fileText,
+                  'Notas',
+                ),
+                _buildItem(
                   
                   context,
                  
