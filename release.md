@@ -72,3 +72,22 @@ A tela de Consistência Semanal apresenta dados demonstrativos nesta versão. A 
 
 
 ## Pomodoro
+
+o Pomodoro é uma tela de foco cronometrado ligada às disciplinas e sessões de estudo.
+
+ Ele faz isto:
+
+  - Permite escolher uma matéria e uma sessão agendada antes de iniciar o foco.
+  - Roda ciclos de Foco, Pausa curta e Pausa longa.
+  - Padrão atual:
+      - Foco: 25 min
+      - Pausa curta: 5 min
+      - Pausa longa: 15 min
+      - Pausa longa a cada 4 ciclos.
+
+  A nova tela de Pomodoro permite executar sessões de foco vinculadas às disciplinas e sessões de estudo cadastradas. O estudante pode
+  iniciar ciclos de foco, alternar entre pausas curtas e longas, ajustar durações, registrar interrupções e avaliar a produtividade ao
+  final de cada bloco.
+
+  Cada ciclo concluído é salvo como um bloco Pomodoro, contribuindo para o histórico de foco, o resumo diário e os dados usados
+  posteriormente em análises de produtividade e insights.
