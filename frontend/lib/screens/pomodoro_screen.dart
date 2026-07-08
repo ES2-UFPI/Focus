@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../core/theme/app_theme.dart';
+import '../providers/app_shell_provider.dart';
 import '../providers/pomodoro_provider.dart';
 import '../services/sessao_estudo_service.dart';
 
@@ -29,10 +30,16 @@ class _PomodoroView extends StatefulWidget {
 
 class _PomodoroViewState extends State<_PomodoroView> {
   bool _productivityPromptOpen = false;
+  bool _wasVisibleInShell = false;
+  bool _refreshScheduled = false;
+  int _lastRefreshRevision = -1;
 
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<PomodoroProvider>();
+    final shellState = _watchShellState(context);
+    _scheduleRefreshIfNeeded(provider, shellState.visible, shellState.revision);
+
     if (provider.produtividadePendente && !_productivityPromptOpen) {
       _productivityPromptOpen = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -92,6 +99,48 @@ class _PomodoroViewState extends State<_PomodoroView> {
               ),
       ),
     );
+  }
+
+  ({bool visible, int revision}) _watchShellState(BuildContext context) {
+    try {
+      final shell = context.watch<AppShellProvider>();
+      return (
+        visible: shell.currentPage == AppPage.pomodoro,
+        revision: shell.pomodoroRefreshRevision,
+      );
+    } on ProviderNotFoundException {
+      return (visible: true, revision: 0);
+    }
+  }
+
+  void _scheduleRefreshIfNeeded(
+    PomodoroProvider provider,
+    bool visible,
+    int revision,
+  ) {
+    if (!visible) {
+      _wasVisibleInShell = false;
+      return;
+    }
+    if (provider.loading) return;
+
+    final shouldRefresh =
+        !_wasVisibleInShell || revision != _lastRefreshRevision;
+    _wasVisibleInShell = true;
+    if (!shouldRefresh || _refreshScheduled) return;
+
+    _lastRefreshRevision = revision;
+    _refreshScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      try {
+        await provider.atualizarDadosExternos();
+      } finally {
+        if (mounted) {
+          setState(() => _refreshScheduled = false);
+        }
+      }
+    });
   }
 
   Future<void> _askProductivity(PomodoroProvider provider) async {

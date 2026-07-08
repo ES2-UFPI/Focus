@@ -13,10 +13,13 @@ class AppShellProvider extends ChangeNotifier {
   ];
 
   int _currentIndex = 0;
+  int _pomodoroRefreshRevision = 0;
 
   int get currentIndex => _currentIndex;
 
   AppPage get currentPage => pages[_currentIndex];
+
+  int get pomodoroRefreshRevision => _pomodoroRefreshRevision;
 
   void selectIndex(int index) {
     if (index < 0 || index >= pages.length || index == _currentIndex) return;
@@ -27,5 +30,10 @@ class AppShellProvider extends ChangeNotifier {
   void selectPage(AppPage page) {
     final index = pages.indexOf(page);
     selectIndex(index);
+  }
+
+  void notifyPomodoroDataChanged() {
+    _pomodoroRefreshRevision++;
+    notifyListeners();
   }
 }
