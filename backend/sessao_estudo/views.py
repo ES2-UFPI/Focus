@@ -5,7 +5,6 @@ from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
 from django.http import Http404
 from django.shortcuts import get_object_or_404
-from disciplinas.models import Disciplina
 
 
 from .models import BlocoPomodoro, SessaoEstudo, PlanejamentoDisciplina
@@ -99,8 +98,7 @@ class SessaoEstudoViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def dashboard(self, request):
-        print(f"🚀 [Dashboard] Processando dados para: {request.user.email}")
-
+        # Retorna o cálculo do serviço usando o aluno_id correto
         return Response(
             self.consistencia.obter_dashboard_consistencia(self.aluno_id)
         )

@@ -53,12 +53,10 @@ class AppSidebar extends StatelessWidget {
                   'Eventos',
                 ),
                 _buildItem(
-                  
                   context,
-                 
-                  AppPage.metas,
-                  LucideIcons.target,
-                  'Metas Semanais',
+                  AppPage.disciplinas,
+                  LucideIcons.bookOpen,
+                  'Disciplinas',
                 ),
                 _buildItem(
                   context,

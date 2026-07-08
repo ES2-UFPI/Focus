@@ -4,13 +4,20 @@ import '../services/disciplina_service.dart';
 import '../services/agenda_service.dart';
 
 class CriarDisciplinaDialog extends StatefulWidget {
-  const CriarDisciplinaDialog({super.key});
+  /// Quando informada, o diálogo edita a disciplina em vez de criar uma nova.
+  final Disciplina? disciplinaExistente;
 
-  static Future<Disciplina?> show(BuildContext context) {
+  const CriarDisciplinaDialog({super.key, this.disciplinaExistente});
+
+  static Future<Disciplina?> show(
+    BuildContext context, {
+    Disciplina? disciplinaExistente,
+  }) {
     return showDialog<Disciplina>(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const CriarDisciplinaDialog(),
+      builder: (context) =>
+          CriarDisciplinaDialog(disciplinaExistente: disciplinaExistente),
     );
   }
 
@@ -29,6 +36,20 @@ class _CriarDisciplinaDialogState extends State<CriarDisciplinaDialog> {
   String _corSelecionada = '#2196F3'; // Azul padrão
   bool _isSaving = false;
   String? _errorMessage;
+
+  bool get _editando => widget.disciplinaExistente != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final d = widget.disciplinaExistente;
+    if (d != null) {
+      _nomeController.text = d.nome;
+      _codigoController.text = d.codigo ?? '';
+      _descricaoController.text = d.descricao ?? '';
+      _corSelecionada = d.cor;
+    }
+  }
 
   final List<Map<String, String>> _paletaCores = [
     {'nome': 'Azul', 'hex': '#2196F3'},
@@ -58,15 +79,29 @@ class _CriarDisciplinaDialogState extends State<CriarDisciplinaDialog> {
     });
 
     try {
-      final novaDisciplina = await _disciplinaService.criarDisciplina(
-        nome: _nomeController.text.trim(),
-        codigo: _codigoController.text.trim().isEmpty ? null : _codigoController.text.trim(),
-        descricao: _descricaoController.text.trim().isEmpty ? null : _descricaoController.text.trim(),
-        cor: _corSelecionada,
-      );
+      final nome = _nomeController.text.trim();
+      final codigo =
+          _codigoController.text.trim().isEmpty ? null : _codigoController.text.trim();
+      final descricao =
+          _descricaoController.text.trim().isEmpty ? null : _descricaoController.text.trim();
+
+      final disciplina = _editando
+          ? await _disciplinaService.atualizarDisciplina(
+              id: widget.disciplinaExistente!.id,
+              nome: nome,
+              codigo: codigo,
+              descricao: descricao,
+              cor: _corSelecionada,
+            )
+          : await _disciplinaService.criarDisciplina(
+              nome: nome,
+              codigo: codigo,
+              descricao: descricao,
+              cor: _corSelecionada,
+            );
 
       if (mounted) {
-        Navigator.of(context).pop(novaDisciplina);
+        Navigator.of(context).pop(disciplina);
       }
     } on AgendaServiceException catch (e) {
       setState(() {
@@ -84,7 +119,7 @@ class _CriarDisciplinaDialogState extends State<CriarDisciplinaDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Nova Disciplina'),
+      title: Text(_editando ? 'Editar Disciplina' : 'Nova Disciplina'),
       content: SingleChildScrollView(
         child: Form(
           key: _formKey,
@@ -205,7 +240,7 @@ class _CriarDisciplinaDialogState extends State<CriarDisciplinaDialog> {
                     valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                   ),
                 )
-              : const Text('Criar'),
+              : Text(_editando ? 'Salvar' : 'Criar'),
         ),
       ],
     );
