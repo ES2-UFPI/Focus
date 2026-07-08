@@ -9,7 +9,7 @@ class InsightFeedRow extends StatelessWidget {
   final String id;
   final Color indicatorColor;
   final IconData icon;
-  final _InsightFeedPresentation presentation;
+  final _InsightFeedPresentation _presentation;
   final VoidCallback? onTap;
   final VoidCallback? onAcknowledge;
 
@@ -18,10 +18,10 @@ class InsightFeedRow extends StatelessWidget {
     required this.id,
     required this.indicatorColor,
     required this.icon,
-    required this.presentation,
+    required _InsightFeedPresentation presentation,
     this.onTap,
     this.onAcknowledge,
-  });
+  }) : _presentation = presentation;
 
   factory InsightFeedRow.fromInsight({
     Key? key,
@@ -81,10 +81,10 @@ class InsightFeedRow extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _InsightTag(tag: presentation.tag),
+                            _InsightTag(tag: _presentation.tag),
                             const SizedBox(height: AppSpacing.xs),
                             Text(
-                              presentation.title,
+                              _presentation.title,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: AppTypography.cardTitle.copyWith(
@@ -94,7 +94,7 @@ class InsightFeedRow extends StatelessWidget {
                             ),
                             const SizedBox(height: AppSpacing.xs),
                             Text(
-                              presentation.context,
+                              _presentation.context,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: AppTypography.caption.copyWith(
@@ -115,10 +115,10 @@ class InsightFeedRow extends StatelessWidget {
                   ),
                   const SizedBox(height: AppSpacing.md),
                   _InsightStoryGrid(
-                    sections: presentation.sections,
+                    sections: _presentation.sections,
                     accentColor: indicatorColor,
                   ),
-                  if (presentation.showAcknowledge) ...[
+                  if (_presentation.showAcknowledge) ...[
                     const SizedBox(height: AppSpacing.md),
                     Align(
                       alignment: Alignment.centerRight,
@@ -202,7 +202,8 @@ class _InsightFeedPresentation {
           ),
           _InsightStorySection(
             label: 'Recomendação',
-            text: 'Deixe tarefas exigentes para a manhã e use a noite só para revisão leve.',
+            text:
+                'Deixe tarefas exigentes para a manhã e use a noite só para revisão leve.',
           ),
           _InsightStorySection(
             label: 'Resultado esperado',
@@ -213,11 +214,13 @@ class _InsightFeedPresentation {
         return const [
           _InsightStorySection(
             label: 'Padrão ruim observado',
-            text: 'Revisões de Banco de Dados passam a perder foco após blocos longos.',
+            text:
+                'Revisões de Banco de Dados passam a perder foco após blocos longos.',
           ),
           _InsightStorySection(
             label: 'Recomendação',
-            text: 'Use blocos de até 50 min e faça uma pausa curta antes de continuar.',
+            text:
+                'Use blocos de até 50 min e faça uma pausa curta antes de continuar.',
           ),
           _InsightStorySection(
             label: 'Resultado esperado',
@@ -316,7 +319,8 @@ class _InsightFeedPresentation {
           ),
           const _InsightStorySection(
             label: 'Próximo uso',
-            text: 'Observe se o mesmo comportamento aparece em outras matérias.',
+            text:
+                'Observe se o mesmo comportamento aparece em outras matérias.',
           ),
         ];
     }
@@ -340,10 +344,7 @@ class _InsightTagData {
   }
 
   factory _InsightTagData.discovery() {
-    return const _InsightTagData(
-      label: 'Informativo',
-      color: AppColors.info,
-    );
+    return const _InsightTagData(label: 'Informativo', color: AppColors.info);
   }
 }
 
@@ -419,10 +420,7 @@ class _InsightStoryBlock extends StatelessWidget {
   final _InsightStorySection section;
   final Color accentColor;
 
-  const _InsightStoryBlock({
-    required this.section,
-    required this.accentColor,
-  });
+  const _InsightStoryBlock({required this.section, required this.accentColor});
 
   @override
   Widget build(BuildContext context) {

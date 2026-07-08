@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../core/theme/app_theme.dart';
-import '../data/insights_mock.dart';
 import '../models/insights_model.dart';
 import '../services/insights_service.dart';
 import '../widgets/insights/insight_evolution_view.dart';
@@ -17,10 +16,9 @@ import 'insight_detail_screen.dart';
 enum _InsightsView { insights, evolucao }
 
 class InsightsScreen extends StatefulWidget {
-  final List<Insight>? insights;
   final InsightsService? service;
 
-  const InsightsScreen({super.key, this.insights, this.service});
+  const InsightsScreen({super.key, this.service});
 
   @override
   State<InsightsScreen> createState() => _InsightsScreenState();
@@ -42,25 +40,8 @@ class _InsightsScreenState extends State<InsightsScreen> {
   void initState() {
     super.initState();
     _service = widget.service ?? const InsightsService();
-    if (widget.insights != null) {
-      _items = widget.insights!;
-      _journey = getJornadaMock();
-    } else {
-      _loading = true;
-      _fetch();
-    }
-  }
-
-  @override
-  void didUpdateWidget(covariant InsightsScreen oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.insights != widget.insights && widget.insights != null) {
-      setState(() {
-        _items = widget.insights!;
-        _loading = false;
-        _error = null;
-      });
-    }
+    _loading = true;
+    _fetch();
   }
 
   Future<void> _fetch() async {
@@ -243,31 +224,31 @@ class _InsightsScreenState extends State<InsightsScreen> {
               child: Padding(
                 padding: const EdgeInsets.all(AppSpacing.xs),
                 child: Row(
-                children: [
-                  Expanded(
-                    child: _ViewButton(
-                      key: const ValueKey('view-insights'),
-                      label: 'Insights',
-                      icon: LucideIcons.sparkles,
-                      selected: _selectedView == _InsightsView.insights,
-                      onPressed: () => setState(
-                        () => _selectedView = _InsightsView.insights,
+                  children: [
+                    Expanded(
+                      child: _ViewButton(
+                        key: const ValueKey('view-insights'),
+                        label: 'Insights',
+                        icon: LucideIcons.sparkles,
+                        selected: _selectedView == _InsightsView.insights,
+                        onPressed: () => setState(
+                          () => _selectedView = _InsightsView.insights,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: AppSpacing.xs),
-                  Expanded(
-                    child: _ViewButton(
-                      key: const ValueKey('view-evolucao'),
-                      label: 'Evolução',
-                      icon: LucideIcons.trendingUp,
-                      selected: _selectedView == _InsightsView.evolucao,
-                      onPressed: () => setState(
-                        () => _selectedView = _InsightsView.evolucao,
+                    const SizedBox(width: AppSpacing.xs),
+                    Expanded(
+                      child: _ViewButton(
+                        key: const ValueKey('view-evolucao'),
+                        label: 'Evolução',
+                        icon: LucideIcons.trendingUp,
+                        selected: _selectedView == _InsightsView.evolucao,
+                        onPressed: () => setState(
+                          () => _selectedView = _InsightsView.evolucao,
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
                 ),
               ),
             ),

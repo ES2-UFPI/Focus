@@ -1,12 +1,13 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:frontend/data/insights_mock.dart';
 import 'package:frontend/widgets/insights/insight_recommendations_section.dart';
+
+import '../../fixtures/insights_fixtures.dart';
 
 void main() {
   test('deduplicates actions and keeps only actionable experiments', () {
     final entries = buildInsightRecommendationEntries(
-      insights: getInsightsMock(),
-      experiments: getInsightsDashboardMock().experimentos,
+      insights: getInsightsFixture(),
+      experiments: getInsightsDashboardFixture().experimentos,
     );
     final actions = entries
         .where((entry) => entry.kind == InsightRecommendationKind.action)

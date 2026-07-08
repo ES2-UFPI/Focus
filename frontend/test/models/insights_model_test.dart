@@ -1,7 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/data/insight_disciplina_colors.dart';
-import 'package:frontend/data/insights_mock.dart';
 import 'package:frontend/models/insights_model.dart';
+
+import '../fixtures/insights_fixtures.dart';
 
 void main() {
   test('Insight.fromJson reads the future backend contract', () {
@@ -34,6 +35,8 @@ void main() {
           'disciplina': 'Cálculo',
           'duracaoMin': 50,
           'produtividade': 4.1,
+          'status': 'CONCLUIDO',
+          'horario': '08:00 - 08:50',
         },
       ],
     });
@@ -57,6 +60,9 @@ void main() {
     expect(insight.sessoesEvidencia, hasLength(1));
     expect(insight.sessoesEvidencia.single.duracaoMin, 50);
     expect(insight.sessoesEvidencia.single.produtividade, 4.1);
+    expect(insight.sessoesEvidencia.single.status, 'CONCLUIDO');
+    expect(insight.sessoesEvidencia.single.horario, '08:00 - 08:50');
+    expect(insight.sessoesEvidencia.single.isCancelada, isFalse);
   });
 
   test('Insight.fromJson reads the stable id used by feedback', () {
@@ -160,8 +166,8 @@ void main() {
     expect(dashboard.experimentos.single.valorAtual, 4.0);
   });
 
-  test('mock keeps the student profile compact and coherent', () {
-    final insights = getInsightsMock();
+  test('fixture keeps the student profile compact and coherent', () {
+    final insights = getInsightsFixture();
 
     expect(insights, hasLength(6));
     expect(insights.map((insight) => insight.categoria).toSet(), {
@@ -200,16 +206,12 @@ void main() {
         .toSet();
     expect(
       detailedTypes,
-      containsAll({
-        'melhor_horario',
-        'duracao_ideal',
-        'taxa_furo',
-      }),
+      containsAll({'melhor_horario', 'duracao_ideal', 'taxa_furo'}),
     );
   });
 
-  test('mock keeps actions curated and subject colors local', () {
-    final insights = getInsightsMock();
+  test('fixture keeps actions curated and subject colors local', () {
+    final insights = getInsightsFixture();
     final actionable = insights
         .where((insight) => insight.acao != null)
         .toList();
@@ -237,19 +239,28 @@ void main() {
     );
   });
 
-  test('journey mock connects detection, action and observed improvement', () {
-    final journey = getJornadaMock();
+  test(
+    'journey fixture connects detection, action and observed improvement',
+    () {
+      final journey = getJourneyFixture();
 
-    expect(journey, hasLength(4));
-    expect(journey.first.tipo, 'detectado');
-    expect(journey.map((event) => event.tipo).toSet(), {
-      'detectado',
-      'acao',
-      'melhora',
-    });
-    expect(
-      journey.map((event) => event.insightTipo),
-      containsAll({'melhor_horario', 'efeito_acao', 'taxa_furo'}),
-    );
-  });
+      expect(journey, hasLength(6));
+      expect(journey.first.tipo, 'detectado');
+      expect(journey.map((event) => event.tipo).toSet(), {
+        'detectado',
+        'acao',
+        'melhora',
+      });
+      expect(
+        journey.map((event) => event.insightTipo),
+        containsAll({'melhor_horario', 'efeito_acao', 'taxa_furo'}),
+      );
+
+      final improvementTypes = journey
+          .where((event) => event.tipo == 'melhora')
+          .map((event) => event.insightTipo)
+          .toSet();
+      expect(improvementTypes, {'desgaste', 'duracao_ideal', 'taxa_furo'});
+    },
+  );
 }

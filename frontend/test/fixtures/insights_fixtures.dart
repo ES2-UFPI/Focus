@@ -1,17 +1,15 @@
-import '../models/insights_model.dart';
+import 'package:frontend/models/insights_model.dart';
+import 'package:frontend/services/insights_service.dart';
 
-// Perfil da demo:
+// Perfil de fixture:
 // Estudante do 5º semestre de Engenharia de Software.
 // Estagia das 13h às 17h e usa o Focus para manter Estruturas de Dados
 // e Banco de Dados sob controle sem empurrar tudo para sexta à noite.
 const _estruturasDisciplinaId = '62bca7f0919a4536b5337fcbf3f777c6';
 const _bancoDadosDisciplinaId = '3c2a4a0d5fef4e4f937f7f91bba253bb';
 
-/// Fonte temporária e única dos insights exibidos no painel Insights.
-///
-/// Quando o endpoint estiver disponível, esta chamada será o ponto de troca
-/// pelo método equivalente do serviço de API.
-List<Insight> getInsightsMock() {
+/// Massa de teste usada para validar a apresentação de insights.
+List<Insight> getInsightsFixture() {
   return const [
     Insight(
       id: 'estudante-melhor-horario',
@@ -146,18 +144,24 @@ List<Insight> getInsightsMock() {
           disciplina: 'Banco de Dados',
           duracaoMin: 0,
           produtividade: 0,
+          status: 'CANCELADO',
+          horario: '20:00 - 20:45',
         ),
         InsightEvidenceSession(
           data: '2026-06-19',
           disciplina: 'Banco de Dados',
           duracaoMin: 0,
           produtividade: 0,
+          status: 'CANCELADO',
+          horario: '22:00 - 22:45',
         ),
         InsightEvidenceSession(
           data: '2026-06-26',
           disciplina: 'Banco de Dados',
           duracaoMin: 36,
           produtividade: 3.0,
+          status: 'CONCLUIDO',
+          horario: '20:00 - 20:45',
         ),
       ],
       acao: InsightAction(
@@ -174,7 +178,11 @@ List<Insight> getInsightsMock() {
       descricao:
           'Nos dias com estágio, sono curto e estudo depois das 20h, a '
           'produtividade média cai 26%.',
-      numeros: {'sessoes_noturnas': 4, 'horas_sono_media': 5.8, 'queda_pct': 26},
+      numeros: {
+        'sessoes_noturnas': 4,
+        'horas_sono_media': 5.8,
+        'queda_pct': 26,
+      },
       categoria: 'saude',
       amostra: 7,
       confianca: 'media',
@@ -203,8 +211,8 @@ List<Insight> getInsightsMock() {
   ];
 }
 
-/// Resumo mockado usado nas leituras de panorama, comparação e experimento.
-InsightsDashboard getInsightsDashboardMock() {
+/// Resumo de fixture usado nas leituras de panorama, comparação e experimento.
+InsightsDashboard getInsightsDashboardFixture() {
   return const InsightsDashboard(
     periodo: '24 a 30 de junho',
     atualizadoEm: 'Atualizado hoje, 08:40',
@@ -343,9 +351,8 @@ InsightsDashboard getInsightsDashboardMock() {
   );
 }
 
-/// Jornada mockada da demo. Na fase de dados, estes eventos virão do backend
-/// junto dos insights de progresso e efeito observado após uma ação.
-List<InsightJourneyEvent> getJornadaMock() {
+/// Jornada de fixture para validar progresso e efeito observado após uma ação.
+List<InsightJourneyEvent> getJourneyFixture() {
   return const [
     InsightJourneyEvent(
       data: 'Há 3 semanas',
@@ -361,7 +368,7 @@ List<InsightJourneyEvent> getJornadaMock() {
       texto:
           'Você passou a reservar dois blocos de ED antes do estágio, entre 7h '
           'e 10h.',
-      insightTipo: 'melhor_horario',
+      insightTipo: 'efeito_acao',
     ),
     InsightJourneyEvent(
       data: 'Há 8 dias',
@@ -396,4 +403,56 @@ List<InsightJourneyEvent> getJornadaMock() {
       insightTipo: 'taxa_furo',
     ),
   ];
+}
+
+class FixtureInsightsService extends InsightsService {
+  final List<Insight>? insights;
+  final List<InsightJourneyEvent>? journey;
+  final InsightsDashboard? dashboard;
+  final Duration delay;
+  final Object? error;
+
+  const FixtureInsightsService({
+    this.insights,
+    this.journey,
+    this.dashboard,
+    this.delay = Duration.zero,
+    this.error,
+  });
+
+  Future<void> _wait() async {
+    if (delay != Duration.zero) {
+      await Future<void>.delayed(delay);
+    }
+  }
+
+  @override
+  Future<List<Insight>> fetchInsights() async {
+    await _wait();
+    final error = this.error;
+    if (error != null) {
+      throw error;
+    }
+    return insights ?? getInsightsFixture();
+  }
+
+  @override
+  Future<List<InsightJourneyEvent>> fetchJourney() async {
+    await _wait();
+    final error = this.error;
+    if (error != null) {
+      throw error;
+    }
+    return journey ?? getJourneyFixture();
+  }
+
+  @override
+  Future<InsightsDashboard> fetchDashboard() async {
+    await _wait();
+    final error = this.error;
+    if (error != null) {
+      throw error;
+    }
+    return dashboard ?? getInsightsDashboardFixture();
+  }
 }

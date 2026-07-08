@@ -1,41 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:frontend/data/insights_mock.dart';
-import 'package:frontend/models/insights_model.dart';
 import 'package:frontend/screens/insights_screen.dart';
-import 'package:frontend/services/insights_service.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
-class _DelayedInsightsService extends InsightsService {
-  const _DelayedInsightsService();
-
-  @override
-  Future<List<Insight>> fetchInsights() async {
-    await Future<void>.delayed(const Duration(milliseconds: 60));
-    return getInsightsMock();
-  }
-
-  @override
-  Future<List<InsightJourneyEvent>> fetchJourney() async {
-    await Future<void>.delayed(const Duration(milliseconds: 60));
-    return getJornadaMock();
-  }
-
-  @override
-  Future<InsightsDashboard> fetchDashboard() async {
-    await Future<void>.delayed(const Duration(milliseconds: 60));
-    return getInsightsDashboardMock();
-  }
-}
-
-class _FailingInsightsService extends InsightsService {
-  const _FailingInsightsService();
-
-  @override
-  Future<List<Insight>> fetchInsights() async {
-    throw Exception('offline');
-  }
-}
+import '../fixtures/insights_fixtures.dart';
 
 void _configureLargeView(WidgetTester tester) {
   tester.view.physicalSize = const Size(1000, 1800);
@@ -48,7 +16,11 @@ void main() {
   testWidgets('shows loading, then the insight feed', (tester) async {
     _configureLargeView(tester);
     await tester.pumpWidget(
-      const ShadApp(home: InsightsScreen(service: _DelayedInsightsService())),
+      const ShadApp(
+        home: InsightsScreen(
+          service: FixtureInsightsService(delay: Duration(milliseconds: 60)),
+        ),
+      ),
     );
     await tester.pump();
 
@@ -63,7 +35,11 @@ void main() {
   testWidgets('shows an error state with retry', (tester) async {
     _configureLargeView(tester);
     await tester.pumpWidget(
-      const ShadApp(home: InsightsScreen(service: _FailingInsightsService())),
+      ShadApp(
+        home: InsightsScreen(
+          service: FixtureInsightsService(error: Exception('offline')),
+        ),
+      ),
     );
     await tester.pumpAndSettle();
 
@@ -75,7 +51,14 @@ void main() {
   });
 
   testWidgets('renders the empty insights state', (tester) async {
-    await tester.pumpWidget(const ShadApp(home: InsightsScreen(insights: [])));
+    await tester.pumpWidget(
+      const ShadApp(
+        home: InsightsScreen(
+          service: FixtureInsightsService(insights: [], journey: []),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
 
     expect(
       find.text('Estude algumas sessões para desbloquear seus insights.'),
@@ -88,9 +71,9 @@ void main() {
   ) async {
     _configureLargeView(tester);
     await tester.pumpWidget(
-      ShadApp(home: InsightsScreen(insights: getInsightsMock())),
+      const ShadApp(home: InsightsScreen(service: FixtureInsightsService())),
     );
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     expect(find.text('Pontos para melhorar'), findsOneWidget);
     expect(find.text('Descobertas'), findsOneWidget);
@@ -107,7 +90,10 @@ void main() {
       find.byKey(const ValueKey('feed-row-amostra_insuficiente')),
       findsNothing,
     );
-    expect(find.byKey(const ValueKey('feed-row-dimension-tempo')), findsNothing);
+    expect(
+      find.byKey(const ValueKey('feed-row-dimension-tempo')),
+      findsNothing,
+    );
     expect(find.text('Padrão ruim observado'), findsWidgets);
     expect(find.text('Recomendação'), findsWidgets);
     expect(find.text('Resultado esperado'), findsWidgets);
@@ -129,9 +115,9 @@ void main() {
   testWidgets('subject filter narrows the insight feed', (tester) async {
     _configureLargeView(tester);
     await tester.pumpWidget(
-      ShadApp(home: InsightsScreen(insights: getInsightsMock())),
+      const ShadApp(home: InsightsScreen(service: FixtureInsightsService())),
     );
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     await tester.tap(
       find.byKey(const ValueKey('subject-filter-Banco de Dados')),
@@ -151,9 +137,9 @@ void main() {
   ) async {
     _configureLargeView(tester);
     await tester.pumpWidget(
-      ShadApp(home: InsightsScreen(insights: getInsightsMock())),
+      const ShadApp(home: InsightsScreen(service: FixtureInsightsService())),
     );
-    await tester.pump();
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('view-evolucao')));
     await tester.pump();
 
@@ -173,10 +159,7 @@ void main() {
       find.byKey(const ValueKey('evolution-improvement-taxa_furo')),
       findsOneWidget,
     );
-    expect(
-      find.text('Menos estudo tarde'),
-      findsOneWidget,
-    );
+    expect(find.text('Menos estudo tarde'), findsOneWidget);
     expect(find.text('Blocos mais curtos'), findsOneWidget);
     expect(find.text('Sexta à noite evitada'), findsOneWidget);
     expect(
@@ -186,10 +169,7 @@ void main() {
     expect(find.text('Fonte'), findsOneWidget);
     expect(find.text('Sono e rotina'), findsOneWidget);
     expect(find.text('Saúde'), findsNothing);
-    expect(
-      find.text('Produtividade'),
-      findsOneWidget,
-    );
+    expect(find.text('Produtividade'), findsOneWidget);
     expect(find.text('3,5'), findsOneWidget);
     expect(find.text('4,2'), findsOneWidget);
     expect(find.text('+20%'), findsOneWidget);
@@ -199,10 +179,7 @@ void main() {
     expect(find.textContaining('Ajuste:'), findsNothing);
     expect(find.textContaining('Problema:'), findsNothing);
     expect(find.textContaining('p.p.'), findsNothing);
-    expect(
-      find.textContaining('Relacionado:'),
-      findsWidgets,
-    );
+    expect(find.textContaining('Relacionado:'), findsWidgets);
     final latestTop = tester.getTopLeft(
       find.byKey(const ValueKey('evolution-improvement-taxa_furo')),
     );
@@ -238,14 +215,11 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     await tester.pumpWidget(
-      ShadApp(home: InsightsScreen(insights: getInsightsMock())),
+      const ShadApp(home: InsightsScreen(service: FixtureInsightsService())),
     );
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
-    expect(
-      find.byKey(const ValueKey('feed-row-desgaste')),
-      findsOneWidget,
-    );
+    expect(find.byKey(const ValueKey('feed-row-desgaste')), findsOneWidget);
   });
 }

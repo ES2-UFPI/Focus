@@ -14,8 +14,6 @@ class EvolutionCardPresentation {
   final String relatedTitle;
   final String contextLabel;
   final String contextValue;
-  final String evidenceLabel;
-  final String evidenceValue;
   final IconData icon;
   final Color accentColor;
   final Color deltaColor;
@@ -29,8 +27,6 @@ class EvolutionCardPresentation {
     required this.relatedTitle,
     required this.contextLabel,
     required this.contextValue,
-    required this.evidenceLabel,
-    required this.evidenceValue,
     required this.icon,
     required this.accentColor,
     required this.deltaColor,
@@ -87,8 +83,6 @@ class HealthRoutineEvolutionStrategy extends EvolutionCardStrategy {
         relatedTitle: 'Sono curto antes de estudar',
         contextLabel: 'Fonte',
         contextValue: 'Sono e rotina',
-        evidenceLabel: 'Evidência',
-        evidenceValue: _sampleText(insight.amostra),
         icon: LucideIcons.moon,
         accentColor: AppColors.success,
         deltaColor: AppColors.success,
@@ -104,8 +98,6 @@ class HealthRoutineEvolutionStrategy extends EvolutionCardStrategy {
       relatedTitle: 'Cansaço no fim do dia',
       contextLabel: 'Fonte',
       contextValue: 'Sono e rotina',
-      evidenceLabel: 'Evidência',
-      evidenceValue: _sampleText(insight.amostra),
       icon: LucideIcons.moon,
       accentColor: AppColors.success,
       deltaColor: AppColors.success,
@@ -130,8 +122,6 @@ class PhoneUsageEvolutionStrategy extends EvolutionCardStrategy {
       relatedTitle: 'Celular antes da sessão',
       contextLabel: 'Fonte',
       contextValue: 'Uso do celular',
-      evidenceLabel: 'Evidência',
-      evidenceValue: _sampleText(insight.amostra),
       icon: LucideIcons.smartphone,
       accentColor: AppColors.success,
       deltaColor: AppColors.success,
@@ -166,8 +156,6 @@ class StudyManagementEvolutionStrategy extends EvolutionCardStrategy {
           relatedTitle: 'Blocos longos em Banco de Dados',
           contextLabel: 'Disciplina',
           contextValue: insight.disciplina ?? 'Sessões de estudo',
-          evidenceLabel: 'Evidência',
-          evidenceValue: _sampleText(insight.amostra),
           icon: LucideIcons.batteryLow,
           accentColor: AppColors.success,
           deltaColor: AppColors.success,
@@ -182,8 +170,6 @@ class StudyManagementEvolutionStrategy extends EvolutionCardStrategy {
           relatedTitle: 'Sexta à noite frágil',
           contextLabel: 'Disciplina',
           contextValue: insight.disciplina ?? 'Sessões de estudo',
-          evidenceLabel: 'Evidência',
-          evidenceValue: _sampleText(insight.amostra),
           icon: LucideIcons.calendarX,
           accentColor: AppColors.success,
           deltaColor: AppColors.success,
@@ -198,8 +184,6 @@ class StudyManagementEvolutionStrategy extends EvolutionCardStrategy {
           relatedTitle: 'Estudo concentrado no fim',
           contextLabel: 'Contexto',
           contextValue: insight.disciplina ?? 'Planejamento',
-          evidenceLabel: 'Evidência',
-          evidenceValue: _sampleText(insight.amostra),
           icon: LucideIcons.hourglass,
           accentColor: AppColors.success,
           deltaColor: AppColors.success,
@@ -220,8 +204,6 @@ class StudyManagementEvolutionStrategy extends EvolutionCardStrategy {
       relatedTitle: insight.titulo,
       contextLabel: insight.disciplina == null ? 'Contexto' : 'Disciplina',
       contextValue: insight.disciplina ?? categoryLabel(insight.categoria),
-      evidenceLabel: 'Evidência',
-      evidenceValue: _sampleText(insight.amostra),
       icon: LucideIcons.trendingUp,
       accentColor: AppColors.success,
       deltaColor: AppColors.success,
@@ -247,17 +229,11 @@ class DefaultEvolutionCardStrategy extends EvolutionCardStrategy {
       relatedTitle: insight.titulo,
       contextLabel: insight.disciplina == null ? 'Contexto' : 'Disciplina',
       contextValue: insight.disciplina ?? categoryLabel(insight.categoria),
-      evidenceLabel: 'Evidência',
-      evidenceValue: _sampleText(insight.amostra),
       icon: LucideIcons.trendingUp,
       accentColor: AppColors.success,
       deltaColor: AppColors.success,
     );
   }
-}
-
-String _sampleText(int sample) {
-  return '$sample ${sample == 1 ? 'sessão' : 'sessões'} na amostra';
 }
 
 String _metricValue(

@@ -301,10 +301,6 @@ class _ImprovementCard extends StatelessWidget {
                       label: presentation.contextLabel,
                       value: presentation.contextValue,
                     ),
-                    _ImprovementFact(
-                      label: presentation.evidenceLabel,
-                      value: presentation.evidenceValue,
-                    ),
                   ],
                 ),
               ],

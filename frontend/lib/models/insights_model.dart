@@ -65,13 +65,21 @@ class InsightEvidenceSession {
   final String? disciplina;
   final int duracaoMin;
   final num produtividade;
+  final String? status;
+  final String? horario;
 
   const InsightEvidenceSession({
     required this.data,
     this.disciplina,
     required this.duracaoMin,
     required this.produtividade,
+    this.status,
+    this.horario,
   });
+
+  bool get isCancelada =>
+      status?.toUpperCase() == 'CANCELADO' ||
+      (status == null && duracaoMin == 0 && produtividade == 0);
 
   factory InsightEvidenceSession.fromJson(Map<String, dynamic> json) {
     final duracaoJson = json['duracaoMin'] ?? json['duracao_min'];
@@ -81,6 +89,8 @@ class InsightEvidenceSession {
       disciplina: json['disciplina'] as String?,
       duracaoMin: duracaoJson is num ? duracaoJson.toInt() : 0,
       produtividade: json['produtividade'] as num? ?? 0,
+      status: json['status'] as String?,
+      horario: json['horario'] as String?,
     );
   }
 }
@@ -313,11 +323,10 @@ class InsightExperiment {
 
 /// Insight observacional sobre os hábitos de estudo do aluno.
 ///
-/// Os nomes dos campos acompanham o contrato previsto para o backend, permitindo
-/// que a fonte mock seja substituída sem adaptar os componentes visuais.
+/// Os nomes dos campos acompanham o contrato do backend, mantendo os
+/// componentes visuais desacoplados da camada de rede.
 class Insight {
-  /// Identificador estável do insight. Vazio no mock; no contrato do backend
-  /// vem preenchido e é usado em `POST /api/insights/{id}/feedback`.
+  /// Identificador estável usado em `POST /api/insights/{id}/feedback`.
   final String id;
   final String tipo;
   final String titulo;

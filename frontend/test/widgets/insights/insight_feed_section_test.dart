@@ -1,10 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:frontend/data/insights_mock.dart';
 import 'package:frontend/widgets/insights/insight_feed_section.dart';
+
+import '../../fixtures/insights_fixtures.dart';
 
 void main() {
   test('groups severities and excludes insufficient evidence', () {
-    final groups = groupInsightsByPriority(getInsightsMock());
+    final groups = groupInsightsByPriority(getInsightsFixture());
 
     expect(groups.attention.first.severidade, 'critico');
     expect(
@@ -30,7 +31,7 @@ void main() {
 
   test('applies the subject filter to both priority groups', () {
     final groups = groupInsightsByPriority(
-      getInsightsMock(),
+      getInsightsFixture(),
       disciplina: 'Estruturas de Dados',
     );
 

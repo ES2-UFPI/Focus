@@ -1,11 +1,12 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:frontend/data/insights_mock.dart';
 import 'package:frontend/screens/insight_detail_screen.dart';
 import 'package:frontend/screens/insights_screen.dart';
 import 'package:frontend/widgets/insights/insight_feedback_control.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
+
+import '../fixtures/insights_fixtures.dart';
 
 void _configureLargeView(WidgetTester tester) {
   tester.view.physicalSize = const Size(1000, 1800);
@@ -19,7 +20,7 @@ void main() {
     tester,
   ) async {
     _configureLargeView(tester);
-    final insight = getInsightsMock().firstWhere(
+    final insight = getInsightsFixture().firstWhere(
       (item) => item.tipo == 'melhor_horario',
     );
     var actionTapped = false;
@@ -43,7 +44,12 @@ void main() {
     expect(chart.data.extraLinesData.horizontalLines.single.dashArray, [4, 4]);
 
     expect(find.text('Sessões que sustentam o padrão'), findsOneWidget);
-    expect(find.text('12 sessões na amostra'), findsOneWidget);
+    expect(find.textContaining('sessões na amostra'), findsNothing);
+    expect(find.byIcon(LucideIcons.database), findsNothing);
+    expect(
+      find.byKey(const ValueKey('evidence-session-card-0')),
+      findsOneWidget,
+    );
     expect(find.text('18/06/2026'), findsOneWidget);
     expect(find.text('Recomendação observacional'), findsOneWidget);
     expect(find.text('Isso faz sentido pra você?'), findsOneWidget);
@@ -55,7 +61,7 @@ void main() {
   });
 
   testWidgets('renders an annotated line chart', (tester) async {
-    final insight = getInsightsMock().firstWhere(
+    final insight = getInsightsFixture().firstWhere(
       (item) => item.tipo == 'duracao_ideal',
     );
 
@@ -70,10 +76,47 @@ void main() {
     expect(chart.data.extraLinesData.horizontalLines, hasLength(1));
   });
 
+  testWidgets('renders binary evidence as a comparison without average', (
+    tester,
+  ) async {
+    final insight = getInsightsFixture().firstWhere(
+      (item) => item.tipo == 'taxa_furo',
+    );
+
+    await tester.pumpWidget(
+      ShadApp(home: InsightDetailScreen(insight: insight)),
+    );
+
+    expect(find.text('Comparação da evidência'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('binary-insight-comparison')),
+      findsOneWidget,
+    );
+    expect(find.byType(BarChart), findsNothing);
+    expect(find.textContaining('Canceladas +1'), findsOneWidget);
+    expect(find.textContaining('Média'), findsNothing);
+    expect(find.text('Sessões canceladas'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('cancelled-session-card-0')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('cancelled-session-card-1')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('cancelled-session-card-2')),
+      findsNothing,
+    );
+    expect(find.text('12/06/2026 · 20:00 - 20:45'), findsOneWidget);
+    expect(find.text('19/06/2026 · 22:00 - 22:45'), findsOneWidget);
+    expect(find.text('Cancelada'), findsNWidgets(2));
+  });
+
   testWidgets('falls back to numbers when chart and evidence are absent', (
     tester,
   ) async {
-    final insight = getInsightsMock().firstWhere(
+    final insight = getInsightsFixture().firstWhere(
       (item) => item.tipo == 'tarefas_no_prazo',
     );
 
@@ -93,9 +136,9 @@ void main() {
   testWidgets('opens detail from a feed row', (tester) async {
     _configureLargeView(tester);
     await tester.pumpWidget(
-      ShadApp(home: InsightsScreen(insights: getInsightsMock())),
+      const ShadApp(home: InsightsScreen(service: FixtureInsightsService())),
     );
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     final row = find.byKey(const ValueKey('feed-row-melhor_horario'));
     await tester.ensureVisible(row);
@@ -111,7 +154,7 @@ void main() {
 
   testWidgets('reports feedback changes from the detail', (tester) async {
     _configureLargeView(tester);
-    final insight = getInsightsMock().first;
+    final insight = getInsightsFixture().first;
     InsightFeedbackState? feedback;
 
     await tester.pumpWidget(
