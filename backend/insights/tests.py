@@ -93,6 +93,12 @@ class MelhorHorarioTests(InsightsTestBase):
         self.assertGreater(insight['numeros']['manha'], insight['numeros']['noite'])
         self.assertEqual(insight['confianca'], 'alta')  # 16 sessões (>= 15)
         self.assertEqual(len(insight['grafico']['valores']), 6)
+        self.assertEqual(len(insight['sessoesEvidencia']), 3)
+        self.assertEqual(
+            insight['sessoesEvidencia'][0]['status'],
+            SessaoEstudo.StatusSessao.CONCLUIDO,
+        )
+        self.assertIn('horario', insight['sessoesEvidencia'][0])
 
 
 class DuracaoIdealTests(InsightsTestBase):
@@ -176,6 +182,14 @@ class TaxaFuroTests(InsightsTestBase):
         self.assertIsNotNone(insight)
         self.assertEqual(insight['severidade'], 'critico')
         self.assertGreaterEqual(insight['numeros']['taxa_pct'], 50)
+        self.assertEqual(len(insight['sessoesEvidencia']), 4)
+        self.assertTrue(
+            all(
+                sessao['status'] == SessaoEstudo.StatusSessao.CANCELADO
+                for sessao in insight['sessoesEvidencia']
+            )
+        )
+        self.assertIn('horario', insight['sessoesEvidencia'][0])
 
 
 class ClassificacaoTests(InsightsTestBase):

@@ -32,8 +32,8 @@ class _Registro:
 
     __slots__ = (
         'id', 'disciplina_id', 'disciplina_nome', 'inicio', 'hora',
-        'dia_semana', 'duracao_real', 'duracao_planejada', 'produtividade',
-        'interrupcoes', 'tipo_atividade',
+        'fim', 'dia_semana', 'duracao_real', 'duracao_planejada',
+        'produtividade', 'interrupcoes', 'tipo_atividade', 'status',
     )
 
     def __init__(self, sessao):
@@ -42,6 +42,7 @@ class _Registro:
         self.disciplina_id = str(sessao.disciplina_id)
         self.disciplina_nome = sessao.disciplina.nome
         self.inicio = sessao.inicio
+        self.fim = sessao.fim
         self.hora = local.hour
         self.dia_semana = local.weekday()
         self.duracao_real = sessao.duracao_realizada
@@ -50,6 +51,7 @@ class _Registro:
         )
         self.interrupcoes = sessao.interrupcoes
         self.tipo_atividade = sessao.tipo_atividade
+        self.status = sessao.status
         # Produtividade da sessão = média das avaliações dos seus blocos.
         notas = [
             b.produtividade
@@ -184,7 +186,13 @@ class InsightsService:
 
         # Agrupa por (dia da semana, período) e mede a taxa de cancelamento.
         grupos = defaultdict(
-            lambda: {'total': 0, 'canceladas': 0, 'disc': None, 'disc_id': None}
+            lambda: {
+                'total': 0,
+                'canceladas': 0,
+                'disc': None,
+                'disc_id': None,
+                'sessoes': [],
+            }
         )
         for s in sessoes:
             local = timezone.localtime(s.inicio)
@@ -195,6 +203,7 @@ class InsightsService:
             grupos[chave]['total'] += 1
             grupos[chave]['disc'] = s.disciplina.nome
             grupos[chave]['disc_id'] = str(s.disciplina_id)
+            grupos[chave]['sessoes'].append(s)
             if s.status == SessaoEstudo.StatusSessao.CANCELADO:
                 grupos[chave]['canceladas'] += 1
 
@@ -208,6 +217,7 @@ class InsightsService:
                     'dia': dia, 'periodo': periodo, 'taxa': taxa,
                     'total': dados['total'], 'canceladas': dados['canceladas'],
                     'disc': dados['disc'], 'disc_id': dados['disc_id'],
+                    'sessoes': dados['sessoes'],
                 }
         if pior is None:
             return None
@@ -238,6 +248,9 @@ class InsightsService:
                 'valores': [pior['total'] - pior['canceladas'], pior['canceladas']],
                 'destaqueIndex': 1,
             },
+            'sessoesEvidencia': self._evidencias_sessoes_canceladas(
+                pior['sessoes']
+            ),
             'acao': {
                 'tipo': 'reagendar',
                 'label': f'Reagendar {nome_dia} à {pior["periodo"]}',
@@ -320,10 +333,13 @@ class InsightsService:
 
         semanas = self.JANELA_DIAS / 7
         limite_recente = self._agora - timedelta(days=14)
-        por_disc = defaultdict(lambda: {'total': 0, 'recente': 0, 'nome': None})
+        por_disc = defaultdict(
+            lambda: {'total': 0, 'recente': 0, 'nome': None, 'regs': []}
+        )
         for r in registros:
             por_disc[r.disciplina_id]['total'] += 1
             por_disc[r.disciplina_id]['nome'] = r.disciplina_nome
+            por_disc[r.disciplina_id]['regs'].append(r)
             if r.inicio >= limite_recente:
                 por_disc[r.disciplina_id]['recente'] += 1
 
@@ -340,6 +356,7 @@ class InsightsService:
                         'disciplina_id': disc_id, 'nome': d['nome'],
                         'recente': d['recente'], 'esperado': esperado_2sem,
                         'deficit': deficit, 'total': d['total'],
+                        'regs': d['regs'],
                     }
         if pior is None:
             return None
@@ -362,6 +379,9 @@ class InsightsService:
             'confianca': self._confianca(pior['total']),
             'natureza': 'observacional',
             'severidade': 'atencao',
+            'sessoesEvidencia': self._evidencias(
+                sorted(pior['regs'], key=lambda r: r.inicio, reverse=True)[:3]
+            ),
             'acao': {
                 'tipo': 'agendar_sessao',
                 'label': f'Agendar mais sessões de {pior["nome"]}',
@@ -461,6 +481,9 @@ class InsightsService:
         destaque = max(range(len(valores)), key=lambda i: valores[i])
 
         manha_melhor = media_manha >= media_noite
+        periodo_evidencia = (
+            self.PERIODO_MANHA if manha_melhor else self.PERIODO_NOITE
+        )
         return {
             'id': 'melhor_horario',
             'tipo': 'melhor_horario',
@@ -490,7 +513,7 @@ class InsightsService:
                 'destaqueIndex': destaque,
             },
             'sessoesEvidencia': self._evidencias(
-                [r for r in registros if r.hora in self.PERIODO_MANHA]
+                [r for r in registros if r.hora in periodo_evidencia]
             ),
             'acao': {
                 'tipo': 'agendar_sessao',
@@ -542,16 +565,21 @@ class InsightsService:
         seq_atual = 0
         notas_seq = []
         notas_melhor = []
+        regs_seq = []
+        regs_melhor = []
         for r in registros:  # já ordenados por início
             if r.produtividade >= 4:
                 seq_atual += 1
                 notas_seq.append(r.produtividade)
+                regs_seq.append(r)
                 if seq_atual > melhor_seq:
                     melhor_seq = seq_atual
                     notas_melhor = list(notas_seq)
+                    regs_melhor = list(regs_seq)
             else:
                 seq_atual = 0
                 notas_seq = []
+                regs_seq = []
         if melhor_seq < 3:
             return None
 
@@ -572,6 +600,7 @@ class InsightsService:
             'confianca': self._confianca(len(registros)),
             'natureza': 'observacional',
             'severidade': 'positivo',
+            'sessoesEvidencia': self._evidencias(regs_melhor[:3]),
         }
 
     def _insight_progresso(self, aluno_id):
@@ -585,6 +614,21 @@ class InsightsService:
             return None
 
         reducao = stats.variacao_percentual(taxa_ant, taxa_rec)
+        sessoes_recentes = (
+            SessaoEstudo.objects
+            .filter(
+                disciplina__aluno_id=aluno_id,
+                inicio__gte=meio,
+                inicio__lt=self._agora,
+                status__in=[
+                    SessaoEstudo.StatusSessao.CONCLUIDO,
+                    SessaoEstudo.StatusSessao.CANCELADO,
+                ],
+            )
+            .select_related('disciplina')
+            .prefetch_related('blocos_pomodoro')
+            .order_by('-inicio')[:3]
+        )
         return {
             'id': 'progresso',
             'tipo': 'progresso',
@@ -603,6 +647,7 @@ class InsightsService:
             'confianca': self._confianca(total_ant + total_rec),
             'natureza': 'observacional',
             'severidade': 'positivo',
+            'sessoesEvidencia': self._evidencias_sessoes(sessoes_recentes),
         }
 
     # ==================== Fallback ====================
@@ -643,14 +688,62 @@ class InsightsService:
         canceladas = qs.filter(status=SessaoEstudo.StatusSessao.CANCELADO).count()
         return total, (round(canceladas / total * 100) if total else 0)
 
+    def _evidencias_sessoes(self, sessoes, limite=3):
+        evidencias = []
+        for sessao in list(sessoes)[:limite]:
+            inicio = timezone.localtime(sessao.inicio)
+            fim = timezone.localtime(sessao.fim)
+            notas = [
+                b.produtividade
+                for b in sessao.blocos_pomodoro.all()
+                if b.produtividade is not None
+            ]
+            evidencias.append({
+                'data': inicio.date().isoformat(),
+                'horario': f'{inicio:%H:%M} - {fim:%H:%M}',
+                'disciplina': sessao.disciplina.nome,
+                'duracao_min': sessao.duracao_realizada,
+                'produtividade': round(stats.media(notas), 2) if notas else 0,
+                'status': sessao.status,
+            })
+        return evidencias
+
+    def _evidencias_sessoes_canceladas(self, sessoes, limite=6):
+        canceladas = sorted(
+            (
+                s for s in sessoes
+                if s.status == SessaoEstudo.StatusSessao.CANCELADO
+            ),
+            key=lambda s: s.inicio,
+            reverse=True,
+        )
+        evidencias = []
+        for sessao in canceladas[:limite]:
+            inicio = timezone.localtime(sessao.inicio)
+            fim = timezone.localtime(sessao.fim)
+            evidencias.append({
+                'data': inicio.date().isoformat(),
+                'horario': f'{inicio:%H:%M} - {fim:%H:%M}',
+                'disciplina': sessao.disciplina.nome,
+                'duracao_min': sessao.duracao_realizada,
+                'produtividade': 0,
+                'status': sessao.status,
+            })
+        return evidencias
+
     def _evidencias(self, registros):
         """Converte registros em sessões de evidência do contrato."""
         return [
             {
                 'data': timezone.localtime(r.inicio).date().isoformat(),
+                'horario': (
+                    f'{timezone.localtime(r.inicio):%H:%M} - '
+                    f'{timezone.localtime(r.fim):%H:%M}'
+                ),
                 'disciplina': r.disciplina_nome,
                 'duracao_min': r.duracao_real,
                 'produtividade': round(r.produtividade, 2) if r.produtividade else 0,
+                'status': r.status,
             }
             for r in registros[:3]
         ]
