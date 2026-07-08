@@ -46,6 +46,12 @@ class AppSidebar extends StatelessWidget {
                 ),
                 _buildItem(
                   context,
+                  AppPage.disciplinas,
+                  LucideIcons.bookOpen,
+                  'Disciplinas',
+                ),
+                _buildItem(
+                  context,
                   AppPage.consistencia,
                   LucideIcons.barChart2,
                   'Consistência',
