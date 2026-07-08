@@ -240,7 +240,7 @@ void main() {
   test('journey mock connects detection, action and observed improvement', () {
     final journey = getJornadaMock();
 
-    expect(journey, hasLength(4));
+    expect(journey, hasLength(6));
     expect(journey.first.tipo, 'detectado');
     expect(journey.map((event) => event.tipo).toSet(), {
       'detectado',
@@ -249,7 +249,12 @@ void main() {
     });
     expect(
       journey.map((event) => event.insightTipo),
-      containsAll({'melhor_horario', 'efeito_acao', 'taxa_furo'}),
+      containsAll({
+        'melhor_horario',
+        'desgaste',
+        'duracao_ideal',
+        'taxa_furo',
+      }),
     );
   });
 }

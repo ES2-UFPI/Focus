@@ -48,7 +48,10 @@ class _NotasView extends StatelessWidget {
       backgroundColor: AppColors.appBackground,
       body: SafeArea(
         child: provider.carregando && provider.todasNotas.isEmpty
-            ? const Center(child: CircularProgressIndicator())
+            ? const Center(
+                child: CircularProgressIndicator(
+                    color: AppColors.brandPrimary),
+              )
             : isWide
                 ? const _WideLayout()
                 : const _NarrowLayout(),
@@ -99,6 +102,9 @@ class _NarrowLayout extends StatelessWidget {
               Align(
                 alignment: Alignment.centerLeft,
                 child: TextButton.icon(
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.textSecondary,
+                  ),
                   onPressed: () {
                     final p = context.read<NotasProvider>();
                     p.cancelarFormulario();
@@ -316,7 +322,9 @@ class _ListaNotas extends StatelessWidget {
                 TextField(
                   onChanged: (v) =>
                       context.read<NotasProvider>().definirBusca(v),
-                  style: const TextStyle(fontSize: 13),
+                  cursorColor: AppColors.textPrimary,
+                  style: const TextStyle(
+                      fontSize: 13, color: AppColors.textPrimary),
                   decoration: InputDecoration(
                     hintText: 'Buscar nota...',
                     hintStyle: const TextStyle(
@@ -664,10 +672,18 @@ class _DetalheNota extends StatelessWidget {
     final confirmar = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Excluir nota'),
-        content: Text('Excluir "${nota.titulo}"? Essa ação não pode ser desfeita.'),
+        backgroundColor: AppColors.surface,
+        title: const Text('Excluir nota',
+            style: TextStyle(color: AppColors.textPrimary)),
+        content: Text(
+          'Excluir "${nota.titulo}"? Essa ação não pode ser desfeita.',
+          style: const TextStyle(color: AppColors.textSecondary),
+        ),
         actions: [
           TextButton(
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.textSecondary,
+            ),
             onPressed: () => Navigator.of(ctx).pop(false),
             child: const Text('Cancelar'),
           ),
@@ -724,6 +740,8 @@ class _SecaoExpansivelState extends State<_SecaoExpansivel> {
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
           initiallyExpanded: preenchida,
+          iconColor: AppColors.neutral,
+          collapsedIconColor: AppColors.neutral,
           tilePadding: const EdgeInsets.symmetric(horizontal: 13),
           childrenPadding: const EdgeInsets.fromLTRB(13, 0, 13, 13),
           shape: const Border(),
@@ -762,7 +780,9 @@ class _SecaoExpansivelState extends State<_SecaoExpansivel> {
             TextField(
               controller: widget.controller,
               maxLines: 3,
-              style: const TextStyle(fontSize: 14),
+              cursorColor: AppColors.textPrimary,
+              style: const TextStyle(
+                  fontSize: 14, color: AppColors.textPrimary),
               decoration: widget.decoracao,
               onChanged: (_) => setState(() {}),
             ),
@@ -911,6 +931,10 @@ class _FormularioNotaState extends State<_FormularioNota> {
             _rotulo('Disciplina'),
             DropdownButtonFormField<String>(
               initialValue: _disciplinaId,
+              dropdownColor: AppColors.surface,
+              iconEnabledColor: AppColors.neutral,
+              style: const TextStyle(
+                  fontSize: 14, color: AppColors.textPrimary),
               decoration: _decoracao(
                 'Selecione a disciplina',
                 erro: _tentouSalvar && _disciplinaId == null
@@ -944,7 +968,9 @@ class _FormularioNotaState extends State<_FormularioNota> {
             _rotulo('Título da nota'),
             TextField(
               controller: _tituloController,
-              style: const TextStyle(fontSize: 14),
+              cursorColor: AppColors.textPrimary,
+              style: const TextStyle(
+                  fontSize: 14, color: AppColors.textPrimary),
               onChanged: (_) {
                 if (_tentouSalvar) setState(() {});
               },

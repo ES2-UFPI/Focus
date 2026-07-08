@@ -217,11 +217,14 @@ class _LoginScreenState extends State<LoginScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Text(
-                              'Nao tem conta? ',
-                              style: TextStyle(
-                                color: AppColors.textMuted,
-                                fontWeight: FontWeight.w500,
+                            const Flexible(
+                              child: Text(
+                                'Nao tem conta? ',
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: AppColors.textMuted,
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
                             ),
                             TextButton(
