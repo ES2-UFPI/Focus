@@ -5,6 +5,22 @@ import '../core/theme/app_theme.dart';
 import '../models/nota_estudo.dart';
 import '../providers/notas_provider.dart';
 
+/// Converte a cor hex cadastrada na disciplina (ex.: '#2196F3') em [Color].
+Color _corDeHex(String hex, {Color fallback = AppColors.brandPrimary}) {
+  var valor = hex.replaceFirst('#', '');
+  if (valor.length == 6) valor = 'FF$valor';
+  final parsed = int.tryParse(valor, radix: 16);
+  return parsed == null ? fallback : Color(parsed);
+}
+
+/// Cor da disciplina de uma nota, a partir das disciplinas carregadas.
+Color _corDisciplina(NotasProvider provider, String disciplinaId) {
+  for (final d in provider.disciplinas) {
+    if (d.id == disciplinaId) return _corDeHex(d.cor);
+  }
+  return AppColors.brandPrimary;
+}
+
 /// Tela de Notas de Estudo: rail de disciplinas, lista com busca e painel de
 /// detalhe/formulario. Persistencia via /api/materiais-estudo/ (sem backend novo).
 class NotasScreen extends StatelessWidget {
@@ -133,9 +149,10 @@ class _DisciplinasRail extends StatelessWidget {
           Expanded(
             child: ListView(
               children: [
-                _chipDisciplina(context, provider, null, 'Todas'),
+                _chipDisciplina(context, provider, null, 'Todas', null),
                 for (final d in provider.disciplinas)
-                  _chipDisciplina(context, provider, d.id, d.nome),
+                  _chipDisciplina(
+                      context, provider, d.id, d.nome, _corDeHex(d.cor)),
               ],
             ),
           ),
@@ -176,6 +193,7 @@ class _DisciplinasRail extends StatelessWidget {
     NotasProvider provider,
     String? id,
     String label,
+    Color? cor,
   ) {
     final selecionada = provider.filtroDisciplinaId == id;
     return Padding(
@@ -191,6 +209,17 @@ class _DisciplinasRail extends StatelessWidget {
           ),
           child: Row(
             children: [
+              if (cor != null) ...[
+                Container(
+                  width: 9,
+                  height: 9,
+                  decoration: BoxDecoration(
+                    color: cor,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
               Expanded(
                 child: Text(
                   label,
@@ -354,6 +383,7 @@ class _CardNota extends StatelessWidget {
     final provider = context.watch<NotasProvider>();
     final selecionada = provider.notaSelecionada?.id == nota.id &&
         provider.modo == NotasModo.detalhe;
+    final cor = _corDisciplina(provider, nota.disciplinaId);
 
     return InkWell(
       borderRadius: BorderRadius.circular(12),
@@ -361,26 +391,30 @@ class _CardNota extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(13),
         decoration: BoxDecoration(
-          color: selecionada ? const Color(0xFFEEF0FE) : AppColors.surface,
+          color: selecionada
+              ? cor.withValues(alpha: 0.08)
+              : AppColors.surface,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color:
-                selecionada ? AppColors.brandPrimary : AppColors.borderSubtle,
+            color: selecionada ? cor : AppColors.borderSubtle,
             width: 1.5,
           ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Align(
-              alignment: Alignment.centerRight,
-              child: Text(
-                nota.dataCurta,
-                style:
-                    const TextStyle(fontSize: 11, color: AppColors.neutral),
-              ),
+            Row(
+              children: [
+                _ChipDisciplinaNota(nome: nota.disciplinaNome, cor: cor),
+                const Spacer(),
+                Text(
+                  nota.dataCurta,
+                  style: const TextStyle(
+                      fontSize: 11, color: AppColors.neutral),
+                ),
+              ],
             ),
-            const SizedBox(height: 5),
+            const SizedBox(height: 7),
             Text(
               nota.titulo,
               style: const TextStyle(
@@ -392,18 +426,47 @@ class _CardNota extends StatelessWidget {
             ),
             const SizedBox(height: 5),
             Text(
-              nota.disciplinaNome,
-              style:
-                  const TextStyle(fontSize: 12, color: AppColors.textMuted),
-            ),
-            const SizedBox(height: 5),
-            Text(
               nota.snippet,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontSize: 12, color: AppColors.neutral),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Chip com o nome da disciplina na cor cadastrada por ela.
+class _ChipDisciplinaNota extends StatelessWidget {
+  final String nome;
+  final Color cor;
+  final double fontSize;
+
+  const _ChipDisciplinaNota({
+    required this.nome,
+    required this.cor,
+    this.fontSize = 10.5,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: cor.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        nome.toUpperCase(),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          fontSize: fontSize,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.3,
+          color: cor,
         ),
       ),
     );
@@ -468,6 +531,8 @@ class _DetalheNota extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cor =
+        _corDisciplina(context.watch<NotasProvider>(), nota.disciplinaId);
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(40, 32, 40, 48),
       child: ConstrainedBox(
@@ -482,6 +547,12 @@ class _DetalheNota extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      _ChipDisciplinaNota(
+                        nome: nota.disciplinaNome,
+                        cor: cor,
+                        fontSize: 11,
+                      ),
+                      const SizedBox(height: 10),
                       Text(
                         nota.titulo,
                         style: const TextStyle(
@@ -492,7 +563,7 @@ class _DetalheNota extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '${nota.disciplinaNome} · Criada em ${nota.dataCurta}',
+                        'Criada em ${nota.dataCurta}',
                         style: const TextStyle(
                             fontSize: 13.5, color: AppColors.textMuted),
                       ),
@@ -614,6 +685,94 @@ class _DetalheNota extends StatelessWidget {
   }
 }
 
+/// Secao do formulario em bloco expansivel: abre ja expandida quando tem
+/// conteudo e mostra a contagem de itens no cabecalho.
+class _SecaoExpansivel extends StatefulWidget {
+  final SecaoNotaDef def;
+  final TextEditingController controller;
+  final InputDecoration decoracao;
+
+  const _SecaoExpansivel({
+    required this.def,
+    required this.controller,
+    required this.decoracao,
+  });
+
+  @override
+  State<_SecaoExpansivel> createState() => _SecaoExpansivelState();
+}
+
+class _SecaoExpansivelState extends State<_SecaoExpansivel> {
+  int get _itens => widget.controller.text
+      .split('\n')
+      .where((l) => l.trim().isNotEmpty)
+      .length;
+
+  @override
+  Widget build(BuildContext context) {
+    final preenchida = _itens > 0;
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: preenchida ? AppColors.brandPrimary : AppColors.border,
+          width: preenchida ? 1.2 : 1,
+        ),
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          initiallyExpanded: preenchida,
+          tilePadding: const EdgeInsets.symmetric(horizontal: 13),
+          childrenPadding: const EdgeInsets.fromLTRB(13, 0, 13, 13),
+          shape: const Border(),
+          title: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  widget.def.label,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ),
+              if (preenchida)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: AppColors.brandPrimary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    '$_itens ${_itens == 1 ? 'item' : 'itens'}',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.brandPrimary,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          children: [
+            TextField(
+              controller: widget.controller,
+              maxLines: 3,
+              style: const TextStyle(fontSize: 14),
+              decoration: widget.decoracao,
+              onChanged: (_) => setState(() {}),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Formulario de criacao/edicao
 // ---------------------------------------------------------------------------
@@ -631,6 +790,7 @@ class _FormularioNotaState extends State<_FormularioNota> {
   late final TextEditingController _tituloController;
   late final Map<String, TextEditingController> _secaoControllers;
   String? _disciplinaId;
+  bool _tentouSalvar = false;
 
   @override
   void initState() {
@@ -659,6 +819,7 @@ class _FormularioNotaState extends State<_FormularioNota> {
     final provider = context.read<NotasProvider>();
     final titulo = _tituloController.text.trim();
     if (titulo.isEmpty || _disciplinaId == null) {
+      setState(() => _tentouSalvar = true);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Informe a disciplina e o título da nota.'),
@@ -691,10 +852,11 @@ class _FormularioNotaState extends State<_FormularioNota> {
     await provider.salvar(nota);
   }
 
-  InputDecoration _decoracao(String hint) {
+  InputDecoration _decoracao(String hint, {String? erro}) {
     return InputDecoration(
       hintText: hint,
       hintStyle: const TextStyle(fontSize: 14, color: AppColors.neutral),
+      errorText: erro,
       isDense: true,
       filled: true,
       fillColor: AppColors.surface,
@@ -749,13 +911,31 @@ class _FormularioNotaState extends State<_FormularioNota> {
             _rotulo('Disciplina'),
             DropdownButtonFormField<String>(
               initialValue: _disciplinaId,
-              decoration: _decoracao('Selecione a disciplina'),
+              decoration: _decoracao(
+                'Selecione a disciplina',
+                erro: _tentouSalvar && _disciplinaId == null
+                    ? 'Escolha uma disciplina cadastrada.'
+                    : null,
+              ),
               items: [
                 for (final d in provider.disciplinas)
                   DropdownMenuItem(
                     value: d.id,
-                    child: Text(d.nome,
-                        style: const TextStyle(fontSize: 14)),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 9,
+                          height: 9,
+                          decoration: BoxDecoration(
+                            color: _corDeHex(d.cor),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(d.nome, style: const TextStyle(fontSize: 14)),
+                      ],
+                    ),
                   ),
               ],
               onChanged: (v) => setState(() => _disciplinaId = v),
@@ -765,21 +945,34 @@ class _FormularioNotaState extends State<_FormularioNota> {
             TextField(
               controller: _tituloController,
               style: const TextStyle(fontSize: 14),
-              decoration:
-                  _decoracao('Ex.: Aula sobre requisitos e backlog'),
+              onChanged: (_) {
+                if (_tentouSalvar) setState(() {});
+              },
+              decoration: _decoracao(
+                'Ex.: Aula sobre requisitos e backlog',
+                erro: _tentouSalvar && _tituloController.text.trim().isEmpty
+                    ? 'Dê um título para a nota.'
+                    : null,
+              ),
             ),
             const SizedBox(height: 20),
-            for (final def in kSecoesNota) ...[
-              _rotulo(def.label),
-              TextField(
-                controller: _secaoControllers[def.key],
-                maxLines: 3,
-                style: const TextStyle(fontSize: 14),
-                decoration: _decoracao(def.placeholder),
+            _rotulo('Seções da nota'),
+            const Padding(
+              padding: EdgeInsets.only(bottom: 10),
+              child: Text(
+                'Preencha só o que fizer sentido — uma linha por item.',
+                style: TextStyle(fontSize: 12, color: AppColors.neutral),
               ),
-              const SizedBox(height: 16),
+            ),
+            for (final def in kSecoesNota) ...[
+              _SecaoExpansivel(
+                def: def,
+                controller: _secaoControllers[def.key]!,
+                decoracao: _decoracao(def.placeholder),
+              ),
+              const SizedBox(height: 8),
             ],
-            const SizedBox(height: 8),
+            const SizedBox(height: 16),
             Row(
               children: [
                 FilledButton(

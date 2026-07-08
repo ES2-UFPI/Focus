@@ -13,10 +13,10 @@ class _FakeNotasService extends NotasService {
   _FakeNotasService({this.disciplinas = const [], this.notas = const []});
 
   @override
-  Future<List<Disciplina>> listarDisciplinas() async => disciplinas;
+  Future<List<Disciplina>> listarDisciplinas() async => List.of(disciplinas);
 
   @override
-  Future<List<NotaEstudo>> listarNotas() async => notas;
+  Future<List<NotaEstudo>> listarNotas() async => List.of(notas);
 
   @override
   Future<NotaEstudo?> salvarNota(NotaEstudo nota) async {
