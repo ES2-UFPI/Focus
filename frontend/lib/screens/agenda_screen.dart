@@ -32,6 +32,10 @@ class _AgendaScreenState extends State<AgendaScreen> {
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      clipBehavior: Clip.antiAlias,
       showDragHandle: true,
       builder: (bottomSheetContext) {
         return SafeArea(
@@ -56,14 +60,28 @@ class _AgendaScreenState extends State<AgendaScreen> {
                     ),
                   ),
                 ),
-                const Divider(height: 1),
+                const Divider(height: 1, color: AppColors.borderSubtle),
                 ListTile(
                   leading: const Icon(
                     Icons.event_note_rounded,
-                    color: AppColors.brandPrimary,
+                    color: AppColors.brandPrimaryDark,
                   ),
-                  title: const Text('Evento academico'),
-                  subtitle: const Text('Provas, trabalhos, seminarios e entregas'),
+                  title: const Text(
+                    'Evento academico',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  subtitle: const Text(
+                    'Provas, trabalhos, seminarios e entregas',
+                    style: TextStyle(
+                      color: AppColors.textMuted,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  iconColor: AppColors.brandPrimaryDark,
+                  textColor: AppColors.textPrimary,
                   onTap: () async {
                     Navigator.pop(bottomSheetContext);
                     final criado = await Navigator.push<bool>(
@@ -82,8 +100,22 @@ class _AgendaScreenState extends State<AgendaScreen> {
                     Icons.menu_book_rounded,
                     color: AppColors.subjectTeal,
                   ),
-                  title: const Text('Sessao de estudo'),
-                  subtitle: const Text('Bloco de foco ligado a uma disciplina'),
+                  title: const Text(
+                    'Sessao de estudo',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  subtitle: const Text(
+                    'Bloco de foco ligado a uma disciplina',
+                    style: TextStyle(
+                      color: AppColors.textMuted,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  iconColor: AppColors.subjectTeal,
+                  textColor: AppColors.textPrimary,
                   onTap: () async {
                     Navigator.pop(bottomSheetContext);
                     final criado = await Navigator.push<bool>(
@@ -121,9 +153,8 @@ class _AgendaScreenState extends State<AgendaScreen> {
         actions: [
           IconButton(
             tooltip: 'Atualizar agenda',
-            onPressed: () => context.read<AgendaProvider>().fetchAgenda(
-                  isRefresh: true,
-                ),
+            onPressed: () =>
+                context.read<AgendaProvider>().fetchAgenda(isRefresh: true),
             icon: const Icon(Icons.refresh_rounded),
           ),
         ],
@@ -178,9 +209,9 @@ class _ErrorState extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textMuted,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: AppColors.textMuted),
             ),
             const SizedBox(height: AppSpacing.xl),
             FilledButton.tonal(

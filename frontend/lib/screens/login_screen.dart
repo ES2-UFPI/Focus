@@ -34,9 +34,9 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     final erro = await context.read<AuthProvider>().login(
-          _emailCtrl.text.trim(),
-          _senhaCtrl.text,
-        );
+      _emailCtrl.text.trim(),
+      _senhaCtrl.text,
+    );
 
     if (!mounted) return;
     if (erro != null) {
@@ -81,7 +81,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               height: 64,
                               decoration: BoxDecoration(
                                 color: AppColors.brandPrimary,
-                                borderRadius: BorderRadius.circular(AppRadii.xl),
+                                borderRadius: BorderRadius.circular(
+                                  AppRadii.xl,
+                                ),
                                 boxShadow: AppShadows.cardSoft,
                               ),
                               child: const Icon(
@@ -117,7 +119,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           icon: Icons.person_outline,
                           teclado: TextInputType.emailAddress,
                           validar: (v) {
-                            if (v == null || v.isEmpty) return 'Informe o login';
+                            if (v == null || v.isEmpty) {
+                              return 'Informe o login';
+                            }
                             return null;
                           },
                         ),
@@ -128,8 +132,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           icon: Icons.lock_outline,
                           obscuro: !_senhaVisivel,
                           sufixo: IconButton(
-                            tooltip:
-                                _senhaVisivel ? 'Ocultar senha' : 'Mostrar senha',
+                            tooltip: _senhaVisivel
+                                ? 'Ocultar senha'
+                                : 'Mostrar senha',
                             icon: Icon(
                               _senhaVisivel
                                   ? Icons.visibility_off_outlined
@@ -141,7 +146,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                 setState(() => _senhaVisivel = !_senhaVisivel),
                           ),
                           validar: (v) {
-                            if (v == null || v.isEmpty) return 'Informe a senha';
+                            if (v == null || v.isEmpty) {
+                              return 'Informe a senha';
+                            }
                             return null;
                           },
                         ),
@@ -189,10 +196,12 @@ class _LoginScreenState extends State<LoginScreen> {
                             style: FilledButton.styleFrom(
                               backgroundColor: AppColors.brandPrimary,
                               foregroundColor: AppColors.textInverted,
-                              disabledBackgroundColor:
-                                  AppColors.brandPrimary.withValues(alpha: 0.45),
+                              disabledBackgroundColor: AppColors.brandPrimary
+                                  .withValues(alpha: 0.45),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(AppRadii.md),
+                                borderRadius: BorderRadius.circular(
+                                  AppRadii.md,
+                                ),
                               ),
                             ),
                             child: _carregando
@@ -214,8 +223,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         const SizedBox(height: AppSpacing.lg),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                        Wrap(
+                          alignment: WrapAlignment.center,
+                          crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
                             const Text(
                               'Nao tem conta? ',
@@ -225,8 +235,10 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             ),
                             TextButton(
-                              onPressed: () =>
-                                  Navigator.pushReplacementNamed(context, '/registro'),
+                              onPressed: () => Navigator.pushReplacementNamed(
+                                context,
+                                '/registro',
+                              ),
                               style: TextButton.styleFrom(
                                 foregroundColor: AppColors.brandPrimary,
                                 padding: EdgeInsets.zero,
@@ -296,7 +308,10 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: borderRadius,
-          borderSide: const BorderSide(color: AppColors.brandPrimary, width: 1.5),
+          borderSide: const BorderSide(
+            color: AppColors.brandPrimary,
+            width: 1.5,
+          ),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: borderRadius,

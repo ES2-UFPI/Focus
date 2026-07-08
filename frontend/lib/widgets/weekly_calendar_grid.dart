@@ -25,7 +25,10 @@ class WeeklyCalendarGrid extends StatelessWidget {
     final provider = context.watch<AgendaProvider>();
     final weekStart = provider.inicioDaSemanaFocal;
     final weekEnd = provider.fimDaSemanaFocal;
-    final days = List.generate(7, (index) => weekStart.add(Duration(days: index)));
+    final days = List.generate(
+      7,
+      (index) => weekStart.add(Duration(days: index)),
+    );
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -249,11 +252,19 @@ class _MiniMonth extends StatelessWidget {
   Widget build(BuildContext context) {
     final focus = provider.dataFocal;
     final firstDay = DateTime(focus.year, focus.month, 1);
-    final visibleStart = firstDay.subtract(Duration(days: firstDay.weekday - 1));
+    final visibleStart = firstDay.subtract(
+      Duration(days: firstDay.weekday - 1),
+    );
     final selectedWeekStart = provider.inicioDaSemanaFocal;
     final selectedWeekEnd = provider.fimDaSemanaFocal;
     final itemDates = provider.itensFiltrados
-        .map((item) => DateTime(item.timestamp.year, item.timestamp.month, item.timestamp.day))
+        .map(
+          (item) => DateTime(
+            item.timestamp.year,
+            item.timestamp.month,
+            item.timestamp.day,
+          ),
+        )
         .toSet();
 
     return Column(
@@ -309,7 +320,8 @@ class _MiniMonth extends StatelessWidget {
             final inMonth = day.month == focus.month;
             final isSelected = _isSameDay(day, focus);
             final inSelectedWeek =
-                !day.isBefore(selectedWeekStart) && !day.isAfter(selectedWeekEnd);
+                !day.isBefore(selectedWeekStart) &&
+                !day.isAfter(selectedWeekEnd);
             final hasItem = itemDates.any((date) => _isSameDay(date, day));
 
             return InkWell(
@@ -320,8 +332,8 @@ class _MiniMonth extends StatelessWidget {
                   color: isSelected
                       ? AppColors.brandPrimary
                       : inSelectedWeek
-                          ? AppColors.brandPrimary.withValues(alpha: 0.08)
-                          : Colors.transparent,
+                      ? AppColors.brandPrimary.withValues(alpha: 0.08)
+                      : Colors.transparent,
                   borderRadius: BorderRadius.circular(AppRadii.md),
                 ),
                 child: Stack(
@@ -333,9 +345,11 @@ class _MiniMonth extends StatelessWidget {
                         color: isSelected
                             ? AppColors.textInverted
                             : inMonth
-                                ? AppColors.textSecondary
-                                : AppColors.textMuted.withValues(alpha: 0.55),
-                        fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                            ? AppColors.textSecondary
+                            : AppColors.textMuted.withValues(alpha: 0.55),
+                        fontWeight: isSelected
+                            ? FontWeight.w800
+                            : FontWeight.w600,
                         fontSize: 12,
                       ),
                     ),
@@ -465,9 +479,18 @@ class _CalendarLegend extends StatelessWidget {
           ),
         ),
         SizedBox(height: AppSpacing.md),
-        _LegendItem(color: AgendaColors.statusAgendado, label: 'Sessao agendada'),
-        _LegendItem(color: AgendaColors.statusEmAndamento, label: 'Em andamento'),
-        _LegendItem(color: AgendaColors.urgenciaAlta, label: 'Evento importante'),
+        _LegendItem(
+          color: AgendaColors.statusAgendado,
+          label: 'Sessao agendada',
+        ),
+        _LegendItem(
+          color: AgendaColors.statusEmAndamento,
+          label: 'Em andamento',
+        ),
+        _LegendItem(
+          color: AgendaColors.urgenciaAlta,
+          label: 'Evento importante',
+        ),
       ],
     );
   }
@@ -518,7 +541,8 @@ class _WeekGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final totalHours = WeeklyCalendarGrid._gridEndHour - WeeklyCalendarGrid._gridStartHour;
+    final totalHours =
+        WeeklyCalendarGrid._gridEndHour - WeeklyCalendarGrid._gridStartHour;
     final gridHeight = totalHours * WeeklyCalendarGrid._hourHeight;
 
     return LayoutBuilder(
@@ -531,7 +555,8 @@ class _WeekGrid extends StatelessWidget {
           WeeklyCalendarGrid._minDayWidth,
           availableWidth / 7,
         );
-        final calendarWidth = WeeklyCalendarGrid._hourColumnWidth + dayWidth * 7;
+        final calendarWidth =
+            WeeklyCalendarGrid._hourColumnWidth + dayWidth * 7;
 
         return SingleChildScrollView(
           scrollDirection: Axis.horizontal,
@@ -543,8 +568,12 @@ class _WeekGrid extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      const SizedBox(width: WeeklyCalendarGrid._hourColumnWidth),
-                      ...days.map((day) => _DayHeader(day: day, width: dayWidth)),
+                      const SizedBox(
+                        width: WeeklyCalendarGrid._hourColumnWidth,
+                      ),
+                      ...days.map(
+                        (day) => _DayHeader(day: day, width: dayWidth),
+                      ),
                     ],
                   ),
                   Row(
@@ -552,9 +581,15 @@ class _WeekGrid extends StatelessWidget {
                     children: [
                       const _AllDayLabelCell(),
                       ...days.map((day) {
-                        final items = _itemsForDay(day, provider.itensDaSemanaFocal);
+                        final items = _itemsForDay(
+                          day,
+                          provider.itensDaSemanaFocal,
+                        );
                         final allDay = items
-                            .where((item) => item.isEvento && item.horaInicio == null)
+                            .where(
+                              (item) =>
+                                  item.isEvento && item.horaInicio == null,
+                            )
                             .toList();
                         return _AllDayCell(width: dayWidth, items: allDay);
                       }),
@@ -567,13 +602,24 @@ class _WeekGrid extends StatelessWidget {
                       children: [
                         _HourLabels(height: gridHeight),
                         ...days.map((day) {
-                          final items = _itemsForDay(day, provider.itensDaSemanaFocal);
-                          final timed = items
-                              .where((item) =>
-                                  item.isSessao ||
-                                  (item.isEvento && item.horaInicio != null))
-                              .toList()
-                            ..sort((a, b) => _startMinutes(a).compareTo(_startMinutes(b)));
+                          final items = _itemsForDay(
+                            day,
+                            provider.itensDaSemanaFocal,
+                          );
+                          final timed =
+                              items
+                                  .where(
+                                    (item) =>
+                                        item.isSessao ||
+                                        (item.isEvento &&
+                                            item.horaInicio != null),
+                                  )
+                                  .toList()
+                                ..sort(
+                                  (a, b) => _startMinutes(
+                                    a,
+                                  ).compareTo(_startMinutes(b)),
+                                );
                           return _DayColumn(
                             width: dayWidth,
                             height: gridHeight,
@@ -630,7 +676,9 @@ class _DayHeader extends StatelessWidget {
             height: 36,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: isToday ? AppColors.brandPrimary.withValues(alpha: 0.14) : Colors.transparent,
+              color: isToday
+                  ? AppColors.brandPrimary.withValues(alpha: 0.14)
+                  : Colors.transparent,
               shape: BoxShape.circle,
             ),
             child: Text(
@@ -757,7 +805,8 @@ class _HourLabels extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final totalHours = WeeklyCalendarGrid._gridEndHour - WeeklyCalendarGrid._gridStartHour;
+    final totalHours =
+        WeeklyCalendarGrid._gridEndHour - WeeklyCalendarGrid._gridStartHour;
     return Container(
       width: WeeklyCalendarGrid._hourColumnWidth,
       height: height,
@@ -796,7 +845,8 @@ class _DayColumn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final totalHours = WeeklyCalendarGrid._gridEndHour - WeeklyCalendarGrid._gridStartHour;
+    final totalHours =
+        WeeklyCalendarGrid._gridEndHour - WeeklyCalendarGrid._gridStartHour;
     return Container(
       width: width,
       height: height,
@@ -829,9 +879,11 @@ class _DayColumn extends StatelessWidget {
           ...items.map((item) {
             final minutesStart = _startMinutes(item);
             final minutesEnd = _endMinutes(item);
-            final top = ((minutesStart - WeeklyCalendarGrid._gridStartHour * 60) / 60) *
+            final top =
+                ((minutesStart - WeeklyCalendarGrid._gridStartHour * 60) / 60) *
                 WeeklyCalendarGrid._hourHeight;
-            final bottom = ((minutesEnd - WeeklyCalendarGrid._gridStartHour * 60) / 60) *
+            final bottom =
+                ((minutesEnd - WeeklyCalendarGrid._gridStartHour * 60) / 60) *
                 WeeklyCalendarGrid._hourHeight;
             final clampedTop = top.clamp(0.0, height).toDouble();
             final clampedBottom = bottom.clamp(0.0, height).toDouble();
@@ -1107,10 +1159,7 @@ Future<void> _showItemDetails(BuildContext context, AgendaItem item) {
                   label: item.disciplinaNome,
                 ),
               if (item.descricao != null && item.descricao!.isNotEmpty)
-                _DetailLine(
-                  icon: Icons.notes_rounded,
-                  label: item.descricao!,
-                ),
+                _DetailLine(icon: Icons.notes_rounded, label: item.descricao!),
               const SizedBox(height: AppSpacing.lg),
               Row(
                 children: [
@@ -1142,6 +1191,16 @@ Future<void> _showItemDetails(BuildContext context, AgendaItem item) {
                       },
                       icon: const Icon(Icons.edit_rounded),
                       label: const Text('Editar'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.brandPrimaryDark,
+                        backgroundColor: AppColors.brandPrimary.withValues(
+                          alpha: 0.07,
+                        ),
+                        side: const BorderSide(
+                          color: AppColors.brandPrimaryDark,
+                          width: 1.2,
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(width: AppSpacing.md),
@@ -1155,7 +1214,9 @@ Future<void> _showItemDetails(BuildContext context, AgendaItem item) {
                       label: const Text('Excluir'),
                       style: FilledButton.styleFrom(
                         foregroundColor: AppColors.danger,
-                        backgroundColor: AppColors.danger.withValues(alpha: 0.08),
+                        backgroundColor: AppColors.danger.withValues(
+                          alpha: 0.08,
+                        ),
                       ),
                     ),
                   ),
@@ -1236,7 +1297,9 @@ Future<void> _deleteItem(BuildContext context, AgendaItem item) async {
       context.read<AgendaProvider>().fetchAgenda();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(item.isEvento ? 'Evento excluido.' : 'Sessao excluida.'),
+          content: Text(
+            item.isEvento ? 'Evento excluido.' : 'Sessao excluida.',
+          ),
           backgroundColor: AppColors.success,
         ),
       );
@@ -1256,7 +1319,9 @@ Future<void> _deleteItem(BuildContext context, AgendaItem item) async {
 List<AgendaItem> _itemsForDay(DateTime day, List<AgendaItem> items) {
   return items.where((item) {
     final date = item.timestamp;
-    return date.year == day.year && date.month == day.month && date.day == day.day;
+    return date.year == day.year &&
+        date.month == day.month &&
+        date.day == day.day;
   }).toList();
 }
 

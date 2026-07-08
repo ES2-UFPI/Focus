@@ -95,7 +95,7 @@ class RelatoriosScreen extends StatelessWidget {
             ),
           ),
 
-          // Gráfico de Barras Mockado com Containers
+          // Gráfico de barras com containers
           SliverToBoxAdapter(
             child: Card(
               margin: const EdgeInsets.all(16.0),

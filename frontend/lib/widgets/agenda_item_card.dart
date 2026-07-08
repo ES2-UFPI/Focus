@@ -20,11 +20,7 @@ class AgendaItemCard extends StatelessWidget {
   final AgendaItem item;
   final bool isCompact;
 
-  const AgendaItemCard({
-    super.key,
-    required this.item,
-    this.isCompact = false,
-  });
+  const AgendaItemCard({super.key, required this.item, this.isCompact = false});
 
   @override
   Widget build(BuildContext context) {
@@ -100,13 +96,22 @@ class AgendaItemCard extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 16.0),
                 child: Text(
                   item.isEvento ? 'Opções do Evento' : 'Opções da Sessão',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
               const Divider(height: 1),
               ListTile(
                 leading: const Icon(Icons.edit, color: AppColors.brandPrimary),
-                title: Text(item.isEvento ? 'Editar Evento' : 'Editar Sessão'),
+                title: Text(
+                  item.isEvento ? 'Editar Evento' : 'Editar Sessão',
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
                 onTap: () async {
                   Navigator.pop(sheetContext);
                   bool? atualizado;
@@ -114,14 +119,16 @@ class AgendaItemCard extends StatelessWidget {
                     atualizado = await Navigator.push<bool>(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => CriarEventoScreen(eventoExistente: item),
+                        builder: (context) =>
+                            CriarEventoScreen(eventoExistente: item),
                       ),
                     );
                   } else {
                     atualizado = await Navigator.push<bool>(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => CriarSessaoScreen(sessaoExistente: item),
+                        builder: (context) =>
+                            CriarSessaoScreen(sessaoExistente: item),
                       ),
                     );
                   }
@@ -132,18 +139,29 @@ class AgendaItemCard extends StatelessWidget {
               ),
               ListTile(
                 leading: const Icon(Icons.delete, color: AppColors.danger),
-                title: Text(item.isEvento ? 'Excluir Evento' : 'Excluir Sessão'),
+                title: Text(
+                  item.isEvento ? 'Excluir Evento' : 'Excluir Sessão',
+                  style: const TextStyle(
+                    color: AppColors.danger,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
                 onTap: () async {
                   Navigator.pop(sheetContext);
                   final confirmar = await showDialog<bool>(
                     context: context,
                     builder: (dialogContext) {
                       return AlertDialog(
-                        title: Text(item.isEvento ? 'Excluir Evento' : 'Excluir Sessão'),
-                        content: const Text('Tem certeza que deseja excluir este item?'),
+                        title: Text(
+                          item.isEvento ? 'Excluir Evento' : 'Excluir Sessão',
+                        ),
+                        content: const Text(
+                          'Tem certeza que deseja excluir este item?',
+                        ),
                         actions: [
                           TextButton(
-                            onPressed: () => Navigator.pop(dialogContext, false),
+                            onPressed: () =>
+                                Navigator.pop(dialogContext, false),
                             child: const Text('CANCELAR'),
                           ),
                           TextButton(
@@ -168,9 +186,11 @@ class AgendaItemCard extends StatelessWidget {
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text(item.isEvento
-                                ? 'Evento excluído com sucesso!'
-                                : 'Sessão excluída com sucesso!'),
+                            content: Text(
+                              item.isEvento
+                                  ? 'Evento excluído com sucesso!'
+                                  : 'Sessão excluída com sucesso!',
+                            ),
                             backgroundColor: AppColors.success,
                           ),
                         );
@@ -380,7 +400,9 @@ class AgendaItemCard extends StatelessWidget {
             padding: const EdgeInsets.only(left: 28),
             child: Text(
               item.descricao!,
-              style: textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+              style: textTheme.bodySmall?.copyWith(
+                color: AppColors.textSecondary,
+              ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
@@ -402,7 +424,9 @@ class AgendaItemCard extends StatelessWidget {
                 const SizedBox(width: 4),
                 Text(
                   'Concluído',
-                  style: textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
+                  style: textTheme.bodySmall?.copyWith(
+                    color: AppColors.textMuted,
+                  ),
                 ),
               ],
             ),
@@ -481,7 +505,9 @@ class AgendaItemCard extends StatelessWidget {
             padding: const EdgeInsets.only(left: 28),
             child: Text(
               item.descricao!,
-              style: textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+              style: textTheme.bodySmall?.copyWith(
+                color: AppColors.textSecondary,
+              ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
@@ -495,11 +521,17 @@ class AgendaItemCard extends StatelessWidget {
             padding: const EdgeInsets.only(left: 28),
             child: Row(
               children: [
-                Icon(Icons.timer_outlined, size: 16, color: AppColors.textMuted),
+                Icon(
+                  Icons.timer_outlined,
+                  size: 16,
+                  color: AppColors.textMuted,
+                ),
                 const SizedBox(width: 4),
                 Text(
                   'Foco: ${item.duracaoRealizada} min',
-                  style: textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
+                  style: textTheme.bodySmall?.copyWith(
+                    color: AppColors.textMuted,
+                  ),
                 ),
               ],
             ),
