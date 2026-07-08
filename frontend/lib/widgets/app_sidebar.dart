@@ -33,21 +33,39 @@ class AppSidebar extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 8),
               children: [
                 _buildItem(
+                  
                   context,
+                 
                   AppPage.atividades,
+                 
                   LucideIcons.clipboardList,
+                 
                   'Atividades',
                 ),
                 _buildItem(
+                  
                   context,
+                 
                   AppPage.eventos,
+                 
                   LucideIcons.calendarDays,
+                 
                   'Eventos',
+                ),
+                _buildItem(
+                  
+                  context,
+                 
+                  AppPage.metas,
+                  LucideIcons.target,
+                  'Metas Semanais',
                 ),
                 _buildItem(
                   context,
                   AppPage.consistencia,
+                 
                   LucideIcons.barChart2,
+                 
                   'Consistência',
                 ),
                 _buildItem(
@@ -63,9 +81,13 @@ class AppSidebar extends StatelessWidget {
                   'Pomodoro',
                 ),
                 _buildItem(
+                  
                   context,
+                 
                   AppPage.ajustes,
+                 
                   LucideIcons.settings,
+                 
                   'Ajustes',
                 ),
               ],
