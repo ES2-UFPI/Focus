@@ -1,15 +1,15 @@
 ((a,b)=>{a[b]=a[b]||{}})(self,"$__dart_deferred_initializers__")
 $__dart_deferred_initializers__.current=function(a,b,c,$){var B,A={
-bfI(d,e,f){var x,w,v=null,u=new B.P(y.c),t=new B.P(y.c)
-t=new A.a2C(u,t)
-t.bP(d,v,e,v)
+bfv(d,e,f){var x,w,v=null,u=new B.P(y.c),t=new B.P(y.c)
+t=new A.a2w(u,t)
+t.bQ(d,v,e,v)
 x=t.a
 w=u.r
 w.toString
 x.r=w
-u.r=A.bzH(t)
+u.r=A.bzt(t)
 return t},
-byo(d,e){var x
+bya(d,e){var x
 A:{if("timePicker.hours"===e){x="Godziny"
 break A}if("timePicker.minutes"===e){x="Minuty"
 break A}if("timePicker.seconds"===e){x="Sekundy"
@@ -23,26 +23,26 @@ break A}if("input.selectAll"===e){x="Zaznacz wszystko"
 break A}if("keyboardToolbar.done"===e){x="Gotowe"
 break A}x=null
 break A}return x},
-bzH(d){return new A.b2k(d)},
-a2C:function a2C(d,e){this.r=d
+bzt(d){return new A.b29(d)},
+a2w:function a2w(d,e){this.r=d
 this.a=e},
-b2k:function b2k(d){this.a=d},
-agx:function agx(){}}
+b29:function b29(d){this.a=d},
+ago:function ago(){}}
 B=c[0]
 A=a.updateHolder(c[60],A)
-A.a2C.prototype={
-h(d,e){var x=this.r.ad(e)
-return x==null?this.a.ad(e):x},
-gbL(){return this.r}}
-A.agx.prototype={}
+A.a2w.prototype={
+h(d,e){var x=this.r.ac(e)
+return x==null?this.a.ac(e):x},
+gbM(){return this.r}}
+A.ago.prototype={}
 var z=a.updateTypes([])
-A.b2k.prototype={
-$1(d){return A.byo(this.a,d)},
+A.b29.prototype={
+$1(d){return A.bya(this.a,d)},
 $S:2};(function inheritance(){var x=a.mixin,w=a.inherit
-w(A.agx,B.N)
-w(A.a2C,A.agx)
-w(A.b2k,B.b5)
-x(A.agx,B.b9)})()
-B.bm(b.typeUniverse,JSON.parse('{"a2C":{"N":[]}}'))
-var y={c:B.Y("P<a5,N>")}};
-(a=>{a["m4scexcnaaGTbVLewh9Xw/CuJ6Y="]=a.current})($__dart_deferred_initializers__);
+w(A.ago,B.O)
+w(A.a2w,A.ago)
+w(A.b29,B.b5)
+x(A.ago,B.ba)})()
+B.bl(b.typeUniverse,JSON.parse('{"a2w":{"O":[]}}'))
+var y={c:B.X("P<a5,O>")}};
+(a=>{a["8oubutupRccDJal1vEJ5imlnDZk="]=a.current})($__dart_deferred_initializers__);
