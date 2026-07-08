@@ -5,6 +5,7 @@ import 'agenda_screen.dart';
 import 'atividades_screen.dart';
 import 'consistencia_screen.dart';
 import 'configuracoes_screen.dart';
+import 'disciplinas_screen.dart';
 import 'insights_screen.dart';
 import 'pomodoro_screen.dart';
 
@@ -17,6 +18,7 @@ class HomeScreen extends StatelessWidget {
       screens: [
         AtividadesScreen(),
         AgendaScreen(),
+        DisciplinasScreen(),
         ConsistenciaScreen(),
         InsightsScreen(),
         PomodoroScreen(),

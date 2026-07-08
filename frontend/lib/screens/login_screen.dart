@@ -115,13 +115,14 @@ class _LoginScreenState extends State<LoginScreen> {
                         const SizedBox(height: AppSpacing.xxxl),
                         _campo(
                           controller: _emailCtrl,
-                          label: 'Login',
-                          icon: Icons.person_outline,
+                          label: 'E-mail',
+                          icon: Icons.email_outlined,
                           teclado: TextInputType.emailAddress,
                           validar: (v) {
                             if (v == null || v.isEmpty) {
-                              return 'Informe o login';
+                              return 'Informe o e-mail';
                             }
+                            if (!v.contains('@')) return 'E-mail inválido';
                             return null;
                           },
                         ),
@@ -228,7 +229,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
                             const Text(
-                              'Nao tem conta? ',
+                              'Não tem conta? ',
                               style: TextStyle(
                                 color: AppColors.textMuted,
                                 fontWeight: FontWeight.w500,

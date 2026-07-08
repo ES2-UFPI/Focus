@@ -65,12 +65,6 @@ class SessaoEstudoViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'], permission_classes=[AllowAny])
     def dashboard(self, request):
-        # 🛡️ Uma verificação simples de segurança caso queira debugar no terminal
-        if request.user.is_authenticated:
-            print(f"🚀 [Dashboard] Processando dados para: {request.user.email}")
-        else:
-            print("⚠️ [Dashboard] Requisição anônima recebida!")
-
         # Retorna o cálculo do serviço usando o aluno_id correto
         return Response(
             self.consistencia.obter_dashboard_consistencia(self.aluno_id)
