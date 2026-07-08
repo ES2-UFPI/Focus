@@ -273,13 +273,52 @@ class _MateriaSeletor extends StatelessWidget {
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           isExpanded: true,
+          dropdownColor: AppColors.surface,
+          iconEnabledColor: AppColors.textMuted,
+          borderRadius: BorderRadius.circular(10),
+          style: const TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
           value: provider.disciplinaSelecionada?.id,
-          hint: const Text('Selecione a matéria'),
+          hint: const Text(
+            'Selecione a matéria',
+            style: TextStyle(
+              color: AppColors.textMuted,
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          selectedItemBuilder: (context) {
+            return provider.disciplinas.map((d) {
+              return Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  d.nome,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              );
+            }).toList();
+          },
           items: provider.disciplinas
               .map(
                 (d) => DropdownMenuItem(
                   value: d.id,
-                  child: Text(d.nome, overflow: TextOverflow.ellipsis),
+                  child: Text(
+                    d.nome,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
               )
               .toList(),
@@ -334,8 +373,39 @@ class _SessaoSeletor extends StatelessWidget {
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           isExpanded: true,
+          dropdownColor: AppColors.surface,
+          iconEnabledColor: AppColors.textMuted,
+          borderRadius: BorderRadius.circular(10),
+          style: const TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
           value: valorAtual,
-          hint: const Text('Selecione a sessão'),
+          hint: const Text(
+            'Selecione a sessão',
+            style: TextStyle(
+              color: AppColors.textMuted,
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          selectedItemBuilder: (context) {
+            return sessoes.map((s) {
+              return Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  _formatarSessao(s),
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              );
+            }).toList();
+          },
           items: sessoes
               .map(
                 (s) => DropdownMenuItem(
@@ -343,6 +413,11 @@ class _SessaoSeletor extends StatelessWidget {
                   child: Text(
                     _formatarSessao(s),
                     overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               )
@@ -385,7 +460,8 @@ class _SeletorContainer extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppColors.surface,
             borderRadius: BorderRadius.circular(9),
-            border: Border.all(color: AppColors.border),
+            border: Border.all(color: AppColors.borderSubtle),
+            boxShadow: AppShadows.cardSoft,
           ),
           child: Align(alignment: Alignment.centerLeft, child: child),
         ),

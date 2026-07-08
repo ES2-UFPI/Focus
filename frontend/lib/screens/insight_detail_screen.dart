@@ -216,11 +216,6 @@ class _InsightDetailScreenState extends State<InsightDetailScreen> {
                 icon: LucideIcons.database,
                 color: AppColors.textMuted,
               ),
-              _DetailBadge(
-                label: confidenceLabel(_insight.confianca),
-                icon: LucideIcons.shieldCheck,
-                color: confidenceColor(_insight.confianca),
-              ),
             ],
           ),
           const SizedBox(height: AppSpacing.md),
@@ -292,7 +287,7 @@ class _InsightDetailScreenState extends State<InsightDetailScreen> {
         return 'Considere blocos de até 50 minutos, seguidos por uma pausa '
             'curta, e compare sua produtividade nas próximas sessões.';
       case 'vies_estimativa':
-        return 'Ao planejar Cálculo, acrescente uma margem de aproximadamente '
+        return 'Ao planejar uma tarefa mais pesada, acrescente uma margem de '
             '40% ao tempo inicial e ajuste com seus próximos registros.';
       case 'taxa_furo':
         return 'Teste outro horário para as sessões de sexta e acompanhe se a '
@@ -354,26 +349,34 @@ class _SectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
+    final cardRadius = BorderRadius.circular(AppRadii.md);
+
+    return DecoratedBox(
+      decoration: AppDecorations.card(borderRadius: cardRadius),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, size: AppSizes.iconMd, color: AppColors.subjectTeal),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: Text(
-                title,
-                style: AppTypography.cardTitle.copyWith(
-                  color: AppColors.textPrimary,
+            Row(
+              children: [
+                Icon(icon, size: AppSizes.iconMd, color: AppColors.subjectTeal),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: AppTypography.cardTitle.copyWith(
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
+            const SizedBox(height: AppSpacing.lg),
+            child,
           ],
         ),
-        const SizedBox(height: AppSpacing.lg),
-        child,
-      ],
+      ),
     );
   }
 }
@@ -403,7 +406,7 @@ class _NumbersFallback extends StatelessWidget {
                 horizontal: AppSpacing.md,
                 vertical: AppSpacing.sm,
               ),
-              decoration: BoxDecoration(
+              decoration: AppDecorations.softCard(
                 color: color.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(AppRadii.md),
               ),

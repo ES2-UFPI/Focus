@@ -7,9 +7,11 @@ from django.db import models
 class InsightFeedback(models.Model):
     """Feedback determinístico do aluno sobre um insight.
 
-    Não alimenta nenhum modelo de ML: serve para personalização por regra —
-    um insight marcado como "não útil" é rebaixado/ocultado nas próximas
-    listagens daquele aluno (ver `InsightsService`).
+    Não alimenta nenhum modelo de ML e não reforça nem prioriza nada. Serve
+    apenas para uma punição temporária: quando o aluno marca um insight como
+    "não útil" (👎), ele é ocultado para aquele aluno por 7 dias
+    (`ocultar_ate`). Feedback positivo não cria, remove nem altera punição
+    (ver `InsightsService`).
     """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -28,6 +30,13 @@ class InsightFeedback(models.Model):
         help_text='True se o aluno marcou o insight como útil (👍), False se rejeitou (👎).',
     )
     motivo = models.TextField(blank=True, null=True)
+    # Punição temporária: enquanto estiver no futuro, o insight fica oculto
+    # para este aluno. Só é preenchido em feedback negativo (👎).
+    ocultar_ate = models.DateTimeField(
+        blank=True,
+        null=True,
+        help_text='Enquanto no futuro, oculta o insight deste aluno (punição de 7 dias por feedback negativo).',
+    )
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)
 

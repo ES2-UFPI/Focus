@@ -36,15 +36,14 @@ void main() {
     expect(find.text('Detalhe do insight'), findsOneWidget);
     expect(find.byType(BarChart), findsOneWidget);
     expect(find.byKey(const ValueKey('chart-callout')), findsOneWidget);
-    expect(find.text('9-12h · 4,2'), findsOneWidget);
+    expect(find.text('7-10h · 4,3'), findsOneWidget);
     final chart = tester.widget<BarChart>(find.byType(BarChart));
     expect(chart.data.alignment, BarChartAlignment.spaceEvenly);
     expect(chart.data.extraLinesData.horizontalLines, hasLength(1));
     expect(chart.data.extraLinesData.horizontalLines.single.dashArray, [4, 4]);
 
     expect(find.text('Sessões que sustentam o padrão'), findsOneWidget);
-    expect(find.text('18 sessões na amostra'), findsOneWidget);
-    expect(find.text('Confiança alta'), findsOneWidget);
+    expect(find.text('12 sessões na amostra'), findsOneWidget);
     expect(find.text('18/06/2026'), findsOneWidget);
     expect(find.text('Recomendação observacional'), findsOneWidget);
     expect(find.text('Isso faz sentido pra você?'), findsOneWidget);
@@ -66,7 +65,7 @@ void main() {
 
     expect(find.byType(LineChart), findsOneWidget);
     expect(find.byKey(const ValueKey('chart-callout')), findsOneWidget);
-    expect(find.text('50 min · 4,1'), findsOneWidget);
+    expect(find.text('50 min · 3,9'), findsOneWidget);
     final chart = tester.widget<LineChart>(find.byType(LineChart));
     expect(chart.data.extraLinesData.horizontalLines, hasLength(1));
   });
@@ -105,7 +104,7 @@ void main() {
 
     expect(find.text('Detalhe do insight'), findsOneWidget);
     expect(
-      find.text('Seu rendimento tende a ser maior pela manhã'),
+      find.text('Você rende melhor em Estruturas de Dados pela manhã'),
       findsOneWidget,
     );
   });

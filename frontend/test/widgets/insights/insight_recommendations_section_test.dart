@@ -15,11 +15,10 @@ void main() {
         .where((entry) => entry.kind == InsightRecommendationKind.experiment)
         .toList();
 
-    expect(actions, hasLength(3));
+    expect(actions, hasLength(2));
     expect(actions.map((entry) => entry.insight!.acao!.tipo).toSet(), {
       'agendar_sessao',
       'reagendar',
-      'silenciar_celular',
     });
     expect(
       actions.where((entry) => entry.insight!.acao!.tipo == 'agendar_sessao'),

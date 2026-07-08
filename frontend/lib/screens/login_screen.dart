@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
+import '../core/theme/app_theme.dart';
 import '../providers/auth_provider.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -26,16 +28,22 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _entrar() async {
     if (!_formKey.currentState!.validate()) return;
-    setState(() { _carregando = true; _erro = null; });
+    setState(() {
+      _carregando = true;
+      _erro = null;
+    });
 
     final erro = await context.read<AuthProvider>().login(
-      _emailCtrl.text.trim(),
-      _senhaCtrl.text,
-    );
+          _emailCtrl.text.trim(),
+          _senhaCtrl.text,
+        );
 
     if (!mounted) return;
     if (erro != null) {
-      setState(() { _erro = erro; _carregando = false; });
+      setState(() {
+        _erro = erro;
+        _carregando = false;
+      });
     } else {
       Navigator.pushReplacementNamed(context, '/home');
     }
@@ -44,126 +52,198 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0f0e17),
+      backgroundColor: AppColors.appBackground,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            reverse: true,
-            padding: const EdgeInsets.symmetric(horizontal: 28),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                // reverse:true no SingleChildScrollView inverte o eixo de
-                // rolagem — invertemos a lista aqui também pra manter a
-                // ordem visual (logo em cima, botão embaixo).
-                children: [
-                  const SizedBox(height: 24),
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF6366f1),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: const Icon(Icons.bolt_rounded, color: Colors.white, size: 36),
-                  ),
-                  const SizedBox(height: 20),
-                  const Text(
-                    'Focus',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 32,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Bem-vindo de volta',
-                    style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 15),
-                  ),
-                  const SizedBox(height: 36),
-                  _campo(
-                    controller: _emailCtrl,
-                    label: 'E-mail',
-                    icon: Icons.email_outlined,
-                    teclado: TextInputType.emailAddress,
-                    validar: (v) {
-                      if (v == null || v.isEmpty) return 'Informe o e-mail';
-                      if (!v.contains('@')) return 'E-mail inválido';
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 14),
-                  _campo(
-                    controller: _senhaCtrl,
-                    label: 'Senha',
-                    icon: Icons.lock_outline,
-                    obscuro: !_senhaVisivel,
-                    sufixo: IconButton(
-                      icon: Icon(
-                        _senhaVisivel ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                        color: Colors.white54,
-                        size: 20,
-                      ),
-                      onPressed: () => setState(() => _senhaVisivel = !_senhaVisivel),
-                    ),
-                    validar: (v) {
-                      if (v == null || v.isEmpty) return 'Informe a senha';
-                      return null;
-                    },
-                  ),
-                  if (_erro != null) ...[
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: Colors.red.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.error_outline, color: Colors.redAccent, size: 18),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(_erro!, style: const TextStyle(color: Colors.redAccent, fontSize: 13)),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.xxl,
+              vertical: AppSpacing.xxxl,
+            ),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 430),
+              child: DecoratedBox(
+                decoration: AppDecorations.card(
+                  borderRadius: BorderRadius.circular(AppRadii.xl),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.xxxl),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Column(
+                          children: [
+                            Container(
+                              width: 64,
+                              height: 64,
+                              decoration: BoxDecoration(
+                                color: AppColors.brandPrimary,
+                                borderRadius: BorderRadius.circular(AppRadii.xl),
+                                boxShadow: AppShadows.cardSoft,
+                              ),
+                              child: const Icon(
+                                Icons.bolt_rounded,
+                                color: AppColors.textInverted,
+                                size: 36,
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.lg),
+                            const Text(
+                              'Focus',
+                              style: TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: 32,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.xs),
+                            const Text(
+                              'Bem-vindo de volta',
+                              style: TextStyle(
+                                color: AppColors.textMuted,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: AppSpacing.xxxl),
+                        _campo(
+                          controller: _emailCtrl,
+                          label: 'Login',
+                          icon: Icons.person_outline,
+                          teclado: TextInputType.emailAddress,
+                          validar: (v) {
+                            if (v == null || v.isEmpty) return 'Informe o login';
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        _campo(
+                          controller: _senhaCtrl,
+                          label: 'Senha',
+                          icon: Icons.lock_outline,
+                          obscuro: !_senhaVisivel,
+                          sufixo: IconButton(
+                            tooltip:
+                                _senhaVisivel ? 'Ocultar senha' : 'Mostrar senha',
+                            icon: Icon(
+                              _senhaVisivel
+                                  ? Icons.visibility_off_outlined
+                                  : Icons.visibility_outlined,
+                              color: AppColors.textMuted,
+                              size: 20,
+                            ),
+                            onPressed: () =>
+                                setState(() => _senhaVisivel = !_senhaVisivel),
+                          ),
+                          validar: (v) {
+                            if (v == null || v.isEmpty) return 'Informe a senha';
+                            return null;
+                          },
+                        ),
+                        if (_erro != null) ...[
+                          const SizedBox(height: AppSpacing.md),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.lg,
+                              vertical: AppSpacing.md,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.danger.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(AppRadii.md),
+                              border: Border.all(
+                                color: AppColors.danger.withValues(alpha: 0.25),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.error_outline,
+                                  color: AppColors.danger,
+                                  size: 18,
+                                ),
+                                const SizedBox(width: AppSpacing.sm),
+                                Expanded(
+                                  child: Text(
+                                    _erro!,
+                                    style: const TextStyle(
+                                      color: AppColors.danger,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 24),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: FilledButton(
-                      onPressed: _carregando ? null : _entrar,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFF6366f1),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      child: _carregando
-                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                          : const Text('Entrar', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text('Não tem conta? ', style: TextStyle(color: Colors.white.withValues(alpha: 0.5))),
-                      GestureDetector(
-                        onTap: () => Navigator.pushReplacementNamed(context, '/registro'),
-                        child: const Text(
-                          'Criar conta',
-                          style: TextStyle(color: Color(0xFF818cf8), fontWeight: FontWeight.w600),
+                        const SizedBox(height: AppSpacing.xl),
+                        SizedBox(
+                          height: 52,
+                          child: FilledButton(
+                            onPressed: _carregando ? null : _entrar,
+                            style: FilledButton.styleFrom(
+                              backgroundColor: AppColors.brandPrimary,
+                              foregroundColor: AppColors.textInverted,
+                              disabledBackgroundColor:
+                                  AppColors.brandPrimary.withValues(alpha: 0.45),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(AppRadii.md),
+                              ),
+                            ),
+                            child: _carregando
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: AppColors.textInverted,
+                                    ),
+                                  )
+                                : const Text(
+                                    'Entrar',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                          ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: AppSpacing.lg),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Text(
+                              'Nao tem conta? ',
+                              style: TextStyle(
+                                color: AppColors.textMuted,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: () =>
+                                  Navigator.pushReplacementNamed(context, '/registro'),
+                              style: TextButton.styleFrom(
+                                foregroundColor: AppColors.brandPrimary,
+                                padding: EdgeInsets.zero,
+                                minimumSize: const Size(0, 36),
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              child: const Text(
+                                'Criar conta',
+                                style: TextStyle(fontWeight: FontWeight.w700),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 24),
-                ].reversed.toList(),
+                ),
               ),
             ),
           ),
@@ -181,40 +261,55 @@ class _LoginScreenState extends State<LoginScreen> {
     Widget? sufixo,
     String? Function(String?)? validar,
   }) {
+    final borderRadius = BorderRadius.circular(AppRadii.md);
+
     return TextFormField(
       controller: controller,
       keyboardType: teclado,
       obscureText: obscuro,
-      style: const TextStyle(color: Colors.white),
+      style: const TextStyle(
+        color: AppColors.textPrimary,
+        fontWeight: FontWeight.w600,
+      ),
       validator: validar,
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
-        prefixIcon: Icon(icon, color: Colors.white38, size: 20),
+        labelStyle: const TextStyle(
+          color: AppColors.textMuted,
+          fontWeight: FontWeight.w500,
+        ),
+        prefixIcon: Icon(icon, color: AppColors.textMuted, size: 20),
         suffixIcon: sufixo,
         filled: true,
-        fillColor: const Color(0xFF1e1b4b),
+        fillColor: AppColors.surfaceMuted,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg,
+          vertical: AppSpacing.lg,
+        ),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: borderRadius,
           borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF2d2b5e)),
+          borderRadius: borderRadius,
+          borderSide: const BorderSide(color: AppColors.borderSubtle),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF6366f1), width: 1.5),
+          borderRadius: borderRadius,
+          borderSide: const BorderSide(color: AppColors.brandPrimary, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.redAccent),
+          borderRadius: borderRadius,
+          borderSide: const BorderSide(color: AppColors.danger),
         ),
         focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.redAccent),
+          borderRadius: borderRadius,
+          borderSide: const BorderSide(color: AppColors.danger),
         ),
-        errorStyle: const TextStyle(color: Colors.redAccent),
+        errorStyle: const TextStyle(
+          color: AppColors.danger,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }
