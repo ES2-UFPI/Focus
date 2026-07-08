@@ -27,6 +27,7 @@ class NotasProvider extends ChangeNotifier {
   bool get salvando => _salvando;
   String? get erro => _erro;
   List<Disciplina> get disciplinas => _disciplinas;
+  bool get podeCriarNota => _disciplinas.isNotEmpty;
   String get busca => _busca;
   String? get filtroDisciplinaId => _filtroDisciplinaId;
   NotasModo get modo => _modo;
@@ -66,12 +67,12 @@ class NotasProvider extends ChangeNotifier {
     _erro = null;
     notifyListeners();
     try {
-      final resultados = await Future.wait([
-        _service.listarNotas(),
-        _service.listarDisciplinas(),
-      ]);
-      _notas = resultados[0] as List<NotaEstudo>;
-      _disciplinas = resultados[1] as List<Disciplina>;
+      _disciplinas = await _service.listarDisciplinas();
+    } catch (e) {
+      _erro = 'Não foi possível carregar as disciplinas.';
+    }
+    try {
+      _notas = await _service.listarNotas();
       if (_notaSelecionadaId == null && _notas.isNotEmpty) {
         _notaSelecionadaId = _notas.first.id;
         _modo = NotasModo.detalhe;
@@ -102,6 +103,7 @@ class NotasProvider extends ChangeNotifier {
   }
 
   void novaNota() {
+    if (!podeCriarNota) return;
     _emEdicao = null;
     _modo = NotasModo.formulario;
     notifyListeners();

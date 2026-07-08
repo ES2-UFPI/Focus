@@ -1,35 +1,10 @@
 import 'dart:convert';
 
-import 'package:flutter/material.dart';
-
 import 'material_estudo.dart';
 
 /// Prefixo usado no titulo do MaterialEstudo para marcar registros que sao
 /// notas de estudo (o backend nao tem endpoint proprio de notas).
 const String kNotaTituloPrefixo = '[NOTA] ';
-
-/// Tipo de nota, com cores do design.
-enum TipoNota {
-  aula('AULA', 'Aula', Color(0xFF6366F1), Color(0xFFEEF0FE)),
-  prova('PROVA', 'Prova', Color(0xFFE53935), Color(0xFFFDEAEA)),
-  trabalho('TRABALHO', 'Trabalho', Color(0xFFFFA726), Color(0xFFFFF4E5)),
-  leitura('LEITURA', 'Leitura', Color(0xFF009688), Color(0xFFE1F1EF)),
-  carreira('CARREIRA', 'Carreira', Color(0xFF7E57C2), Color(0xFFF1ECF9));
-
-  final String codigo;
-  final String label;
-  final Color cor;
-  final Color corSoft;
-
-  const TipoNota(this.codigo, this.label, this.cor, this.corSoft);
-
-  static TipoNota fromCodigo(String? codigo) {
-    return TipoNota.values.firstWhere(
-      (t) => t.codigo == codigo,
-      orElse: () => TipoNota.aula,
-    );
-  }
-}
 
 /// Definicao de uma secao estruturada da nota.
 class SecaoNotaDef {
@@ -66,7 +41,6 @@ class NotaEstudo {
   final String disciplinaId;
   final String disciplinaNome;
   final String titulo;
-  final TipoNota tipo;
   final DateTime data;
   final Map<String, List<String>> secoes;
 
@@ -75,7 +49,6 @@ class NotaEstudo {
     required this.disciplinaId,
     required this.disciplinaNome,
     required this.titulo,
-    required this.tipo,
     required this.data,
     required this.secoes,
   });
@@ -133,7 +106,6 @@ class NotaEstudo {
       disciplinaId: material.disciplinaId,
       disciplinaNome: material.disciplinaNome,
       titulo: titulo,
-      tipo: TipoNota.fromCodigo(json['tipo'] as String?),
       data: material.dataInsercao,
       secoes: secoes,
     );
@@ -147,7 +119,6 @@ class NotaEstudo {
       'disciplina': disciplinaId,
       'descricao': jsonEncode({
         'nota': true,
-        'tipo': tipo.codigo,
         'secoes': {
           for (final def in kSecoesNota) def.key: secao(def.key),
         },
@@ -159,7 +130,6 @@ class NotaEstudo {
     String? disciplinaId,
     String? disciplinaNome,
     String? titulo,
-    TipoNota? tipo,
     Map<String, List<String>>? secoes,
   }) {
     return NotaEstudo(
@@ -167,7 +137,6 @@ class NotaEstudo {
       disciplinaId: disciplinaId ?? this.disciplinaId,
       disciplinaNome: disciplinaNome ?? this.disciplinaNome,
       titulo: titulo ?? this.titulo,
-      tipo: tipo ?? this.tipo,
       data: data,
       secoes: secoes ?? this.secoes,
     );

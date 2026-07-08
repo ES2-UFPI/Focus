@@ -140,6 +140,14 @@ class _DisciplinasRail extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
+          if (!provider.podeCriarNota)
+            const Padding(
+              padding: EdgeInsets.only(bottom: 8),
+              child: Text(
+                'Cadastre uma disciplina para criar notas.',
+                style: TextStyle(fontSize: 12, color: AppColors.neutral),
+              ),
+            ),
           FilledButton.icon(
             style: FilledButton.styleFrom(
               backgroundColor: AppColors.brandPrimary,
@@ -149,7 +157,9 @@ class _DisciplinasRail extends StatelessWidget {
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
-            onPressed: () => context.read<NotasProvider>().novaNota(),
+            onPressed: provider.podeCriarNota
+                ? () => context.read<NotasProvider>().novaNota()
+                : null,
             icon: const Icon(Icons.add, size: 16),
             label: const Text(
               'Nova nota',
@@ -255,8 +265,19 @@ class _ListaNotas extends StatelessWidget {
                         AppSizes.desktopBreakpoint)
                       IconButton(
                         tooltip: 'Nova nota',
-                        onPressed: () =>
-                            context.read<NotasProvider>().novaNota(),
+                        onPressed: () {
+                          final p = context.read<NotasProvider>();
+                          if (!p.podeCriarNota) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                    'Cadastre uma disciplina para criar notas.'),
+                              ),
+                            );
+                            return;
+                          }
+                          p.novaNota();
+                        },
                         icon: const Icon(Icons.add_circle,
                             color: AppColors.brandPrimary),
                       ),
@@ -333,7 +354,6 @@ class _CardNota extends StatelessWidget {
     final provider = context.watch<NotasProvider>();
     final selecionada = provider.notaSelecionada?.id == nota.id &&
         provider.modo == NotasModo.detalhe;
-    final tipo = nota.tipo;
 
     return InkWell(
       borderRadius: BorderRadius.circular(12),
@@ -341,26 +361,24 @@ class _CardNota extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(13),
         decoration: BoxDecoration(
-          color: selecionada ? tipo.corSoft : AppColors.surface,
+          color: selecionada ? const Color(0xFFEEF0FE) : AppColors.surface,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: selecionada ? tipo.cor : AppColors.borderSubtle,
+            color:
+                selecionada ? AppColors.brandPrimary : AppColors.borderSubtle,
             width: 1.5,
           ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                _BadgeTipo(tipo: tipo),
-                const Spacer(),
-                Text(
-                  nota.dataCurta,
-                  style: const TextStyle(
-                      fontSize: 11, color: AppColors.neutral),
-                ),
-              ],
+            Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                nota.dataCurta,
+                style:
+                    const TextStyle(fontSize: 11, color: AppColors.neutral),
+              ),
             ),
             const SizedBox(height: 5),
             Text(
@@ -386,33 +404,6 @@ class _CardNota extends StatelessWidget {
               style: const TextStyle(fontSize: 12, color: AppColors.neutral),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _BadgeTipo extends StatelessWidget {
-  final TipoNota tipo;
-  final double fontSize;
-
-  const _BadgeTipo({required this.tipo, this.fontSize = 10.5});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: tipo.corSoft,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        tipo.label.toUpperCase(),
-        style: TextStyle(
-          fontSize: fontSize,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.3,
-          color: tipo.cor,
         ),
       ),
     );
@@ -450,16 +441,19 @@ class _EstadoVazio extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    final podeCriar = context.watch<NotasProvider>().podeCriarNota;
+    return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.description_outlined,
+          const Icon(Icons.description_outlined,
               size: 40, color: Color(0xFFD1D5DB)),
-          SizedBox(height: 10),
+          const SizedBox(height: 10),
           Text(
-            'Selecione uma nota para ler, ou crie uma nova.',
-            style: TextStyle(fontSize: 14, color: AppColors.neutral),
+            podeCriar
+                ? 'Selecione uma nota para ler, ou crie uma nova.'
+                : 'Cadastre uma disciplina para começar a criar notas.',
+            style: const TextStyle(fontSize: 14, color: AppColors.neutral),
           ),
         ],
       ),
@@ -488,8 +482,6 @@ class _DetalheNota extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _BadgeTipo(tipo: nota.tipo, fontSize: 11),
-                      const SizedBox(height: 10),
                       Text(
                         nota.titulo,
                         style: const TextStyle(
@@ -639,7 +631,6 @@ class _FormularioNotaState extends State<_FormularioNota> {
   late final TextEditingController _tituloController;
   late final Map<String, TextEditingController> _secaoControllers;
   String? _disciplinaId;
-  TipoNota _tipo = TipoNota.aula;
 
   @override
   void initState() {
@@ -653,7 +644,6 @@ class _FormularioNotaState extends State<_FormularioNota> {
         ),
     };
     _disciplinaId = nota?.disciplinaId;
-    _tipo = nota?.tipo ?? TipoNota.aula;
   }
 
   @override
@@ -692,7 +682,6 @@ class _FormularioNotaState extends State<_FormularioNota> {
       disciplinaNome:
           disciplina.isNotEmpty ? disciplina.first.nome : '',
       titulo: titulo,
-      tipo: _tipo,
       data: base?.data ?? DateTime.now(),
       secoes: {
         for (final def in kSecoesNota)
@@ -778,41 +767,6 @@ class _FormularioNotaState extends State<_FormularioNota> {
               style: const TextStyle(fontSize: 14),
               decoration:
                   _decoracao('Ex.: Aula sobre requisitos e backlog'),
-            ),
-            const SizedBox(height: 16),
-            _rotulo('Tipo de nota'),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final t in TipoNota.values)
-                  InkWell(
-                    borderRadius: BorderRadius.circular(999),
-                    onTap: () => setState(() => _tipo = t),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 9),
-                      decoration: BoxDecoration(
-                        color: _tipo == t ? t.cor : AppColors.surface,
-                        borderRadius: BorderRadius.circular(999),
-                        border: Border.all(
-                          color: _tipo == t ? t.cor : AppColors.border,
-                          width: 1.5,
-                        ),
-                      ),
-                      child: Text(
-                        t.label,
-                        style: TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w600,
-                          color: _tipo == t
-                              ? Colors.white
-                              : AppColors.textSecondary,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
             ),
             const SizedBox(height: 20),
             for (final def in kSecoesNota) ...[
