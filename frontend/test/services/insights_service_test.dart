@@ -38,8 +38,56 @@ void main() {
     expect(insights.first.tipo, 'melhor_horario');
   });
 
-  test('fetchJourney returns empty until the backend Phase 4', () async {
-    const service = InsightsService();
+  test('fetchJourney parses the journey from the evolucao endpoint', () async {
+    final client = MockClient((request) async {
+      expect(request.url.path, endsWith('/api/insights/evolucao/'));
+      return http.Response(
+        jsonEncode({
+          'periodo': '01/07 a 07/07',
+          'atualizado_em': 'Atualizado em 07/07 19:30',
+          'jornada': [
+            {
+              'data': 'Há 3 dias',
+              'tipo': 'melhora',
+              'texto': 'Os cancelamentos caíram de 60% para 25%.',
+              'insight_tipo': 'taxa_furo',
+            }
+          ],
+          'dimensoes': [],
+          'comparacoes': [],
+          'experimentos': [],
+        }),
+        200,
+        headers: {'content-type': 'application/json'},
+      );
+    });
+    final service = InsightsService(client: client);
+
+    final journey = await service.fetchJourney();
+
+    expect(journey, hasLength(1));
+    expect(journey.first.tipo, 'melhora');
+    expect(journey.first.insightTipo, 'taxa_furo');
+  });
+
+  test('fetchJourney returns empty when there is no observed improvement',
+      () async {
+    final client = MockClient((request) async {
+      return http.Response(
+        jsonEncode({
+          'periodo': '01/07 a 07/07',
+          'atualizado_em': 'Atualizado em 07/07 19:30',
+          'jornada': [],
+          'dimensoes': [],
+          'comparacoes': [],
+          'experimentos': [],
+        }),
+        200,
+        headers: {'content-type': 'application/json'},
+      );
+    });
+    final service = InsightsService(client: client);
+
     expect(await service.fetchJourney(), isEmpty);
   });
 

@@ -9,7 +9,7 @@ import '../models/insights_model.dart';
 ///
 /// Consome o backend real:
 /// - `GET  /api/insights/`               → [fetchInsights]
-/// - `GET  /api/insights/evolucao/`      → [fetchDashboard]
+/// - `GET  /api/insights/evolucao/`      → [fetchJourney] / [fetchDashboard]
 /// - `POST /api/insights/{id}/feedback/` → [submitFeedback]
 ///
 /// A UI que consome esta interface (tela, cards) não precisa saber a origem
@@ -40,13 +40,27 @@ class InsightsService {
     );
   }
 
-  /// Marcos da jornada exibidos na aba Evolução.
+  /// Melhorias observadas exibidas na aba Evolução.
   ///
-  /// A jornada (diagnóstico → ação → melhora) depende do rastro de origem de
-  /// recomendação, que faz parte da Fase 4 do backend (ver
-  /// `docs/plano-backend-insights.md`). Enquanto essa fase não é implementada,
-  /// retorna vazio — a UI já trata a lista vazia.
-  Future<List<InsightJourneyEvent>> fetchJourney() async => const [];
+  /// Vêm do campo `jornada` de `GET /api/insights/evolucao/`. A lista pode ser
+  /// vazia quando ainda não há uma melhoria objetiva a mostrar — a UI já trata
+  /// esse caso.
+  Future<List<InsightJourneyEvent>> fetchJourney() async {
+    final uri = Uri.parse('$kBaseUrl/api/insights/evolucao/');
+    final response = await _http.get(uri, headers: kDefaultHeaders);
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final jornada = data['jornada'];
+      if (jornada is! List) return const [];
+      return jornada
+          .whereType<Map<String, dynamic>>()
+          .map(InsightJourneyEvent.fromJson)
+          .toList();
+    }
+    throw InsightsServiceException(
+      'Erro ao buscar evolução. Status: ${response.statusCode}',
+    );
+  }
 
   /// Resumo temporal usado no panorama, comparações e experimentos.
   Future<InsightsDashboard> fetchDashboard() async {
