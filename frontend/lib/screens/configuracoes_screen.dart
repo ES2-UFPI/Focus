@@ -13,6 +13,40 @@ class _ConfiguracoesScreenState extends State<ConfiguracoesScreen> {
   bool _notificacoesEmail = true;
   bool _notificacoesPush = true;
   bool _modoFocoEstrito = false;
+  final Set<String> _fontesConectadas = {};
+
+  static const _fontesSincronizacao = [
+    _FonteSincronizacao(
+      id: 'health_connect',
+      nome: 'Google Fit / Health Connect',
+      subtitulo: 'Android · sono e atividade',
+      icone: Icons.health_and_safety_outlined,
+    ),
+    _FonteSincronizacao(
+      id: 'mi_fitness',
+      nome: 'Mi Fitness (Xiaomi)',
+      subtitulo: 'Sono e passos',
+      icone: Icons.watch_outlined,
+    ),
+    _FonteSincronizacao(
+      id: 'samsung_health',
+      nome: 'Samsung Health',
+      subtitulo: 'Sono e atividade',
+      icone: Icons.favorite_border_rounded,
+    ),
+    _FonteSincronizacao(
+      id: 'apple_health',
+      nome: 'Apple Saúde (HealthKit)',
+      subtitulo: 'iOS · sono e atividade',
+      icone: Icons.monitor_heart_outlined,
+    ),
+    _FonteSincronizacao(
+      id: 'screen_time',
+      nome: 'Uso do celular / Tempo de tela',
+      subtitulo: 'Android · atividade antes das sessões',
+      icone: Icons.phone_android_outlined,
+    ),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -76,7 +110,7 @@ class _ConfiguracoesScreenState extends State<ConfiguracoesScreen> {
                   child: Row(
                     children: [
                       Consumer<AuthProvider>(
-                        builder: (_, auth, __) {
+                        builder: (_, auth, _) {
                           final inicial = auth.nomeAluno.isNotEmpty
                               ? auth.nomeAluno[0].toUpperCase()
                               : 'U';
@@ -97,7 +131,7 @@ class _ConfiguracoesScreenState extends State<ConfiguracoesScreen> {
                       const SizedBox(width: 16),
                       Expanded(
                         child: Consumer<AuthProvider>(
-                          builder: (_, auth, __) => Column(
+                          builder: (_, auth, _) => Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
@@ -165,6 +199,24 @@ class _ConfiguracoesScreenState extends State<ConfiguracoesScreen> {
                   setState(() => _notificacoesEmail = val);
                 },
               ),
+
+              // Integrações exclusivamente visuais nesta fase. A implementação
+              // real usará Health Connect/HealthKit ou SDKs dos parceiros e
+              // exigirá permissão e consentimento explícito do usuário.
+              _buildSectionTitle(context, 'Sincronização e Dados'),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: Text(
+                  'Conecte apps de saúde para enriquecer seus insights com '
+                  'sono, atividade e tempo de tela.',
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 13,
+                    height: 1.4,
+                  ),
+                ),
+              ),
+              ..._buildFontesSincronizacao(),
 
               // Tema e Aparência
               _buildSectionTitle(context, 'Aparência e Tema'),
@@ -239,6 +291,77 @@ class _ConfiguracoesScreenState extends State<ConfiguracoesScreen> {
     );
   }
 
+  List<Widget> _buildFontesSincronizacao() {
+    final widgets = <Widget>[];
+
+    for (var index = 0; index < _fontesSincronizacao.length; index++) {
+      final fonte = _fontesSincronizacao[index];
+      final conectada = _fontesConectadas.contains(fonte.id);
+
+      widgets.add(
+        ListTile(
+          key: ValueKey('sync-source-${fonte.id}'),
+          leading: Icon(fonte.icone, color: const Color(0xFF673AB7)),
+          title: Text(fonte.nome),
+          subtitle: Text(fonte.subtitulo),
+          trailing: conectada
+              ? Chip(
+                  avatar: const Icon(
+                    Icons.check_circle,
+                    size: 16,
+                    color: Colors.green,
+                  ),
+                  label: const Text('Conectado'),
+                  visualDensity: VisualDensity.compact,
+                )
+              : TextButton(
+                  onPressed: () => _alternarFonte(fonte),
+                  child: const Text('Conectar'),
+                ),
+          onTap: () => _alternarFonte(fonte),
+        ),
+      );
+
+      if (index < _fontesSincronizacao.length - 1) {
+        widgets.add(const Divider(height: 1, indent: 64));
+      }
+    }
+
+    return widgets;
+  }
+
+  Future<void> _alternarFonte(_FonteSincronizacao fonte) async {
+    if (_fontesConectadas.contains(fonte.id)) {
+      setState(() => _fontesConectadas.remove(fonte.id));
+      return;
+    }
+
+    final conectar = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Conectar ${fonte.nome}'),
+        content: const Text(
+          'Integração em breve — protótipo. Esta ação apenas simula uma '
+          'conexão e não acessa dados nem solicita permissões.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Agora não'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Simular conexão'),
+          ),
+        ],
+      ),
+    );
+
+    if (conectar == true && mounted) {
+      setState(() => _fontesConectadas.add(fonte.id));
+    }
+  }
+
   Widget _buildSectionTitle(BuildContext context, String title) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
@@ -253,4 +376,18 @@ class _ConfiguracoesScreenState extends State<ConfiguracoesScreen> {
       ),
     );
   }
+}
+
+class _FonteSincronizacao {
+  final String id;
+  final String nome;
+  final String subtitulo;
+  final IconData icone;
+
+  const _FonteSincronizacao({
+    required this.id,
+    required this.nome,
+    required this.subtitulo,
+    required this.icone,
+  });
 }

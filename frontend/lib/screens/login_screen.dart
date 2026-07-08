@@ -43,17 +43,20 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final cores = Theme.of(context).colorScheme;
     return Scaffold(
       backgroundColor: const Color(0xFF0f0e17),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
+            reverse: true,
             padding: const EdgeInsets.symmetric(horizontal: 28),
             child: Form(
               key: _formKey,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
+                // reverse:true no SingleChildScrollView inverte o eixo de
+                // rolagem — invertemos a lista aqui também pra manter a
+                // ordem visual (logo em cima, botão embaixo).
                 children: [
                   const SizedBox(height: 24),
                   Container(
@@ -77,7 +80,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 6),
                   Text(
                     'Bem-vindo de volta',
-                    style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 15),
+                    style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 15),
                   ),
                   const SizedBox(height: 36),
                   _campo(
@@ -115,9 +118,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                       decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(0.12),
+                        color: Colors.red.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: Colors.red.withOpacity(0.3)),
+                        border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
                       ),
                       child: Row(
                         children: [
@@ -149,7 +152,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text('Não tem conta? ', style: TextStyle(color: Colors.white.withOpacity(0.5))),
+                      Text('Não tem conta? ', style: TextStyle(color: Colors.white.withValues(alpha: 0.5))),
                       GestureDetector(
                         onTap: () => Navigator.pushReplacementNamed(context, '/registro'),
                         child: const Text(
@@ -160,7 +163,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ],
                   ),
                   const SizedBox(height: 24),
-                ],
+                ].reversed.toList(),
               ),
             ),
           ),
@@ -186,7 +189,7 @@ class _LoginScreenState extends State<LoginScreen> {
       validator: validar,
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
+        labelStyle: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
         prefixIcon: Icon(icon, color: Colors.white38, size: 20),
         suffixIcon: sufixo,
         filled: true,

@@ -4,9 +4,12 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.http import Http404
 from django.shortcuts import get_object_or_404
+from rest_framework.permissions import AllowAny, IsAuthenticated # Garanta o import do AllowAny
+from rest_framework.decorators import action
+from rest_framework.response import Response
 
-from .models import SessaoEstudo
-from .serializers import SessaoEstudoSerializer
+from .models import BlocoPomodoro, SessaoEstudo
+from .serializers import BlocoPomodoroSerializer, SessaoEstudoSerializer
 from disciplinas.models import Disciplina
 from services.consistencia_service import ConsistenciaService
 
@@ -60,12 +63,17 @@ class SessaoEstudoViewSet(viewsets.ModelViewSet):
       
         serializer.save()
 
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get'], permission_classes=[AllowAny])
     def dashboard(self, request):
+        # 🛡️ Uma verificação simples de segurança caso queira debugar no terminal
+        if request.user.is_authenticated:
+            print(f"🚀 [Dashboard] Processando dados para: {request.user.email}")
+        else:
+            print("⚠️ [Dashboard] Requisição anônima recebida!")
+
+        # Retorna o cálculo do serviço usando o aluno_id correto
         return Response(
-            self.consistencia.obter_dashboard_consistencia(
-                self.aluno_id
-            )
+            self.consistencia.obter_dashboard_consistencia(self.aluno_id)
         )
 
     @action(detail=False, methods=['get'])
@@ -108,3 +116,14 @@ class SessaoEstudoViewSet(viewsets.ModelViewSet):
                 },
                 status=status.HTTP_404_NOT_FOUND
             )
+
+
+class BlocoPomodoroViewSet(viewsets.ModelViewSet):
+    queryset = BlocoPomodoro.objects.none()
+    serializer_class = BlocoPomodoroSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return BlocoPomodoro.objects.filter(
+            sessao_estudo__disciplina__aluno_id=self.request.user.id
+        )

@@ -64,29 +64,29 @@ class AgendaItemCard extends StatelessWidget {
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(12),
-          child: IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // ── Barra lateral colorida ──────────────────────────────
-                Container(
-                  width: 5,
-                  color: _barColor(),
-                ),
-                // ── Conteúdo ────────────────────────────────────────────
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 12,
-                    ),
-                    child: item.isEvento
-                        ? _buildEvento(context)
-                        : _buildSessao(context),
-                  ),
-                ),
-              ],
-            ),
+          // Stack no lugar de Row(stretch): a barra lateral é um Positioned
+          // que acompanha a altura do conteúdo, então o card não exige mais
+          // altura fechada do pai — pré-requisito pra remover o
+          // IntrinsicHeight da timeline sem crash.
+          child: Stack(
+            children: [
+              // ── Barra lateral colorida ──────────────────────────────
+              Positioned(
+                left: 0,
+                top: 0,
+                bottom: 0,
+                width: 5,
+                child: ColoredBox(color: _barColor()),
+              ),
+              // ── Conteúdo ────────────────────────────────────────────
+              // left 19 = 5 da barra + 14 do respiro original.
+              Padding(
+                padding: const EdgeInsets.fromLTRB(19, 12, 14, 12),
+                child: item.isEvento
+                    ? _buildEvento(context)
+                    : _buildSessao(context),
+              ),
+            ],
           ),
         ),
       ),

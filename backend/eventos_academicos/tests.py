@@ -176,6 +176,7 @@ class EndpointsAPITests(APITestCase):
             aluno=self.aluno
         )
         self.today = timezone.localdate()
+        self.client.force_authenticate(user=self.aluno)
 
     def test_endpoint_eventos_proximos(self):
         # Evento em 3 dias (Deve aparecer)

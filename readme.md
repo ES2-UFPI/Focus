@@ -29,6 +29,8 @@ py -3.11 -m venv venv
 .\venv\Scripts\activate
 python -m pip install --upgrade pip setuptools wheel
 python -m pip install Django==5.1.6 djangorestframework==3.17.1 django-cors-headers==4.9.0
+python -m pip install dj-database-url
+python -m pip install whitenoise
 python manage.py migrate
 
 python manage.py runserver 127.0.0.1:8000
@@ -42,9 +44,11 @@ A API fica disponivel em:
 
 Observacao: o arquivo `backend/requirements.txt` existe, mas contem muitas bibliotecas que nao sao necessarias para iniciar esta API. Para uma instalacao minima e validada, use o comando `pip install` acima. Se preferir instalar tudo do arquivo, substitua o comando de instalacao por:
 
-```powershell
+```powershell  (OPCIONAL )(PREFERENCIALMENTE,NÂO EXECUTE)
 python -m pip install -r requirements.txt
 ```
+
+## DE
 
 ## Como iniciar o frontend
 
