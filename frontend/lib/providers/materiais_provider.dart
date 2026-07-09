@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../models/disciplina.dart';
 import '../models/material_estudo.dart';
+import '../models/nota_estudo.dart';
 import '../services/api_service.dart';
 
 class MateriaisProvider extends ChangeNotifier {
@@ -37,11 +38,14 @@ class MateriaisProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _materiais = await _api.getMateriais(
+      final materiais = await _api.getMateriais(
         disciplinaId: _selectedDisciplinaId,
         tipo: _selectedTipo,
         search: _searchQuery.isEmpty ? null : _searchQuery,
       );
+      // Notas de estudo tambem vivem em materiais-estudo; nao exibi-las aqui.
+      _materiais =
+          materiais.where((m) => !NotaEstudo.ehNota(m)).toList();
     } catch (e) {
       _error = 'Erro ao carregar materiais.';
     } finally {
