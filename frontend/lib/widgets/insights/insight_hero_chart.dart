@@ -73,6 +73,19 @@ class AnnotatedInsightChart extends StatelessWidget {
       length - 1,
     );
     final isLine = chart.tipo == 'linha';
+    if (!isLine && length == 2) {
+      return Semantics(
+        container: true,
+        label: semanticLabel ?? 'Comparativo do insight',
+        child: _BinaryInsightComparison(
+          labels: labels,
+          values: values,
+          highlightIndex: highlightIndex,
+          highlightColor: color,
+        ),
+      );
+    }
+
     final bounds = _chartBounds(values, isLine: isLine);
     final average = values.reduce((a, b) => a + b) / values.length;
 
@@ -322,5 +335,296 @@ class AnnotatedInsightChart extends StatelessWidget {
     final minY = math.max(0, minValue - 1).toDouble();
     final maxY = maxValue + 1;
     return (minY, maxY <= minY ? minY + 1 : maxY);
+  }
+}
+
+class _BinaryInsightComparison extends StatelessWidget {
+  final List<String> labels;
+  final List<double> values;
+  final int highlightIndex;
+  final Color highlightColor;
+
+  const _BinaryInsightComparison({
+    required this.labels,
+    required this.values,
+    required this.highlightIndex,
+    required this.highlightColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final safeHighlight = highlightIndex.clamp(0, 1);
+    final otherIndex = safeHighlight == 0 ? 1 : 0;
+    final total = values.fold<double>(0, (sum, value) => sum + value);
+    final percentages = total <= 0
+        ? const [0.0, 0.0]
+        : values.map((value) => value / total).toList(growable: false);
+    final delta = values[safeHighlight] - values[otherIndex];
+    final highlightLabel = labels[safeHighlight];
+    final otherLabel = labels[otherIndex];
+    final summary = _summaryText(
+      highlightLabel: highlightLabel,
+      otherLabel: otherLabel,
+      delta: delta,
+    );
+    final colors = List.generate(
+      2,
+      (index) => _comparisonColor(
+        label: labels[index],
+        index: index,
+        highlightIndex: safeHighlight,
+        highlightColor: highlightColor,
+      ),
+    );
+
+    return SizedBox.expand(
+      key: const ValueKey('binary-insight-comparison'),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 680),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                summary,
+                textAlign: TextAlign.center,
+                style: AppTypography.bodyStrong.copyWith(
+                  color: AppColors.textPrimary,
+                  fontSize: 18,
+                  height: 1.25,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              Row(
+                children: List.generate(2, (index) {
+                  return Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.only(
+                        right: index == 0 ? AppSpacing.md : 0,
+                      ),
+                      child: _ComparisonMetric(
+                        label: labels[index],
+                        value: values[index],
+                        percentage: percentages[index],
+                        color: colors[index],
+                        highlighted: index == safeHighlight,
+                      ),
+                    ),
+                  );
+                }),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              _SegmentedComparisonBar(
+                labels: labels,
+                values: values,
+                percentages: percentages,
+                colors: colors,
+                highlightIndex: safeHighlight,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _summaryText({
+    required String highlightLabel,
+    required String otherLabel,
+    required double delta,
+  }) {
+    if (delta == 0) {
+      return '$highlightLabel e $otherLabel ficaram empatadas';
+    }
+
+    final formattedDelta = formatInsightNumber(delta.abs());
+    if (delta > 0) {
+      return '$highlightLabel +$formattedDelta acima de $otherLabel';
+    }
+    return '$highlightLabel $formattedDelta abaixo de $otherLabel';
+  }
+
+  Color _comparisonColor({
+    required String label,
+    required int index,
+    required int highlightIndex,
+    required Color highlightColor,
+  }) {
+    final normalized = label.toLowerCase();
+    if (normalized.contains('cancel') ||
+        normalized.contains('atras') ||
+        normalized.contains('falh')) {
+      return AppColors.danger;
+    }
+    if (normalized.contains('realiz') ||
+        normalized.contains('conclu') ||
+        normalized.contains('feito')) {
+      return AppColors.success;
+    }
+    return index == highlightIndex ? highlightColor : AppColors.subjectTeal;
+  }
+}
+
+class _ComparisonMetric extends StatelessWidget {
+  final String label;
+  final double value;
+  final double percentage;
+  final Color color;
+  final bool highlighted;
+
+  const _ComparisonMetric({
+    required this.label,
+    required this.value,
+    required this.percentage,
+    required this.color,
+    required this.highlighted,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Color.alphaBlend(
+          color.withValues(alpha: 0.1),
+          AppColors.surface,
+        ),
+        borderRadius: BorderRadius.circular(AppRadii.md),
+        border: Border.all(
+          color: color.withValues(alpha: highlighted ? 0.42 : 0.2),
+          width: highlighted ? 1.4 : 1,
+        ),
+        boxShadow: highlighted
+            ? [
+                BoxShadow(
+                  color: color.withValues(alpha: 0.16),
+                  blurRadius: 18,
+                  offset: const Offset(0, 8),
+                ),
+              ]
+            : null,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTypography.caption.copyWith(
+                color: AppColors.textSecondary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xxs),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  formatInsightNumber(value),
+                  style: AppTypography.pageTitle.copyWith(
+                    color: color,
+                    fontSize: 32,
+                    height: 1,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.xs),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 3),
+                  child: Text(
+                    '${(percentage * 100).round()}%',
+                    style: AppTypography.caption.copyWith(
+                      color: AppColors.textMuted,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SegmentedComparisonBar extends StatelessWidget {
+  final List<String> labels;
+  final List<double> values;
+  final List<double> percentages;
+  final List<Color> colors;
+  final int highlightIndex;
+
+  const _SegmentedComparisonBar({
+    required this.labels,
+    required this.values,
+    required this.percentages,
+    required this.colors,
+    required this.highlightIndex,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final total = values.fold<double>(0, (sum, value) => sum + value);
+    final flexes = total <= 0
+        ? const [1, 1]
+        : percentages
+              .map((percentage) => math.max(1, (percentage * 1000).round()))
+              .toList(growable: false);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(999),
+          child: SizedBox(
+            height: 28,
+            child: Row(
+              children: List.generate(2, (index) {
+                return Expanded(
+                  flex: flexes[index],
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: colors[index],
+                      boxShadow: index == highlightIndex
+                          ? [
+                              BoxShadow(
+                                color: colors[index].withValues(alpha: 0.3),
+                                blurRadius: 10,
+                              ),
+                            ]
+                          : null,
+                    ),
+                    child: const SizedBox.expand(),
+                  ),
+                );
+              }),
+            ),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Row(
+          children: List.generate(2, (index) {
+            return Expanded(
+              child: Text(
+                '${labels[index]} ${formatInsightNumber(values[index])}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: index == 0 ? TextAlign.left : TextAlign.right,
+                style: AppTypography.caption.copyWith(
+                  color: colors[index],
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            );
+          }),
+        ),
+      ],
+    );
   }
 }

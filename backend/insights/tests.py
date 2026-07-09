@@ -5,7 +5,6 @@ from rest_framework.test import APITestCase
 
 from alunos.models import Aluno
 from disciplinas.models import Disciplina
-from eventos_academicos.models import EventoAcademico
 from sessao_estudo.models import BlocoPomodoro, SessaoEstudo
 from tarefas_disciplina.models import TarefaDisciplina
 
@@ -94,6 +93,12 @@ class MelhorHorarioTests(InsightsTestBase):
         self.assertGreater(insight['numeros']['manha'], insight['numeros']['noite'])
         self.assertEqual(insight['confianca'], 'alta')  # 16 sessões (>= 15)
         self.assertEqual(len(insight['grafico']['valores']), 6)
+        self.assertEqual(len(insight['sessoesEvidencia']), 3)
+        self.assertEqual(
+            insight['sessoesEvidencia'][0]['status'],
+            SessaoEstudo.StatusSessao.CONCLUIDO,
+        )
+        self.assertIn('horario', insight['sessoesEvidencia'][0])
 
 
 class DuracaoIdealTests(InsightsTestBase):
@@ -177,21 +182,56 @@ class TaxaFuroTests(InsightsTestBase):
         self.assertIsNotNone(insight)
         self.assertEqual(insight['severidade'], 'critico')
         self.assertGreaterEqual(insight['numeros']['taxa_pct'], 50)
+        self.assertEqual(len(insight['sessoesEvidencia']), 4)
+        self.assertTrue(
+            all(
+                sessao['status'] == SessaoEstudo.StatusSessao.CANCELADO
+                for sessao in insight['sessoesEvidencia']
+            )
+        )
+        self.assertIn('horario', insight['sessoesEvidencia'][0])
 
 
-class EquilibrioMetodoTests(InsightsTestBase):
-    def test_detecta_excesso_de_leitura(self):
-        base = self._base_local().replace(hour=10)
-        for i in range(6):
-            self._sessao(base - timedelta(days=2 * i + 1),
-                         duracao_real=60, tipo='LEITURA', produtividade=3)
-        self._sessao(base - timedelta(days=13),
-                     duracao_real=30, tipo='EXERCICIO', produtividade=3)
+class ClassificacaoTests(InsightsTestBase):
+    def test_ponto_para_melhorar_tem_acao(self):
+        """`taxa_furo` é crítico e traz ação de reagendamento."""
+        hoje = self._base_local()
+        sexta = hoje - timedelta(days=(hoje.weekday() - 4) % 7 or 7)
+        sexta = sexta.replace(hour=20)
+        canceladas = 0
+        for semana in range(3):
+            for hora in (20, 22):
+                dia = sexta.replace(hour=hora) - timedelta(days=7 * semana)
+                if canceladas < 4:
+                    self._sessao(dia, status=SessaoEstudo.StatusSessao.CANCELADO,
+                                 produtividade=None)
+                    canceladas += 1
+                else:
+                    self._sessao(dia, produtividade=4)
 
-        insight = self._por_tipo('equilibrio_metodo')
+        insight = self._por_tipo('taxa_furo')
         self.assertIsNotNone(insight)
-        self.assertGreaterEqual(insight['numeros']['leitura_pct'], 70)
-        self.assertEqual(insight['severidade'], 'atencao')
+        self.assertIn(insight['severidade'], ('critico', 'atencao'))
+        self.assertIsNotNone(insight['acao'])
+        self.assertEqual(insight['acao']['tipo'], 'reagendar')
+        self.assertIn('disciplina_id', insight['acao'])
+
+    def test_descoberta_informativa_nao_tem_acao(self):
+        """`tarefas_no_prazo` é uma descoberta informativa, sem ação."""
+        agora = timezone.now()
+        for i in range(6):
+            TarefaDisciplina.objects.create(
+                disciplina=self.disciplina,
+                titulo=f'No prazo {i}',
+                prazo=agora - timedelta(days=i + 1),
+                concluida=True,
+                data_conclusao=agora - timedelta(days=i + 2),
+            )
+
+        insight = self._por_tipo('tarefas_no_prazo')
+        self.assertIsNotNone(insight)
+        self.assertIn(insight['severidade'], ('positivo', 'info'))
+        self.assertIsNone(insight.get('acao'))
 
 
 class GateAmostraTests(InsightsTestBase):
@@ -214,7 +254,7 @@ class FeedbackTests(InsightsTestBase):
         for i in range(6):
             self._sessao(base.replace(hour=21) - timedelta(days=2 * i + 2), produtividade=2)
 
-    def test_feedback_negativo_oculta_insight(self):
+    def test_feedback_negativo_oculta_insight_por_7_dias(self):
         self._semear_melhor_horario()
         self.assertIn('melhor_horario', self._tipos())
 
@@ -225,27 +265,87 @@ class FeedbackTests(InsightsTestBase):
         )
         self.assertEqual(resp.status_code, 200, resp.data)
         self.assertNotIn('melhor_horario', self._tipos())
-        self.assertEqual(InsightFeedback.objects.count(), 1)
 
-    def test_feedback_positivo_mantem_e_prioriza(self):
+        feedback = InsightFeedback.objects.get()
+        self.assertFalse(feedback.util)
+        self.assertIsNotNone(feedback.ocultar_ate)
+        # A punição dura ~7 dias.
+        restante = feedback.ocultar_ate - timezone.now()
+        self.assertGreater(restante, timedelta(days=6, hours=23))
+        self.assertLess(restante, timedelta(days=7, minutes=1))
+
+    def test_punicao_expira_e_insight_volta(self):
         self._semear_melhor_horario()
+        self.client.post(
+            '/api/insights/melhor_horario/feedback/',
+            {'useful': False},
+            format='json',
+        )
+        self.assertNotIn('melhor_horario', self._tipos())
+
+        # Punição no passado → o insight pode voltar a aparecer.
+        InsightFeedback.objects.update(
+            ocultar_ate=timezone.now() - timedelta(days=1)
+        )
+        self.assertIn('melhor_horario', self._tipos())
+
+    def test_feedback_positivo_nao_oculta_nem_prioriza(self):
+        self._semear_melhor_horario()
+        ordem_antes = [ins['tipo'] for ins in
+                       InsightsService().obter_insights(self.aluno.id)]
+
         resp = self.client.post(
             '/api/insights/melhor_horario/feedback/',
             {'util': True},
             format='json',
         )
         self.assertEqual(resp.status_code, 200, resp.data)
-        insights = InsightsService().obter_insights(self.aluno.id)
-        self.assertEqual(insights[0]['tipo'], 'melhor_horario')
 
-    def test_reenvio_atualiza_feedback_existente(self):
+        feedback = InsightFeedback.objects.get()
+        self.assertTrue(feedback.util)
+        self.assertIsNone(feedback.ocultar_ate)  # positivo não cria punição
+
+        # Continua visível e sem mudança de ordenação.
+        ordem_depois = [ins['tipo'] for ins in
+                        InsightsService().obter_insights(self.aluno.id)]
+        self.assertIn('melhor_horario', ordem_depois)
+        self.assertEqual(ordem_antes, ordem_depois)
+
+    def test_feedback_positivo_nao_remove_punicao_ativa(self):
         self._semear_melhor_horario()
         self.client.post('/api/insights/melhor_horario/feedback/',
-                         {'util': True}, format='json')
+                         {'useful': False}, format='json')
+        self.assertNotIn('melhor_horario', self._tipos())
+
+        # Um 👍 depois não deve reviver o insight punido.
         self.client.post('/api/insights/melhor_horario/feedback/',
-                         {'util': False}, format='json')
+                         {'util': True}, format='json')
+        self.assertNotIn('melhor_horario', self._tipos())
         self.assertEqual(InsightFeedback.objects.count(), 1)
-        self.assertFalse(InsightFeedback.objects.first().util)
+
+    def test_isolamento_da_punicao_por_aluno(self):
+        self._semear_melhor_horario()
+        self.client.post('/api/insights/melhor_horario/feedback/',
+                         {'useful': False}, format='json')
+        self.assertNotIn('melhor_horario', self._tipos())
+
+        # Outro aluno, com o mesmo padrão, não herda a punição.
+        outro = Aluno.objects.create_user(
+            email='outro-punicao@teste.com', nome='Outro', password='senha123',
+        )
+        outro_disc = Disciplina.objects.create(
+            aluno=outro, nome='ES2', cor='#6366F1', meta_horas_semanais=4,
+        )
+        base = self._base_local()
+        for i in range(6):
+            self._sessao(base.replace(hour=8) - timedelta(days=2 * i + 1),
+                         produtividade=5, disciplina=outro_disc)
+        for i in range(6):
+            self._sessao(base.replace(hour=21) - timedelta(days=2 * i + 2),
+                         produtividade=2, disciplina=outro_disc)
+        tipos_outro = {ins['tipo'] for ins in
+                       InsightsService().obter_insights(outro.id)}
+        self.assertIn('melhor_horario', tipos_outro)
 
 
 class EndpointsTests(InsightsTestBase):
@@ -266,7 +366,7 @@ class EndpointsTests(InsightsTestBase):
         self.assertIsInstance(resp.data, list)
         self.assertTrue(any(i['tipo'] == 'melhor_horario' for i in resp.data))
 
-    def test_get_evolucao_retorna_dashboard(self):
+    def test_get_evolucao_retorna_jornada_e_campos_vazios(self):
         base = self._base_local()
         for i in range(6):
             self._sessao(base.replace(hour=8) - timedelta(days=2 * i + 1), produtividade=5)
@@ -275,8 +375,61 @@ class EndpointsTests(InsightsTestBase):
 
         resp = self.client.get('/api/insights/evolucao/')
         self.assertEqual(resp.status_code, 200)
-        self.assertIn('dimensoes', resp.data)
         self.assertIn('periodo', resp.data)
+        self.assertIn('jornada', resp.data)
+        # Campos legados mantidos só por compatibilidade de contrato — vazios.
+        self.assertEqual(resp.data['dimensoes'], [])
+        self.assertEqual(resp.data['comparacoes'], [])
+        self.assertEqual(resp.data['experimentos'], [])
+
+
+class EvolucaoTests(InsightsTestBase):
+    def _sextas(self, offsets_semanas):
+        hoje = self._base_local()
+        sexta = hoje - timedelta(days=(hoje.weekday() - 4) % 7 or 7)
+        sexta = sexta.replace(hour=20)
+        return [sexta - timedelta(days=7 * k) for k in offsets_semanas]
+
+    def test_melhoria_observada_de_cancelamentos(self):
+        # Sexta à noite frágil (taxa_furo presente) e cancelamentos caindo:
+        # muitos cancelamentos no começo da janela, poucos no fim.
+        recentes = self._sextas([0, 1])   # dentro das últimas 3 semanas
+        antigas = self._sextas([3, 4])     # 3 semanas anteriores
+        recent_cancel = 1
+        old_cancel = 3
+        for sexta in recentes:
+            for hora in (20, 22):
+                dia = sexta.replace(hour=hora)
+                if recent_cancel > 0:
+                    self._sessao(dia, status=SessaoEstudo.StatusSessao.CANCELADO,
+                                 produtividade=None)
+                    recent_cancel -= 1
+                else:
+                    self._sessao(dia, produtividade=4)
+        for sexta in antigas:
+            for hora in (20, 22):
+                dia = sexta.replace(hour=hora)
+                if old_cancel > 0:
+                    self._sessao(dia, status=SessaoEstudo.StatusSessao.CANCELADO,
+                                 produtividade=None)
+                    old_cancel -= 1
+                else:
+                    self._sessao(dia, produtividade=4)
+
+        evolucao = InsightsService().obter_evolucao(self.aluno.id)
+        jornada = evolucao['jornada']
+        self.assertTrue(jornada, 'esperava ao menos uma melhoria observada')
+        furo = [e for e in jornada if e['insight_tipo'] == 'taxa_furo']
+        self.assertEqual(len(furo), 1)
+        self.assertEqual(furo[0]['tipo'], 'melhora')
+
+    def test_evolucao_vazia_sem_dados_suficientes(self):
+        base = self._base_local().replace(hour=9)
+        for i in range(3):
+            self._sessao(base - timedelta(days=i + 1), produtividade=4)
+
+        evolucao = InsightsService().obter_evolucao(self.aluno.id)
+        self.assertEqual(evolucao['jornada'], [])
 
     def test_insights_isolados_por_aluno(self):
         base = self._base_local()

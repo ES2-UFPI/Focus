@@ -90,9 +90,9 @@ class AppSidebar extends StatelessWidget {
             ),
           ),
           AppProfileFooter(
-            name: 'Estudante Focus',
-            caption: 'Ver perfil',
-            initials: 'EF',
+            name: 'Você',
+            caption: 'Engenharia de Software',
+            initials: 'VC',
             onTap: () => onPageChanged(AppPage.ajustes),
           ),
         ],

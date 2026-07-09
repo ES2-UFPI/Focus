@@ -27,6 +27,15 @@ final _disciplina = Disciplina(
   ativo: true,
 );
 
+final _segundaDisciplina = Disciplina(
+  id: 'disc-2',
+  aluno: 'aluno-1',
+  nome: 'Historia',
+  cor: '#009688',
+  metaHorasSemanais: 3,
+  ativo: true,
+);
+
 SessaoEstudoResumo _novaSessaoAgendada() => SessaoEstudoResumo(
   id: 'sessao-1',
   disciplinaId: 'disc-1',
@@ -38,8 +47,13 @@ SessaoEstudoResumo _novaSessaoAgendada() => SessaoEstudoResumo(
 );
 
 class FakeDisciplinaService extends DisciplinaService {
+  final List<Disciplina> disciplinas;
+
+  FakeDisciplinaService([List<Disciplina>? disciplinas])
+    : disciplinas = disciplinas ?? [_disciplina];
+
   @override
-  Future<List<Disciplina>> getDisciplinas() async => [_disciplina];
+  Future<List<Disciplina>> getDisciplinas() async => disciplinas;
 }
 
 class FakeAgendaService extends AgendaService {
@@ -50,14 +64,20 @@ class FakeAgendaService extends AgendaService {
 
 /// Grava as chamadas de editarSessao para os testes inspecionarem o PATCH.
 class FakeSessaoEstudoService extends SessaoEstudoService {
+  final List<SessaoEstudoResumo> sessoes;
   final List<Map<String, Object?>> patches = [];
   final List<Map<String, Object?>> blocos = [];
   final List<Map<String, Object?>> avaliacoes = [];
+  int listarChamadas = 0;
+
+  FakeSessaoEstudoService({List<SessaoEstudoResumo>? sessoes})
+    : sessoes = sessoes ?? [_novaSessaoAgendada()];
 
   @override
-  Future<List<SessaoEstudoResumo>> listarSessoes() async => [
-    _novaSessaoAgendada(),
-  ];
+  Future<List<SessaoEstudoResumo>> listarSessoes() async {
+    listarChamadas++;
+    return List.of(sessoes);
+  }
 
   @override
   Future<List<SessaoEstudoResumo>> getSemanaAtual() async => [];
@@ -179,6 +199,51 @@ void main() {
         provider.dispose();
       });
     });
+
+    test(
+      'recarrega sessoes externas e mostra materia com sessao disponivel',
+      () {
+        fakeAsync((async) {
+          final sessaoService = FakeSessaoEstudoService(sessoes: []);
+          final provider = PomodoroProvider(
+            disciplinaService: FakeDisciplinaService([
+              _disciplina,
+              _segundaDisciplina,
+            ]),
+            agendaService: FakeAgendaService(),
+            sessaoEstudoService: sessaoService,
+            somAtivado: false,
+          );
+          async.flushMicrotasks();
+
+          expect(provider.disciplinaSelecionada?.id, 'disc-1');
+          expect(provider.sessoesDaDisciplinaSelecionada, isEmpty);
+
+          sessaoService.sessoes.add(
+            SessaoEstudoResumo(
+              id: 'sessao-2',
+              disciplinaId: _segundaDisciplina.id,
+              disciplinaNome: _segundaDisciplina.nome,
+              inicio: DateTime(2026, 7, 11, 8),
+              fim: DateTime(2026, 7, 11, 10),
+              duracaoRealizada: 0,
+              status: 'agendado',
+            ),
+          );
+
+          provider.atualizarDadosExternos();
+          async.flushMicrotasks();
+
+          expect(sessaoService.listarChamadas, 2);
+          expect(provider.disciplinaSelecionada?.id, 'disc-2');
+          expect(provider.sessoesDaDisciplinaSelecionada, hasLength(1));
+          expect(provider.sessoesDaDisciplinaSelecionada.single.id, 'sessao-2');
+          expect(provider.sessaoSelecionada, isNull);
+
+          provider.dispose();
+        });
+      },
+    );
 
     test('pausar uma sessão Pomodoro', () {
       fakeAsync((async) {

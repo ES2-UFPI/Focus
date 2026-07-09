@@ -9,13 +9,13 @@ class RelatoriosScreen extends StatelessWidget {
 
     // Paleta de cores para gráficos
     final graficos = [
-      {'dia': 'Seg', 'horas': 2.5, 'color': const Color(0xFF4CAF50)},
-      {'dia': 'Ter', 'horas': 4.0, 'color': const Color(0xFF4CAF50)},
-      {'dia': 'Qua', 'horas': 1.5, 'color': const Color(0xFF81C784)},
-      {'dia': 'Qui', 'horas': 3.0, 'color': const Color(0xFF4CAF50)},
-      {'dia': 'Sex', 'horas': 5.5, 'color': const Color(0xFF2E7D32)},
+      {'dia': 'Seg', 'horas': 1.5, 'color': const Color(0xFF2563EB)},
+      {'dia': 'Ter', 'horas': 2.0, 'color': const Color(0xFF2563EB)},
+      {'dia': 'Qua', 'horas': 1.0, 'color': const Color(0xFFF59E0B)},
+      {'dia': 'Qui', 'horas': 1.5, 'color': const Color(0xFF2563EB)},
+      {'dia': 'Sex', 'horas': 0.5, 'color': const Color(0xFFF59E0B)},
       {'dia': 'Sáb', 'horas': 0.0, 'color': Colors.grey[300]!},
-      {'dia': 'Dom', 'horas': 1.0, 'color': const Color(0xFF81C784)},
+      {'dia': 'Dom', 'horas': 1.0, 'color': const Color(0xFFF59E0B)},
     ];
 
     final totalHoras = graficos.fold<double>(0, (sum, item) => sum + (item['horas'] as double));
@@ -95,7 +95,7 @@ class RelatoriosScreen extends StatelessWidget {
             ),
           ),
 
-          // Gráfico de Barras Mockado com Containers
+          // Gráfico de barras com containers
           SliverToBoxAdapter(
             child: Card(
               margin: const EdgeInsets.all(16.0),
@@ -190,14 +190,14 @@ class RelatoriosScreen extends StatelessWidget {
                     icon: Icons.check_circle_outline_rounded,
                     color: Colors.green,
                     titulo: 'Você bateu 75% da meta',
-                    descricao: 'Ótimo ritmo em Cálculo Diferencial. Mantenha a consistência para a prova de sexta-feira.',
+                    descricao: 'Bom ritmo em Estruturas de Dados. Manter os blocos da manhã ajuda a preparar a prova.',
                   ),
                   const SizedBox(height: 10),
                   _buildInsightItem(
                     icon: Icons.lightbulb_outline_rounded,
                     color: Colors.orange,
-                    titulo: 'Foco na matéria Banco de Dados',
-                    descricao: 'Você estudou apenas 1.5 horas de Banco de Dados nesta semana. Considere agendar uma nova sessão.',
+                    titulo: 'Ajustar Banco de Dados',
+                    descricao: 'As sessões longas cansaram mais. Vale testar blocos de 50 minutos para revisar SQL.',
                   ),
                 ],
               ),

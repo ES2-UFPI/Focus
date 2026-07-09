@@ -1,49 +1,67 @@
 # App `insights` — backend do módulo de Insights
 
-Implementa o backend do módulo de Insights (perfil de estudo/produtividade),
-antes 100% mock no frontend. Contrato e roadmap em
-[`docs/plano-backend-insights.md`](../../docs/plano-backend-insights.md).
+Alimenta a tela atual de Insights (perfil de estudo/produtividade), antes 100%
+mock no frontend. O escopo é pequeno e intencional: entregar só o que as duas
+abas da UI usam hoje. Não implementa o roadmap antigo (dashboard completo,
+dimensões, comparações, experimentos, integrações de saúde/celular).
 
 ## Endpoints
 
 | Rota | Método | Descrição |
 |---|---|---|
 | `/api/insights/` | GET | Insights calculados do aluno autenticado |
-| `/api/insights/evolucao/` | GET | Panorama/comparações (`InsightsDashboard`) da aba Evolução |
-| `/api/insights/<id>/feedback/` | POST | Persiste 👍/👎 do aluno (`{"useful": bool, "reason": "..."}`) |
+| `/api/insights/evolucao/` | GET | Melhorias observadas (`jornada`) da aba Evolução |
+| `/api/insights/<id>/feedback/` | POST | Registra 👍/👎 do aluno (`{"useful": bool, "reason": "..."}`) |
 
 Todos exigem autenticação por token (aluno logado).
 
+## O que a tela usa
+
+- **Insights** — duas seções, classificadas pelo frontend a partir da
+  `severidade` de cada insight:
+  - *Pontos para melhorar*: `severidade` `critico` ou `atencao`.
+  - *Descobertas*: `severidade` `positivo` ou `info`.
+  - Um insight com `acao != null` aparece como "Ação recomendada"; sem `acao`,
+    como "Informativo".
+- **Evolução** — apenas a lista `jornada` de melhorias observadas.
+
+## Insights produzidos
+
+Só os que a UI atual exibe:
+
+- Pontos para melhorar: `taxa_furo`, `duracao_ideal`, `ritmo_disciplina`,
+  `vies_estimativa`.
+- Descobertas: `melhor_horario`, `tarefas_no_prazo`, `sequencia_produtiva`,
+  `progresso`.
+
+Sem dados suficientes, retorna o insight `amostra_insuficiente`.
+
 ## Como funciona
 
-- `services.py` (`InsightsService`) lê os dados já coletados
-  (`SessaoEstudo`, `BlocoPomodoro`, `TarefaDisciplina`, `EventoAcademico`) numa
-  janela de 42 dias e calcula os insights. A **produtividade de uma sessão** é a
-  média das avaliações dos seus `BlocoPomodoro`.
-- `statistics.py` traz correlação (Pearson/Spearman) e regressão quadratica em
-  Python puro — sem numpy/scipy (mantém o `requirements.txt` enxuto). Nada de
-  ML/LLM, conforme decisão do produto.
+- `services.py` (`InsightsService`) lê os dados já coletados (`SessaoEstudo`,
+  `BlocoPomodoro`, `TarefaDisciplina`) numa janela de 42 dias. A
+  **produtividade de uma sessão** é a média das avaliações dos seus
+  `BlocoPomodoro`.
+- `statistics.py` traz média e variação percentual em Python puro. Nada de
+  ML/LLM, saúde, tempo de tela ou causalidade — apenas comparação de médias por
+  grupo.
 - **Gate de N mínimo**: todo insight agregado só aparece com amostra suficiente
   (`MIN_AMOSTRA = 5`); `confianca` = `alta` (≥15), `media` (≥5) ou
-  `insuficiente`. Sem dados, retorna o insight `amostra_insuficiente`.
-- `InsightFeedback` (`models.py`) guarda o feedback e a personalização é
-  determinística: insight marcado como não útil é ocultado; útil sobe ao topo.
+  `insuficiente`.
+- **Evolução**: `obter_evolucao` compara o começo e o fim da janela e emite uma
+  melhoria (`jornada`) quando há queda objetiva ligada a um insight ruim ainda
+  ativo (ex.: cancelamentos caindo com `taxa_furo` presente). Não prova
+  causalidade. Os campos `dimensoes`, `comparacoes` e `experimentos`
+  permanecem na resposta apenas por compatibilidade do parser do frontend e
+  vêm sempre vazios.
 
-## Insights implementados
+## Feedback (`InsightFeedback`)
 
-Fase 1/3 (a partir do dado que já existe):
-`melhor_horario`, `melhor_dia_semana`, `duracao_ideal`, `foco_sem_interrupcoes`,
-`vies_estimativa`, `tarefas_no_prazo`, `taxa_furo`, `sequencia_produtiva`,
-`cramming`, `ritmo_disciplina`, `progresso`, `equilibrio_metodo`.
+Determinístico, sem ML e sem reforço:
 
-## Pendências (fases seguintes do roadmap)
-
-- **Fase 4 — origem da recomendação + `efeito_acao` + jornada.** Requer rastrear
-  qual insight originou uma sessão (FK/tag em `SessaoEstudo`). É uma decisão de
-  produto sobre atribuição (ver plano). Enquanto não existe, `obter_evolucao`
-  devolve `experimentos: []` e o frontend `fetchJourney()` retorna vazio.
-- **Fase 5 — fora de escopo (esforço alto, dependência de SO).** Os insights
-  `sono_x_rendimento`, `tela_antes_sessao` e `desgaste` completo dependem de
-  integração com HealthKit/Health Connect e UsageStatsManager (permissões de
-  sistema). Devem virar issue própria quando houver decisão de produto — não são
-  calculados aqui.
+- 👎 (`useful: false`) aplica uma punição temporária: preenche `ocultar_ate` com
+  `agora + 7 dias` e o insight some daquele aluno até lá. Depois disso, ele pode
+  voltar se o aluno cair de novo no caso de uso. A punição é individual por
+  aluno e por insight.
+- 👍 (`useful: true`) apenas registra o "visto". Não cria, não remove e não
+  altera punição; não prioriza, pontua nem reordena nada.

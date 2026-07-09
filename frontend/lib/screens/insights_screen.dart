@@ -4,28 +4,21 @@ import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../core/theme/app_theme.dart';
-import '../data/insights_mock.dart';
 import '../models/insights_model.dart';
 import '../services/insights_service.dart';
-import '../widgets/insights/insight_editorial_summary.dart';
 import '../widgets/insights/insight_evolution_view.dart';
 import '../widgets/insights/insight_feed_row.dart';
 import '../widgets/insights/insight_feed_section.dart';
 import '../widgets/insights/insight_feedback_control.dart';
-import '../widgets/insights/insight_hero_chart.dart';
-import '../widgets/insights/insight_kpi_strip.dart';
-import '../widgets/insights/insight_presentation.dart';
-import '../widgets/insights/insight_recommendations_section.dart';
 import 'criar_sessao_screen.dart';
 import 'insight_detail_screen.dart';
 
 enum _InsightsView { insights, evolucao }
 
 class InsightsScreen extends StatefulWidget {
-  final List<Insight>? insights;
   final InsightsService? service;
 
-  const InsightsScreen({super.key, this.insights, this.service});
+  const InsightsScreen({super.key, this.service});
 
   @override
   State<InsightsScreen> createState() => _InsightsScreenState();
@@ -36,38 +29,19 @@ class _InsightsScreenState extends State<InsightsScreen> {
 
   List<Insight> _items = const [];
   List<InsightJourneyEvent> _journey = const [];
-  InsightsDashboard _dashboard = getInsightsDashboardMock();
   bool _loading = false;
   Object? _error;
   late final InsightsService _service;
   _InsightsView _selectedView = _InsightsView.insights;
   String? _selectedDisciplina;
-  String? _selectedEvolutionDisciplina;
   final Map<String, InsightFeedbackState> _feedbackByType = {};
 
   @override
   void initState() {
     super.initState();
     _service = widget.service ?? const InsightsService();
-    if (widget.insights != null) {
-      _items = widget.insights!;
-      _journey = getJornadaMock();
-    } else {
-      _loading = true;
-      _fetch();
-    }
-  }
-
-  @override
-  void didUpdateWidget(covariant InsightsScreen oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.insights != widget.insights && widget.insights != null) {
-      setState(() {
-        _items = widget.insights!;
-        _loading = false;
-        _error = null;
-      });
-    }
+    _loading = true;
+    _fetch();
   }
 
   Future<void> _fetch() async {
@@ -75,13 +49,11 @@ class _InsightsScreenState extends State<InsightsScreen> {
       final results = await Future.wait([
         _service.fetchInsights(),
         _service.fetchJourney(),
-        _service.fetchDashboard(),
       ]);
       if (!mounted) return;
       setState(() {
         _items = results[0] as List<Insight>;
         _journey = results[1] as List<InsightJourneyEvent>;
-        _dashboard = results[2] as InsightsDashboard;
         _loading = false;
       });
     } catch (error) {
@@ -118,14 +90,6 @@ class _InsightsScreenState extends State<InsightsScreen> {
         : null;
   }
 
-  String? get _activeEvolutionDisciplina {
-    final available = _availableDisciplinas;
-    if (available.isEmpty) return null;
-    final selected = _selectedEvolutionDisciplina;
-    if (selected != null && available.contains(selected)) return selected;
-    return available.contains('ES2') ? 'ES2' : available.first;
-  }
-
   bool _isEligible(Insight insight) {
     return insight.confianca != 'insuficiente' &&
         _feedbackByType[insight.tipo]?.status != InsightFeedbackStatus.rejected;
@@ -133,69 +97,10 @@ class _InsightsScreenState extends State<InsightsScreen> {
 
   List<Insight> get _eligibleItems => _items.where(_isEligible).toList();
 
-  Insight? _insightByType(String? type) {
-    if (type == null) return null;
-    for (final insight in _items) {
-      if (insight.tipo == type) return insight;
-    }
-    return null;
-  }
-
-  Insight? get _criticalAnchor {
-    final fatigue = _insightByType('desgaste');
-    if (fatigue != null && _isEligible(fatigue)) return fatigue;
-    for (final insight in _items) {
-      if (insight.severidade == 'critico' && _isEligible(insight)) {
-        return insight;
-      }
-    }
-    return null;
-  }
-
-  Insight? get _heroChartInsight {
-    final critical = _criticalAnchor;
-    if (critical?.grafico != null) return critical;
-    for (final insight in _eligibleItems) {
-      if (insight.severidade == 'critico' && insight.grafico != null) {
-        return insight;
-      }
-    }
-    for (final types in [
-      ['melhor_horario'],
-      ['ritmo_disciplina', 'vies_estimativa'],
-      ['duracao_ideal'],
-    ]) {
-      for (final type in types) {
-        final insight = _insightByType(type);
-        if (insight != null &&
-            insight.grafico != null &&
-            _isEligible(insight)) {
-          return insight;
-        }
-      }
-    }
-    return null;
-  }
-
   InsightFeedGroups get _feedGroups {
     return groupInsightsByPriority(
       _eligibleItems,
       disciplina: _activeInsightsDisciplina,
-    );
-  }
-
-  List<StudyDimension> get _evolutionFeedRows {
-    final selected = _activeInsightsDisciplina;
-    if (selected == null) return _dashboard.dimensoes;
-    return _dashboard.dimensoes.where((dimension) {
-      return _insightByType(dimension.insightTipo)?.disciplina == selected;
-    }).toList();
-  }
-
-  List<InsightRecommendationEntry> get _recommendations {
-    return buildInsightRecommendationEntries(
-      insights: _eligibleItems,
-      experiments: _dashboard.experimentos,
     );
   }
 
@@ -309,37 +214,42 @@ class _InsightsScreenState extends State<InsightsScreen> {
             AppSpacing.lg,
             AppSpacing.sm,
           ),
-          child: Material(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(AppRadii.lg),
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.xs),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _ViewButton(
-                      key: const ValueKey('view-insights'),
-                      label: 'Insights',
-                      icon: LucideIcons.sparkles,
-                      selected: _selectedView == _InsightsView.insights,
-                      onPressed: () => setState(
-                        () => _selectedView = _InsightsView.insights,
+          child: DecoratedBox(
+            decoration: AppDecorations.card(
+              borderRadius: BorderRadius.circular(AppRadii.lg),
+            ),
+            child: Material(
+              color: Colors.transparent,
+              borderRadius: BorderRadius.circular(AppRadii.lg),
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.xs),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _ViewButton(
+                        key: const ValueKey('view-insights'),
+                        label: 'Insights',
+                        icon: LucideIcons.sparkles,
+                        selected: _selectedView == _InsightsView.insights,
+                        onPressed: () => setState(
+                          () => _selectedView = _InsightsView.insights,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: AppSpacing.xs),
-                  Expanded(
-                    child: _ViewButton(
-                      key: const ValueKey('view-evolucao'),
-                      label: 'Evolução',
-                      icon: LucideIcons.trendingUp,
-                      selected: _selectedView == _InsightsView.evolucao,
-                      onPressed: () => setState(
-                        () => _selectedView = _InsightsView.evolucao,
+                    const SizedBox(width: AppSpacing.xs),
+                    Expanded(
+                      child: _ViewButton(
+                        key: const ValueKey('view-evolucao'),
+                        label: 'Evolução',
+                        icon: LucideIcons.trendingUp,
+                        selected: _selectedView == _InsightsView.evolucao,
+                        onPressed: () => setState(
+                          () => _selectedView = _InsightsView.evolucao,
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -349,22 +259,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
   }
 
   Widget _buildInsightsTab() {
-    final briefing = buildEditorialBriefing(
-      insights: _eligibleItems,
-      dashboard: _dashboard,
-      anchor: _criticalAnchor,
-    );
-    final hero = _heroChartInsight;
     final groups = _feedGroups;
-    final dimensions = _evolutionFeedRows;
-    final recommendations = _recommendations;
-    final hasInsufficient = _items.any(
-      (insight) =>
-          insight.confianca == 'insuficiente' &&
-          (_activeInsightsDisciplina == null ||
-              insight.disciplina == _activeInsightsDisciplina),
-    );
-
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
@@ -378,53 +273,18 @@ class _InsightsScreenState extends State<InsightsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              InsightEditorialSummary(briefing: briefing, onOpen: _openDetail),
-              if (_dashboard.comparacoes.isNotEmpty) ...[
-                const SizedBox(height: AppSpacing.xxxl),
-                InsightKpiStrip(comparisons: _dashboard.comparacoes),
-              ],
-              if (hero?.grafico != null) ...[
-                const SizedBox(height: AppSpacing.xxxl),
-                Text(
-                  'O dado por trás do destaque',
-                  style: AppTypography.cardTitle.copyWith(
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  hero!.titulo,
-                  style: AppTypography.body.copyWith(
-                    color: AppColors.textMuted,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                SizedBox(
-                  height: 280,
-                  child: AnnotatedInsightChart(
-                    chart: hero.grafico!,
-                    color: severityColor(hero.severidade),
-                    semanticLabel: 'Gráfico de ${hero.titulo}',
-                  ),
-                ),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: () => _openDetail(hero),
-                    child: const Text('Ver gráfico completo'),
-                  ),
-                ),
-              ],
-              const SizedBox(height: AppSpacing.xxxl),
               _buildSubjectFilters(),
               const SizedBox(height: AppSpacing.xxl),
               InsightFeedSection(
-                title: '⚠️ Vale sua atenção',
+                title: 'Pontos para melhorar',
+                description:
+                    'Padrões ruins observados nos seus registros, com recomendação e resultado esperado.',
                 rows: groups.attention
                     .map<Widget>(
                       (insight) => InsightFeedRow.fromInsight(
                         insight: insight,
                         onTap: () => _openDetail(insight),
+                        onAcknowledge: () => _handleAcknowledged(insight),
                       ),
                     )
                     .toList(),
@@ -432,53 +292,19 @@ class _InsightsScreenState extends State<InsightsScreen> {
               if (groups.attention.isNotEmpty && groups.discoveries.isNotEmpty)
                 const SizedBox(height: AppSpacing.xxxl),
               InsightFeedSection(
-                title: '💡 Descobertas',
+                title: 'Descobertas',
+                description:
+                    'Comportamentos bons que já aparecem nos dados e vale manter.',
                 rows: groups.discoveries
                     .map<Widget>(
                       (insight) => InsightFeedRow.fromInsight(
                         insight: insight,
                         onTap: () => _openDetail(insight),
+                        onAcknowledge: () => _handleAcknowledged(insight),
                       ),
                     )
                     .toList(),
               ),
-              if ((groups.attention.isNotEmpty ||
-                      groups.discoveries.isNotEmpty) &&
-                  dimensions.isNotEmpty)
-                const SizedBox(height: AppSpacing.xxxl),
-              InsightFeedSection(
-                title: '📈 Evolução',
-                rows: dimensions.map<Widget>((dimension) {
-                  final insight = _insightByType(dimension.insightTipo);
-                  return StudyDimensionFeedRow(
-                    dimension: dimension,
-                    onTap: insight == null ? null : () => _openDetail(insight),
-                  );
-                }).toList(),
-              ),
-              if (hasInsufficient) ...[
-                const SizedBox(height: AppSpacing.lg),
-                Text(
-                  'Alguns padrões ainda estão se formando; continue '
-                  'registrando suas sessões.',
-                  key: const ValueKey('insufficient-patterns-note'),
-                  style: AppTypography.caption.copyWith(
-                    color: AppColors.textMuted,
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-              ],
-              if (recommendations.isNotEmpty) ...[
-                const SizedBox(height: AppSpacing.xxxl),
-                const Divider(height: 1, color: AppColors.borderSubtle),
-                const SizedBox(height: AppSpacing.xxxl),
-                InsightRecommendationsSection(
-                  entries: recommendations,
-                  onOpenInsight: _openDetail,
-                  onAction: _handleAction,
-                  onOpenExperiment: _openExperiment,
-                ),
-              ],
             ],
           ),
         ),
@@ -541,16 +367,9 @@ class _InsightsScreenState extends State<InsightsScreen> {
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: _contentMaxWidth),
         child: InsightEvolutionView(
-          dashboard: _dashboard,
           insights: _items,
           journey: _journey,
-          disciplinas: _availableDisciplinas,
-          selectedDisciplina: _activeEvolutionDisciplina,
-          onSelectDisciplina: (value) {
-            setState(() => _selectedEvolutionDisciplina = value);
-          },
           onOpenInsight: _openDetail,
-          onAction: _handleAction,
         ),
       ),
     );
@@ -591,14 +410,10 @@ class _InsightsScreenState extends State<InsightsScreen> {
     });
   }
 
-  void _openExperiment(InsightExperiment experiment) {
-    final insight = _insightByType(experiment.insightTipo);
-    if (insight != null) {
-      _openDetail(insight);
-      return;
-    }
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Acompanhamento disponível em breve.')),
+  void _handleAcknowledged(Insight insight) {
+    _handleFeedbackChanged(
+      insight,
+      const InsightFeedbackState(status: InsightFeedbackStatus.useful),
     );
   }
 

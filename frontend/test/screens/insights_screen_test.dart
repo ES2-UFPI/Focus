@@ -1,44 +1,9 @@
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:frontend/core/theme/app_theme.dart';
-import 'package:frontend/data/insights_mock.dart';
-import 'package:frontend/models/insights_model.dart';
 import 'package:frontend/screens/insights_screen.dart';
-import 'package:frontend/services/insights_service.dart';
-import 'package:frontend/widgets/insights/insight_kpi_strip.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
-class _DelayedInsightsService extends InsightsService {
-  const _DelayedInsightsService();
-
-  @override
-  Future<List<Insight>> fetchInsights() async {
-    await Future<void>.delayed(const Duration(milliseconds: 60));
-    return getInsightsMock();
-  }
-
-  @override
-  Future<List<InsightJourneyEvent>> fetchJourney() async {
-    await Future<void>.delayed(const Duration(milliseconds: 60));
-    return getJornadaMock();
-  }
-
-  @override
-  Future<InsightsDashboard> fetchDashboard() async {
-    await Future<void>.delayed(const Duration(milliseconds: 60));
-    return getInsightsDashboardMock();
-  }
-}
-
-class _FailingInsightsService extends InsightsService {
-  const _FailingInsightsService();
-
-  @override
-  Future<List<Insight>> fetchInsights() async {
-    throw Exception('offline');
-  }
-}
+import '../fixtures/insights_fixtures.dart';
 
 void _configureLargeView(WidgetTester tester) {
   tester.view.physicalSize = const Size(1000, 1800);
@@ -48,10 +13,14 @@ void _configureLargeView(WidgetTester tester) {
 }
 
 void main() {
-  testWidgets('shows loading, then the editorial experience', (tester) async {
+  testWidgets('shows loading, then the insight feed', (tester) async {
     _configureLargeView(tester);
     await tester.pumpWidget(
-      const ShadApp(home: InsightsScreen(service: _DelayedInsightsService())),
+      const ShadApp(
+        home: InsightsScreen(
+          service: FixtureInsightsService(delay: Duration(milliseconds: 60)),
+        ),
+      ),
     );
     await tester.pump();
 
@@ -60,18 +29,17 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(CircularProgressIndicator), findsNothing);
-    expect(
-      find.byKey(const ValueKey('insight-editorial-summary')),
-      findsOneWidget,
-    );
-    expect(find.byKey(const ValueKey('insight-kpi-strip')), findsOneWidget);
-    expect(find.byKey(const ValueKey('calm-toggle')), findsNothing);
+    expect(find.byKey(const ValueKey('feed-row-desgaste')), findsOneWidget);
   });
 
   testWidgets('shows an error state with retry', (tester) async {
     _configureLargeView(tester);
     await tester.pumpWidget(
-      const ShadApp(home: InsightsScreen(service: _FailingInsightsService())),
+      ShadApp(
+        home: InsightsScreen(
+          service: FixtureInsightsService(error: Exception('offline')),
+        ),
+      ),
     );
     await tester.pumpAndSettle();
 
@@ -83,7 +51,14 @@ void main() {
   });
 
   testWidgets('renders the empty insights state', (tester) async {
-    await tester.pumpWidget(const ShadApp(home: InsightsScreen(insights: [])));
+    await tester.pumpWidget(
+      const ShadApp(
+        home: InsightsScreen(
+          service: FixtureInsightsService(insights: [], journey: []),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
 
     expect(
       find.text('Estude algumas sessões para desbloquear seus insights.'),
@@ -91,18 +66,17 @@ void main() {
     );
   });
 
-  testWidgets('groups eligible insights and dimensions by priority', (
+  testWidgets('renders the two insight sections with explanatory cards', (
     tester,
   ) async {
     _configureLargeView(tester);
     await tester.pumpWidget(
-      ShadApp(home: InsightsScreen(insights: getInsightsMock())),
+      const ShadApp(home: InsightsScreen(service: FixtureInsightsService())),
     );
-    await tester.pump();
+    await tester.pumpAndSettle();
 
-    expect(find.text('⚠️ Vale sua atenção'), findsOneWidget);
-    expect(find.text('💡 Descobertas'), findsOneWidget);
-    expect(find.text('📈 Evolução'), findsOneWidget);
+    expect(find.text('Pontos para melhorar'), findsOneWidget);
+    expect(find.text('Descobertas'), findsOneWidget);
     expect(find.byKey(const ValueKey('feed-row-desgaste')), findsOneWidget);
     expect(
       find.byKey(const ValueKey('feed-row-duracao_ideal')),
@@ -117,97 +91,33 @@ void main() {
       findsNothing,
     );
     expect(
-      find.byKey(const ValueKey('insufficient-patterns-note')),
-      findsOneWidget,
-    );
-    expect(
       find.byKey(const ValueKey('feed-row-dimension-tempo')),
-      findsOneWidget,
+      findsNothing,
     );
-    expect(
-      find.byKey(const ValueKey('feed-row-dimension-recuperacao')),
-      findsOneWidget,
-    );
-  });
-
-  testWidgets('editorial CTA opens the anchored insight detail', (
-    tester,
-  ) async {
-    _configureLargeView(tester);
-    await tester.pumpWidget(
-      ShadApp(home: InsightsScreen(insights: getInsightsMock())),
-    );
-    await tester.pump();
-
-    final summary = tester.widget<Text>(
-      find.byKey(const ValueKey('insight-editorial-summary')),
-    );
-    final rootSpan = summary.textSpan! as TextSpan;
-    final ctaSpan = rootSpan.children!.last as TextSpan;
-    (ctaSpan.recognizer! as TapGestureRecognizer).onTap!();
-    await tester.pumpAndSettle();
-
-    expect(find.text('Detalhe do insight'), findsOneWidget);
-    expect(
-      find.text('Seus registros recentes mostram sinais de cansaço'),
-      findsOneWidget,
-    );
-  });
-
-  testWidgets('shows three KPIs with semantic variation colors', (
-    tester,
-  ) async {
-    _configureLargeView(tester);
-    await tester.pumpWidget(
-      ShadApp(home: InsightsScreen(insights: getInsightsMock())),
-    );
-    await tester.pump();
-
-    expect(find.byKey(const ValueKey('kpi-produtividade-es2')), findsOneWidget);
-    expect(
-      find.byKey(const ValueKey('kpi-cancelamentos-sexta')),
-      findsOneWidget,
-    );
-    expect(find.byKey(const ValueKey('kpi-tarefas-no-prazo')), findsOneWidget);
-    expect(
-      find.descendant(
-        of: find.byKey(const ValueKey('kpi-produtividade-es2')),
-        matching: find.text('4/5'),
-      ),
-      findsOneWidget,
-    );
-    expect(
-      find.descendant(
-        of: find.byKey(const ValueKey('kpi-cancelamentos-sexta')),
-        matching: find.text('10%'),
-      ),
-      findsOneWidget,
-    );
-    expect(
-      find.descendant(
-        of: find.byKey(const ValueKey('kpi-tarefas-no-prazo')),
-        matching: find.text('78%'),
-      ),
-      findsOneWidget,
-    );
-
-    final variation = tester.widget<DecoratedBox>(
-      find.byKey(const ValueKey('kpi-variation-cancelamentos-sexta')),
-    );
-    final decoration = variation.decoration as BoxDecoration;
-    expect(decoration.color, AppColors.success.withValues(alpha: 0.1));
-    expect(
-      comparisonVariationIsPositive(getInsightsDashboardMock().comparacoes[1]),
-      isTrue,
-    );
+    expect(find.text('Padrão ruim observado'), findsWidgets);
+    expect(find.text('Recomendação'), findsWidgets);
+    expect(find.text('Resultado esperado'), findsWidgets);
+    expect(find.text('Comportamento mapeado'), findsWidgets);
+    expect(find.text('Como manter'), findsWidgets);
+    expect(find.text('Próximo uso'), findsWidgets);
+    expect(find.text('Ação recomendada'), findsOneWidget);
+    expect(find.text('Informativo'), findsWidgets);
+    expect(find.text('Descoberta'), findsNothing);
+    expect(find.text('Recomendação'), findsWidgets);
+    expect(find.text('Sono e rotina'), findsOneWidget);
+    expect(find.text('Saúde'), findsNothing);
+    expect(find.byKey(const ValueKey('feed-ack-desgaste')), findsOneWidget);
+    expect(find.text('Taxa'), findsNothing);
+    expect(find.text('60%'), findsNothing);
+    expect(find.text('Recomendação de melhoria'), findsNothing);
   });
 
   testWidgets('subject filter narrows the insight feed', (tester) async {
     _configureLargeView(tester);
     await tester.pumpWidget(
-      ShadApp(home: InsightsScreen(insights: getInsightsMock())),
+      const ShadApp(home: InsightsScreen(service: FixtureInsightsService())),
     );
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     await tester.tap(
       find.byKey(const ValueKey('subject-filter-Banco de Dados')),
@@ -222,19 +132,78 @@ void main() {
     expect(find.byKey(const ValueKey('feed-row-melhor_horario')), findsNothing);
   });
 
-  testWidgets('keeps the evolution journey in its own tab', (tester) async {
+  testWidgets('keeps only improvement cards in the evolution tab', (
+    tester,
+  ) async {
     _configureLargeView(tester);
     await tester.pumpWidget(
-      ShadApp(home: InsightsScreen(insights: getInsightsMock())),
+      const ShadApp(home: InsightsScreen(service: FixtureInsightsService())),
     );
-    await tester.pump();
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('view-evolucao')));
     await tester.pump();
 
-    expect(find.text('Antes × agora'), findsOneWidget);
-    expect(find.text('Da hipótese ao resultado'), findsOneWidget);
-    expect(find.text('A história de cada disciplina'), findsOneWidget);
     expect(find.text('Histórico das mudanças'), findsOneWidget);
+    expect(find.text('Antes × agora'), findsNothing);
+    expect(find.text('Da hipótese ao resultado'), findsNothing);
+    expect(find.text('A história de cada disciplina'), findsNothing);
+    expect(
+      find.byKey(const ValueKey('evolution-improvement-desgaste')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('evolution-improvement-duracao_ideal')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('evolution-improvement-taxa_furo')),
+      findsOneWidget,
+    );
+    expect(find.text('Menos estudo tarde'), findsOneWidget);
+    expect(find.text('Blocos mais curtos'), findsOneWidget);
+    expect(find.text('Sexta à noite evitada'), findsOneWidget);
+    expect(
+      find.textContaining('Relacionado: Cansaço no fim do dia'),
+      findsOneWidget,
+    );
+    expect(find.text('Fonte'), findsOneWidget);
+    expect(find.text('Sono e rotina'), findsOneWidget);
+    expect(find.text('Saúde'), findsNothing);
+    expect(find.text('Produtividade'), findsOneWidget);
+    expect(find.text('3,5'), findsOneWidget);
+    expect(find.text('4,2'), findsOneWidget);
+    expect(find.text('+20%'), findsOneWidget);
+    expect(find.text('+43%'), findsOneWidget);
+    expect(find.text('-20%'), findsOneWidget);
+    expect(find.textContaining('Hábito corrigido'), findsNothing);
+    expect(find.textContaining('Ajuste:'), findsNothing);
+    expect(find.textContaining('Problema:'), findsNothing);
+    expect(find.textContaining('p.p.'), findsNothing);
+    expect(find.textContaining('Relacionado:'), findsWidgets);
+    final latestTop = tester.getTopLeft(
+      find.byKey(const ValueKey('evolution-improvement-taxa_furo')),
+    );
+    final middleTop = tester.getTopLeft(
+      find.byKey(const ValueKey('evolution-improvement-duracao_ideal')),
+    );
+    final oldestTop = tester.getTopLeft(
+      find.byKey(const ValueKey('evolution-improvement-desgaste')),
+    );
+    expect(latestTop.dy, lessThan(middleTop.dy));
+    expect(middleTop.dy, lessThan(oldestTop.dy));
+    expect(find.textContaining('Você rendia menos'), findsNothing);
+    expect(find.textContaining('Você passou a reservar'), findsNothing);
+
+    await tester.tap(
+      find.byKey(const ValueKey('evolution-improvement-desgaste')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Detalhe do insight'), findsOneWidget);
+    expect(
+      find.text('O cansaço aparece quando você empilha estudo no fim do dia'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('lays out the calm hierarchy on a phone viewport', (
@@ -246,14 +215,11 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     await tester.pumpWidget(
-      ShadApp(home: InsightsScreen(insights: getInsightsMock())),
+      const ShadApp(home: InsightsScreen(service: FixtureInsightsService())),
     );
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
-    expect(
-      find.byKey(const ValueKey('insight-editorial-summary')),
-      findsOneWidget,
-    );
+    expect(find.byKey(const ValueKey('feed-row-desgaste')), findsOneWidget);
   });
 }

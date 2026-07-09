@@ -7,6 +7,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../core/theme/app_theme.dart';
 import '../models/agenda_model.dart';
 
 class RecomendacoesSection extends StatelessWidget {
@@ -28,14 +29,14 @@ class RecomendacoesSection extends StatelessWidget {
               const Icon(
                 Icons.lightbulb_outline_rounded,
                 size: 20,
-                color: Color(0xFFE65100),
+                color: AppColors.warningStrong,
               ),
               const SizedBox(width: 8),
               Text(
                 'Sugestões de Estudo',
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w700,
-                  color: const Color(0xFFE65100),
+                  color: AppColors.textPrimary,
                 ),
               ),
             ],
@@ -64,24 +65,24 @@ class _RecomendacaoCard extends StatelessWidget {
 
     // Determina o ícone, a cor de destaque e a cor de fundo com base no conteúdo
     IconData iconData = Icons.lightbulb;
-    Color color = Colors.orange;
-    Color bgColor = Colors.orange.shade50;
+    Color color = AppColors.warningStrong;
+    Color bgColor = AppColors.recommendationBackground;
     String prefixEmoji = '💡';
 
     if (text.contains('nenhuma sessão') || text.contains('sem sessão')) {
       iconData = Icons.error_outline_rounded;
-      color = Colors.red.shade700;
-      bgColor = Colors.red.shade50;
+      color = AppColors.danger;
+      bgColor = AppColors.danger.withValues(alpha: 0.08);
       prefixEmoji = '🚨';
     } else if (text.contains('próxima') || text.contains('dias') || text.contains('prazo')) {
       iconData = Icons.warning_amber_rounded;
-      color = Colors.amber.shade800;
-      bgColor = Colors.amber.shade50;
+      color = AppColors.warningStrong;
+      bgColor = AppColors.warningStrong.withValues(alpha: 0.10);
       prefixEmoji = '⚠️';
     } else if (text.contains('agendar') || text.contains('mais sessões') || text.contains('considere')) {
       iconData = Icons.menu_book_rounded;
-      color = Colors.indigo.shade700;
-      bgColor = Colors.indigo.shade50;
+      color = AppColors.brandPrimary;
+      bgColor = AppColors.brandPrimary.withValues(alpha: 0.08);
       prefixEmoji = '📚';
     }
 
@@ -89,9 +90,10 @@ class _RecomendacaoCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: bgColor,
+        color: Color.alphaBlend(bgColor, AppColors.surface),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.3), width: 1),
+        border: Border.all(color: color.withValues(alpha: 0.22), width: 1),
+        boxShadow: AppShadows.cardSoft,
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -110,14 +112,14 @@ class _RecomendacaoCard extends StatelessWidget {
                   '$prefixEmoji ${rec.eventoTitulo}',
                   style: textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: Colors.grey.shade900,
+                    color: AppColors.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   rec.recomendacao,
                   style: textTheme.bodySmall?.copyWith(
-                    color: Colors.grey.shade800,
+                    color: AppColors.textSecondary,
                     height: 1.35,
                     fontSize: 13,
                   ),

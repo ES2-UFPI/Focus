@@ -160,6 +160,36 @@ class AgendaProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Define o foco do calendario para uma data especifica.
+  void selecionarData(DateTime data) {
+    if (_dataFocal.year == data.year &&
+        _dataFocal.month == data.month &&
+        _dataFocal.day == data.day) {
+      return;
+    }
+    _dataFocal = data;
+    notifyListeners();
+  }
+
+  /// Navega o mini calendario para o mes anterior.
+  void retrocederMes() {
+    _dataFocal = _mesComDiaSeguro(_dataFocal.year, _dataFocal.month - 1);
+    notifyListeners();
+  }
+
+  /// Navega o mini calendario para o proximo mes.
+  void avancarMes() {
+    _dataFocal = _mesComDiaSeguro(_dataFocal.year, _dataFocal.month + 1);
+    notifyListeners();
+  }
+
+  DateTime _mesComDiaSeguro(int ano, int mes) {
+    final primeiroDoMesSeguinte = DateTime(ano, mes + 1, 1);
+    final ultimoDia = primeiroDoMesSeguinte.subtract(const Duration(days: 1)).day;
+    final dia = _dataFocal.day > ultimoDia ? ultimoDia : _dataFocal.day;
+    return DateTime(ano, mes, dia);
+  }
+
   // ---------------------------------------------------------------------------
   // Ações de Carregamento
   // ---------------------------------------------------------------------------

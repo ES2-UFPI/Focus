@@ -147,16 +147,53 @@ class PomodoroProvider extends ChangeNotifier {
     await _carregarSessoesAgendadas();
   }
 
+  Future<void> atualizarDadosExternos() async {
+    await _carregarProgressoSemana();
+    await _carregarSessoesAgendadas();
+  }
+
   /// Busca todas as sessões AGENDADO do aluno, para alimentar o seletor de
   /// sessão específica (matéria → sessão) na tela do Pomodoro.
   Future<void> _carregarSessoesAgendadas() async {
     try {
       final sessoes = await _sessaoEstudoService.listarSessoes();
-      _sessoesAgendadas = sessoes.where((s) => s.status == 'AGENDADO').toList()
-        ..sort((a, b) => a.inicio.compareTo(b.inicio));
+      _sessoesAgendadas =
+          sessoes.where((s) => s.status.toUpperCase() == 'AGENDADO').toList()
+            ..sort((a, b) => a.inicio.compareTo(b.inicio));
+      _reconciliarSelecaoComSessoesAgendadas();
       notifyListeners();
     } catch (_) {
       // Sem sessões agendadas disponíveis: lista fica vazia no seletor.
+    }
+  }
+
+  void _reconciliarSelecaoComSessoesAgendadas() {
+    final sessaoAtual = sessaoSelecionada;
+    if (sessaoAtual != null) {
+      final idx = _sessoesAgendadas.indexWhere((s) => s.id == sessaoAtual.id);
+      if (idx != -1) {
+        sessaoSelecionada = _sessoesAgendadas[idx];
+        return;
+      }
+      sessaoSelecionada = null;
+      energiaInicial = null;
+      interrupcoes = 0;
+      interrupcoesBloco = 0;
+      _inicioBloco = null;
+      _energiaPromptRespondido = false;
+    }
+
+    final disciplinaAtual = disciplinaSelecionada;
+    final disciplinaAtualTemSessao =
+        disciplinaAtual != null &&
+        _sessoesAgendadas.any((s) => s.disciplinaId == disciplinaAtual.id);
+    if (disciplinaAtualTemSessao || _sessoesAgendadas.isEmpty) return;
+
+    final proximoIndice = disciplinas.indexWhere(
+      (d) => _sessoesAgendadas.any((s) => s.disciplinaId == d.id),
+    );
+    if (proximoIndice != -1) {
+      selectedIndex = proximoIndice;
     }
   }
 

@@ -63,8 +63,10 @@ class _InsightDetailScreenState extends State<InsightDetailScreen> {
                       const SizedBox(height: AppSpacing.lg),
                       if (hasChart)
                         _SectionCard(
-                          title: 'A evidência em gráfico',
-                          icon: LucideIcons.chartNoAxesColumnIncreasing,
+                          title: _chartSectionTitle(chart),
+                          icon: _usesBinaryComparison(chart)
+                              ? LucideIcons.scale
+                              : LucideIcons.chartNoAxesColumnIncreasing,
                           child: SizedBox(
                             height: 280,
                             child: AnnotatedInsightChart(
@@ -111,6 +113,18 @@ class _InsightDetailScreenState extends State<InsightDetailScreen> {
         ],
       ),
     );
+  }
+
+  bool _usesBinaryComparison(InsightChart chart) {
+    return chart.tipo != 'linha' &&
+        chart.labels.length == 2 &&
+        chart.valores.length == 2;
+  }
+
+  String _chartSectionTitle(InsightChart chart) {
+    return _usesBinaryComparison(chart)
+        ? 'Comparação da evidência'
+        : 'A evidência em gráfico';
   }
 
   Widget _buildHeader() {
@@ -199,6 +213,11 @@ class _InsightDetailScreenState extends State<InsightDetailScreen> {
 
   Widget _buildEvidence() {
     final sessions = _insight.sessoesEvidencia;
+    final cancelledSessions = sessions
+        .where((session) => session.isCancelada)
+        .toList(growable: false);
+    final showCancelledSessions =
+        _insight.tipo == 'taxa_furo' && cancelledSessions.isNotEmpty;
 
     return _SectionCard(
       title: 'Sessões que sustentam o padrão',
@@ -206,24 +225,6 @@ class _InsightDetailScreenState extends State<InsightDetailScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
-            children: [
-              _DetailBadge(
-                label:
-                    '${_insight.amostra} ${_insight.amostra == 1 ? 'sessão' : 'sessões'} na amostra',
-                icon: LucideIcons.database,
-                color: AppColors.textMuted,
-              ),
-              _DetailBadge(
-                label: confidenceLabel(_insight.confianca),
-                icon: LucideIcons.shieldCheck,
-                color: confidenceColor(_insight.confianca),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
           if (sessions.isEmpty)
             Text(
               'As sessões individuais ainda não estão disponíveis para este '
@@ -233,6 +234,8 @@ class _InsightDetailScreenState extends State<InsightDetailScreen> {
                 height: 1.45,
               ),
             )
+          else if (showCancelledSessions)
+            _CancelledSessionsList(sessions: cancelledSessions)
           else
             ...List.generate(
               sessions.length,
@@ -240,7 +243,10 @@ class _InsightDetailScreenState extends State<InsightDetailScreen> {
                 padding: EdgeInsets.only(
                   bottom: index == sessions.length - 1 ? 0 : AppSpacing.sm,
                 ),
-                child: _EvidenceRow(session: sessions[index]),
+                child: _EvidenceSessionCard(
+                  key: ValueKey('evidence-session-card-$index'),
+                  session: sessions[index],
+                ),
               ),
             ),
         ],
@@ -292,7 +298,7 @@ class _InsightDetailScreenState extends State<InsightDetailScreen> {
         return 'Considere blocos de até 50 minutos, seguidos por uma pausa '
             'curta, e compare sua produtividade nas próximas sessões.';
       case 'vies_estimativa':
-        return 'Ao planejar Cálculo, acrescente uma margem de aproximadamente '
+        return 'Ao planejar uma tarefa mais pesada, acrescente uma margem de '
             '40% ao tempo inicial e ajuste com seus próximos registros.';
       case 'taxa_furo':
         return 'Teste outro horário para as sessões de sexta e acompanhe se a '
@@ -354,26 +360,34 @@ class _SectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
+    final cardRadius = BorderRadius.circular(AppRadii.md);
+
+    return DecoratedBox(
+      decoration: AppDecorations.card(borderRadius: cardRadius),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, size: AppSizes.iconMd, color: AppColors.subjectTeal),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: Text(
-                title,
-                style: AppTypography.cardTitle.copyWith(
-                  color: AppColors.textPrimary,
+            Row(
+              children: [
+                Icon(icon, size: AppSizes.iconMd, color: AppColors.subjectTeal),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: AppTypography.cardTitle.copyWith(
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
+            const SizedBox(height: AppSpacing.lg),
+            child,
           ],
         ),
-        const SizedBox(height: AppSpacing.lg),
-        child,
-      ],
+      ),
     );
   }
 }
@@ -403,7 +417,7 @@ class _NumbersFallback extends StatelessWidget {
                 horizontal: AppSpacing.md,
                 vertical: AppSpacing.sm,
               ),
-              decoration: BoxDecoration(
+              decoration: AppDecorations.softCard(
                 color: color.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(AppRadii.md),
               ),
@@ -431,73 +445,244 @@ class _NumbersFallback extends StatelessWidget {
   }
 }
 
-class _EvidenceRow extends StatelessWidget {
-  final InsightEvidenceSession session;
+class _CancelledSessionsList extends StatelessWidget {
+  final List<InsightEvidenceSession> sessions;
 
-  const _EvidenceRow({required this.session});
+  const _CancelledSessionsList({required this.sessions});
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: AppColors.subjectTeal.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(AppRadii.md),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 30,
+              height: 30,
+              decoration: BoxDecoration(
+                color: AppColors.danger.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(AppRadii.sm),
+              ),
+              child: const Icon(
+                LucideIcons.calendarX,
+                size: AppSizes.iconSm,
+                color: AppColors.danger,
+              ),
             ),
-            child: const Icon(
-              LucideIcons.calendarCheck,
-              size: AppSizes.iconMd,
-              color: AppColors.subjectTeal,
-            ),
-          ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  session.disciplina ?? 'Sessão geral',
-                  style: AppTypography.bodyStrong.copyWith(
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.xxs),
-                Text(
-                  _formatDate(session.data),
-                  style: AppTypography.caption.copyWith(
-                    color: AppColors.textMuted,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                session.duracaoMin == 0
-                    ? 'Cancelada'
-                    : '${session.duracaoMin} min',
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Text(
+                'Sessões canceladas',
                 style: AppTypography.bodyStrong.copyWith(
-                  color: AppColors.textSecondary,
+                  color: AppColors.textPrimary,
                 ),
               ),
-              if (session.produtividade > 0)
-                Text(
-                  '${_formatNumber(session.produtividade)} / 5',
-                  style: AppTypography.caption.copyWith(
-                    color: AppColors.textMuted,
-                  ),
-                ),
-            ],
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        ...List.generate(
+          sessions.length,
+          (index) => Padding(
+            padding: EdgeInsets.only(
+              bottom: index == sessions.length - 1 ? 0 : AppSpacing.sm,
+            ),
+            child: _CancelledSessionCard(
+              key: ValueKey('cancelled-session-card-$index'),
+              session: sessions[index],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CancelledSessionCard extends StatelessWidget {
+  final InsightEvidenceSession session;
+
+  const _CancelledSessionCard({super.key, required this.session});
+
+  @override
+  Widget build(BuildContext context) {
+    final horario = session.horario;
+    final subtitle = horario == null || horario.isEmpty
+        ? _formatDate(session.data)
+        : '${_formatDate(session.data)} · $horario';
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Color.alphaBlend(
+          AppColors.danger.withValues(alpha: 0.07),
+          AppColors.surface,
+        ),
+        borderRadius: BorderRadius.circular(AppRadii.md),
+        border: Border.all(color: AppColors.danger.withValues(alpha: 0.18)),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.danger.withValues(alpha: 0.08),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
           ),
         ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Row(
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: AppColors.danger.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(AppRadii.md),
+              ),
+              child: const Icon(
+                LucideIcons.x,
+                size: AppSizes.iconSm,
+                color: AppColors.danger,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    session.disciplina ?? 'Sessão de estudo',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.bodyStrong.copyWith(
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xxs),
+                  Text(
+                    subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.caption.copyWith(
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.sm,
+                vertical: AppSpacing.xxs,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.danger.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                'Cancelada',
+                style: AppTypography.caption.copyWith(
+                  color: AppColors.danger,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _EvidenceSessionCard extends StatelessWidget {
+  final InsightEvidenceSession session;
+
+  const _EvidenceSessionCard({super.key, required this.session});
+
+  @override
+  Widget build(BuildContext context) {
+    final isCancelled = session.isCancelada;
+    final color = isCancelled ? AppColors.danger : AppColors.subjectTeal;
+    final horario = session.horario;
+    final subtitle = horario == null || horario.isEmpty
+        ? _formatDate(session.data)
+        : '${_formatDate(session.data)} · $horario';
+    final trailing = isCancelled
+        ? 'Cancelada'
+        : session.duracaoMin == 0
+        ? 'Registrada'
+        : '${session.duracaoMin} min';
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Color.alphaBlend(
+          color.withValues(alpha: 0.07),
+          AppColors.surface,
+        ),
+        borderRadius: BorderRadius.circular(AppRadii.md),
+        border: Border.all(color: color.withValues(alpha: 0.18)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Row(
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(AppRadii.md),
+              ),
+              child: Icon(
+                isCancelled ? LucideIcons.x : LucideIcons.calendarCheck,
+                size: AppSizes.iconSm,
+                color: color,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    session.disciplina ?? 'Sessão de estudo',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.bodyStrong.copyWith(
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xxs),
+                  Text(
+                    subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.caption.copyWith(
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  trailing,
+                  style: AppTypography.bodyStrong.copyWith(color: color),
+                ),
+                if (session.produtividade > 0)
+                  Text(
+                    '${_formatNumber(session.produtividade)} / 5',
+                    style: AppTypography.caption.copyWith(
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -505,14 +690,10 @@ class _EvidenceRow extends StatelessWidget {
 
 class _DetailBadge extends StatelessWidget {
   final String label;
-  final IconData icon;
+  final IconData? icon;
   final Color color;
 
-  const _DetailBadge({
-    required this.label,
-    required this.icon,
-    required this.color,
-  });
+  const _DetailBadge({required this.label, this.icon, required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -528,8 +709,10 @@ class _DetailBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: AppSizes.iconSm, color: color),
-          const SizedBox(width: AppSpacing.xs),
+          if (icon != null) ...[
+            Icon(icon, size: AppSizes.iconSm, color: color),
+            const SizedBox(width: AppSpacing.xs),
+          ],
           Text(
             label,
             style: AppTypography.caption.copyWith(

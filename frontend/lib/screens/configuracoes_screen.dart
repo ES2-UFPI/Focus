@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../core/theme/app_theme.dart';
 import '../providers/auth_provider.dart';
 
 class ConfiguracoesScreen extends StatefulWidget {
@@ -50,44 +51,81 @@ class _ConfiguracoesScreenState extends State<ConfiguracoesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final baseTheme = Theme.of(context);
+    final settingsTheme = ThemeData.light(useMaterial3: true).copyWith(
+      scaffoldBackgroundColor: AppColors.appBackground,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: AppColors.brandPrimary,
+        brightness: Brightness.light,
+        primary: AppColors.brandPrimary,
+        surface: AppColors.surface,
+      ),
+      textTheme: baseTheme.textTheme.apply(
+        bodyColor: AppColors.textPrimary,
+        displayColor: AppColors.textPrimary,
+      ),
+      cardTheme: const CardThemeData(
+        color: AppColors.surface,
+        surfaceTintColor: Colors.transparent,
+      ),
+      dividerColor: AppColors.borderSubtle,
+      listTileTheme: const ListTileThemeData(
+        iconColor: AppColors.brandPrimary,
+        textColor: AppColors.textPrimary,
+        subtitleTextStyle: TextStyle(
+          color: AppColors.textMuted,
+          fontSize: 14,
+        ),
+      ),
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return AppColors.brandPrimary;
+          }
+          return AppColors.surface;
+        }),
+        trackColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return AppColors.brandPrimary.withValues(alpha: 0.28);
+          }
+          return AppColors.border;
+        }),
+      ),
+    );
 
-    return Scaffold(
-      body: CustomScrollView(
-        slivers: [
-          // Header Estilizado com Gradiente
+    return Theme(
+      data: settingsTheme,
+      child: Scaffold(
+        backgroundColor: AppColors.appBackground,
+        body: CustomScrollView(
+          slivers: [
           SliverAppBar(
-            expandedHeight: 180.0,
+            expandedHeight: 132.0,
             floating: false,
             pinned: true,
+            elevation: 0,
+            backgroundColor: AppColors.appBackground,
+            surfaceTintColor: AppColors.appBackground,
             flexibleSpace: FlexibleSpaceBar(
-              centerTitle: true,
-              title: Text(
+              titlePadding: const EdgeInsetsDirectional.only(start: 24, bottom: 18),
+              title: const Text(
                 'Configurações',
                 style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: theme.colorScheme.onPrimary,
-                  fontSize: 20,
-                  shadows: const [
-                    Shadow(color: Colors.black38, offset: Offset(0, 1), blurRadius: 4),
-                  ],
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                  fontSize: 22,
                 ),
               ),
               background: Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Color(0xFF673AB7), Color(0xFF9C27B0)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                ),
-                child: const Center(
+                color: AppColors.appBackground,
+                child: Align(
+                  alignment: Alignment.bottomRight,
                   child: Padding(
-                    padding: EdgeInsets.only(top: 40.0),
+                    padding: const EdgeInsets.only(right: 32, bottom: 20),
                     child: Icon(
                       Icons.settings_suggest_rounded,
-                      size: 80,
-                      color: Colors.white24,
+                      size: 82,
+                      color: AppColors.brandPrimary.withValues(alpha: 0.10),
                     ),
                   ),
                 ),
@@ -147,7 +185,7 @@ class _ConfiguracoesScreenState extends State<ConfiguracoesScreen> {
                           ),
                         ),
                       ),
-                      const Icon(Icons.edit_outlined, color: Colors.grey),
+                      const Icon(Icons.edit_outlined, color: AppColors.textMuted),
                     ],
                   ),
                 ),
@@ -218,35 +256,13 @@ class _ConfiguracoesScreenState extends State<ConfiguracoesScreen> {
               ),
               ..._buildFontesSincronizacao(),
 
-              // Tema e Aparência
-              _buildSectionTitle(context, 'Aparência e Tema'),
-              ListTile(
-                leading: const Icon(Icons.palette_outlined, color: Colors.blueGrey),
-                title: const Text('Tema da Interface'),
-                subtitle: const Text('Claro (Sistema)'),
-                trailing: Wrap(
-                  spacing: 8,
-                  children: [
-                    ChoiceChip(
-                      label: const Text('Claro'),
-                      selected: true,
-                      onSelected: (_) {},
-                    ),
-                    ChoiceChip(
-                      label: const Text('Escuro'),
-                      selected: false,
-                      onSelected: (_) {},
-                    ),
-                  ],
-                ),
-              ),
 
               // Sobre e Suporte
               _buildSectionTitle(context, 'Ajuda e Suporte'),
               ListTile(
                 leading: const Icon(Icons.info_outline, color: Colors.grey),
                 title: const Text('Sobre o Focus'),
-                subtitle: const Text('Versão 1.0.0 — ES2'),
+                subtitle: const Text('Versão 1.0.0 — perfil do estudante'),
                 onTap: () {},
               ),
               ListTile(
@@ -286,7 +302,8 @@ class _ConfiguracoesScreenState extends State<ConfiguracoesScreen> {
               const SizedBox(height: 120),
             ]),
           ),
-        ],
+          ],
+        ),
       ),
     );
   }

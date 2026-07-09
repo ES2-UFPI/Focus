@@ -46,11 +46,13 @@ InsightFeedGroups groupInsightsByPriority(
 
 class InsightFeedSection extends StatelessWidget {
   final String title;
+  final String? description;
   final List<Widget> rows;
 
   const InsightFeedSection({
     super.key,
     required this.title,
+    this.description,
     required this.rows,
   });
 
@@ -65,10 +67,20 @@ class InsightFeedSection extends StatelessWidget {
           title,
           style: AppTypography.cardTitle.copyWith(color: AppColors.textPrimary),
         ),
-        const SizedBox(height: AppSpacing.sm),
+        if (description != null) ...[
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            description!,
+            style: AppTypography.body.copyWith(
+              color: AppColors.textMuted,
+              height: 1.4,
+            ),
+          ),
+        ],
+        const SizedBox(height: AppSpacing.md),
         for (var index = 0; index < rows.length; index++) ...[
           if (index > 0)
-            const Divider(height: 1, color: AppColors.borderSubtle),
+            const SizedBox(height: AppSpacing.md),
           rows[index],
         ],
       ],

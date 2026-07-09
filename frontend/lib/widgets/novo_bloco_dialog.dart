@@ -2,11 +2,9 @@ import 'package:flutter/material.dart';
 import '../models/bloco_estudo.dart';
 
 const _disciplinasCores = {
-  'Cálculo I': Color(0xFF5C6BC0),
-  'Banco de Dados': Color(0xFF009688),
-  'Física': Color(0xFFFF7043),
-  'Prog. II': Color(0xFFEC407A),
-  'IA': Color(0xFF7E57C2),
+  'Estruturas de Dados': Color(0xFF2563EB),
+  'Banco de Dados': Color(0xFFF59E0B),
+  'Projeto Integrador': Color(0xFF10B981),
 };
 
 class NovoBlocoDialog extends StatefulWidget {
