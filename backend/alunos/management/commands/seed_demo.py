@@ -13,10 +13,14 @@ disparar um conjunto rico e coerente de insights (forças e fraquezas).
 Uso:
     python manage.py seed_demo
     python manage.py seed_demo --email aluno@x.com --senha Senha@1
-    python manage.py seed_demo --keep   # não recria se o usuário já existir
+    python manage.py seed_demo --keep         # não faz nada se o usuário existir
+    python manage.py seed_demo --reset-senha  # redefine a senha do usuário existente
+    python manage.py seed_demo --staff        # dá acesso ao /admin
 
-O comando é idempotente: por padrão remove o usuário demo (e, em cascata,
-todos os seus dados) antes de recriar, para poder ser rodado várias vezes.
+O comando é idempotente e NÃO destrói a conta: se o usuário já existir, a
+conta (id, senha e token) é preservada e apenas os dados de estudo dele são
+recriados. A senha só é definida ao criar um usuário novo — ou com
+`--reset-senha` num usuário existente.
 """
 
 import datetime as dt
@@ -30,6 +34,7 @@ from alunos.models import Aluno
 from disciplinas.models import Disciplina
 from eventos_academicos.models import EventoAcademico
 from feedback_sessao_estudo.models import FeedbackSessaoEstudo
+from insights.models import InsightFeedback
 from materiais_estudo.models import MaterialEstudo
 from sessao_estudo.models import BlocoPomodoro, SessaoEstudo
 from tarefas_disciplina.models import Prioridade, TarefaDisciplina
@@ -50,6 +55,17 @@ class Command(BaseCommand):
             '--keep',
             action='store_true',
             help='Não faz nada se o usuário já existir (não recria os dados).',
+        )
+        parser.add_argument(
+            '--staff',
+            action='store_true',
+            help='Marca o usuário como staff (acesso ao /admin). Padrão: não.',
+        )
+        parser.add_argument(
+            '--reset-senha',
+            action='store_true',
+            dest='reset_senha',
+            help='Redefine a senha mesmo se o usuário já existir.',
         )
 
     # ------------------------------------------------------------------ #
@@ -74,23 +90,38 @@ class Command(BaseCommand):
         email = options['email']
         senha = options['senha']
 
-        existente = Aluno.objects.filter(email=email).first()
-        if existente and options['keep']:
+        aluno = Aluno.objects.filter(email=email).first()
+
+        if aluno and options['keep']:
             self.stdout.write(self.style.WARNING(
                 f'Usuario {email} ja existe e --keep foi usado; nada a fazer.'
             ))
             return
-        if existente:
-            existente.delete()  # cascata remove disciplinas, sessoes, etc.
-            self.stdout.write(self.style.WARNING(f'Usuario {email} recriado do zero.'))
 
-        aluno = Aluno.objects.create_user(
-            email=email,
-            password=senha,
-            nome='Samuel Fortes',
-            data_nascimento=dt.date(2003, 5, 14),
-            is_staff=True,  # permite acessar o /admin para conferência
-        )
+        if aluno:
+            # Reaproveita a conta existente (mantem id, senha e token).
+            # Remove apenas os dados de dominio para poder repovoar de forma
+            # idempotente, SEM apagar o usuario.
+            InsightFeedback.objects.filter(aluno=aluno).delete()
+            aluno.disciplinas.all().delete()  # cascata: sessoes, eventos, etc.
+            if options['reset_senha']:
+                aluno.set_password(senha)
+            if options['staff'] and not aluno.is_staff:
+                aluno.is_staff = True
+            aluno.save()
+            self.stdout.write(self.style.WARNING(
+                f'Usuario {email} ja existia: dados de estudo recriados '
+                f'(conta e senha preservadas).'
+            ))
+        else:
+            aluno = Aluno.objects.create_user(
+                email=email,
+                password=senha,
+                nome='Samuel Fortes',
+                data_nascimento=dt.date(2003, 5, 14),
+                is_staff=options['staff'],
+            )
+            self.stdout.write(self.style.SUCCESS(f'Usuario {email} criado.'))
 
         discs = self._criar_disciplinas(aluno)
         eventos = self._criar_eventos(discs)
@@ -412,7 +443,7 @@ class Command(BaseCommand):
 
         disc_ids = list(aluno.disciplinas.values_list('id', flat=True))
         self.stdout.write(self.style.SUCCESS('\n[OK] Perfil de demonstracao criado.'))
-        self.stdout.write(f'  Aluno .............. {aluno.email} (senha definida)')
+        self.stdout.write(f'  Aluno .............. {aluno.email}')
         self.stdout.write(f'  Disciplinas ........ {aluno.disciplinas.count()}')
         self.stdout.write(
             f"  Sessoes (total) .... {n(SessaoEstudo, disciplina_id__in=disc_ids)} "
