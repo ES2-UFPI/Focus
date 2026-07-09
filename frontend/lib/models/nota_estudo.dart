@@ -1,0 +1,144 @@
+import 'dart:convert';
+
+import 'material_estudo.dart';
+
+/// Prefixo usado no titulo do MaterialEstudo para marcar registros que sao
+/// notas de estudo (o backend nao tem endpoint proprio de notas).
+const String kNotaTituloPrefixo = '[NOTA] ';
+
+/// Definicao de uma secao estruturada da nota.
+class SecaoNotaDef {
+  final String key;
+  final String label;
+  final String placeholder;
+
+  const SecaoNotaDef(this.key, this.label, this.placeholder);
+}
+
+const List<SecaoNotaDef> kSecoesNota = [
+  SecaoNotaDef('obs', 'Observações importantes',
+      'Escreva pontos importantes da aula...'),
+  SecaoNotaDef('prova', 'Dicas para prova',
+      'O que o professor destacou? O que pode cair?'),
+  SecaoNotaDef('artigos', 'Artigos citados',
+      'Nome do artigo, autor, link, comentário...'),
+  SecaoNotaDef('livros', 'Livros citados',
+      'Livro, capítulo, páginas, autor...'),
+  SecaoNotaDef('carreira', 'Dicas profissionais e cursos',
+      'Cursos indicados, ferramentas, mercado, carreira...'),
+  SecaoNotaDef('duvidas', 'Dúvidas pendentes',
+      'O que você ainda precisa revisar?'),
+  SecaoNotaDef('conceitos', 'Conceitos-chave',
+      'Termos e definições centrais desta nota...'),
+  SecaoNotaDef('revisao', 'Questões para revisar',
+      'Perguntas para testar seu entendimento depois...'),
+];
+
+/// Nota de estudo persistida como MaterialEstudo (tipo 'Resumo') com as
+/// secoes serializadas em JSON no campo descricao.
+class NotaEstudo {
+  final String? id;
+  final String disciplinaId;
+  final String disciplinaNome;
+  final String titulo;
+  final DateTime data;
+  final Map<String, List<String>> secoes;
+
+  const NotaEstudo({
+    this.id,
+    required this.disciplinaId,
+    required this.disciplinaNome,
+    required this.titulo,
+    required this.data,
+    required this.secoes,
+  });
+
+  List<String> secao(String key) => secoes[key] ?? const [];
+
+  String get snippet {
+    for (final def in kSecoesNota) {
+      final itens = secao(def.key);
+      if (itens.isNotEmpty) return itens.first;
+    }
+    return 'Sem observações ainda.';
+  }
+
+  String get dataCurta {
+    final d = data.day.toString().padLeft(2, '0');
+    final m = data.month.toString().padLeft(2, '0');
+    return '$d/$m/${data.year}';
+  }
+
+  /// Verifica se um MaterialEstudo representa uma nota de estudo.
+  static bool ehNota(MaterialEstudo material) {
+    if (!material.titulo.startsWith(kNotaTituloPrefixo.trim())) return false;
+    final descricao = material.descricao;
+    if (descricao == null || descricao.isEmpty) return false;
+    try {
+      final json = jsonDecode(descricao);
+      return json is Map<String, dynamic> && json['nota'] == true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static NotaEstudo? fromMaterial(MaterialEstudo material) {
+    if (!ehNota(material)) return null;
+    final json = jsonDecode(material.descricao!) as Map<String, dynamic>;
+    final secoesJson = json['secoes'];
+    final secoes = <String, List<String>>{};
+    if (secoesJson is Map<String, dynamic>) {
+      for (final def in kSecoesNota) {
+        final itens = secoesJson[def.key];
+        secoes[def.key] = itens is List
+            ? itens.map((e) => e.toString()).toList()
+            : <String>[];
+      }
+    }
+    var titulo = material.titulo;
+    if (titulo.startsWith(kNotaTituloPrefixo)) {
+      titulo = titulo.substring(kNotaTituloPrefixo.length);
+    } else {
+      titulo = titulo.substring(kNotaTituloPrefixo.trim().length).trim();
+    }
+    return NotaEstudo(
+      id: material.id,
+      disciplinaId: material.disciplinaId,
+      disciplinaNome: material.disciplinaNome,
+      titulo: titulo,
+      data: material.dataInsercao,
+      secoes: secoes,
+    );
+  }
+
+  /// Payload para criar/atualizar via /api/materiais-estudo/.
+  Map<String, dynamic> toMaterialPayload() {
+    return {
+      'titulo': '$kNotaTituloPrefixo$titulo',
+      'tipo': 'Resumo',
+      'disciplina': disciplinaId,
+      'descricao': jsonEncode({
+        'nota': true,
+        'secoes': {
+          for (final def in kSecoesNota) def.key: secao(def.key),
+        },
+      }),
+    };
+  }
+
+  NotaEstudo copyWith({
+    String? disciplinaId,
+    String? disciplinaNome,
+    String? titulo,
+    Map<String, List<String>>? secoes,
+  }) {
+    return NotaEstudo(
+      id: id,
+      disciplinaId: disciplinaId ?? this.disciplinaId,
+      disciplinaNome: disciplinaNome ?? this.disciplinaNome,
+      titulo: titulo ?? this.titulo,
+      data: data,
+      secoes: secoes ?? this.secoes,
+    );
+  }
+}

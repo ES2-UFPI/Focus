@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 
-enum AppPage { atividades, eventos, disciplinas, consistencia, perfil, pomodoro, ajustes }
+enum AppPage { atividades, eventos, disciplinas, consistencia, perfil, pomodoro, notas, ajustes }
 
 class AppShellProvider extends ChangeNotifier {
   static const List<AppPage> pages = [
@@ -10,6 +10,7 @@ class AppShellProvider extends ChangeNotifier {
     AppPage.consistencia,
     AppPage.perfil,
     AppPage.pomodoro,
+    AppPage.notas,
     AppPage.ajustes,
   ];
 
