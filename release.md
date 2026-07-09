@@ -2,6 +2,12 @@
 
 Esta versão amplia o Focus de um organizador de agenda para um verdadeiro acompanhante de estudos. Além de planejar provas, trabalhos e sessões, o estudante agora consegue **executar** o estudo com o timer Pomodoro, **registrar** o que aprendeu em notas, **organizar** suas disciplinas e materiais em espaços próprios e **entender** seu próprio ritmo por meio de insights e de uma consistência semanal agora baseada em dados reais.
 
+## 📱 Acesse o app
+
+O Focus está online. Aponte a câmera do celular para o QR code abaixo ou acesse **https://es2-ufpi.github.io/Focus/**.
+
+<img src="https://raw.githubusercontent.com/ES2-UFPI/Focus/master/docs/qrcode-app.png" alt="QR code para acessar o Focus" width="240" />
+
 ## 🚀 Novidades
 
 ### Insights de estudo (Perfil de estudo)
