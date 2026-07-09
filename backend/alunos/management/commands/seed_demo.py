@@ -14,6 +14,7 @@ Uso:
     python manage.py seed_demo
     python manage.py seed_demo --email aluno@x.com --senha Senha@1
     python manage.py seed_demo --keep         # não faz nada se o usuário existir
+    python manage.py seed_demo --if-empty     # só semeia se a conta não tiver dados
     python manage.py seed_demo --reset-senha  # redefine a senha do usuário existente
     python manage.py seed_demo --staff        # dá acesso ao /admin
 
@@ -67,6 +68,15 @@ class Command(BaseCommand):
             dest='reset_senha',
             help='Redefine a senha mesmo se o usuário já existir.',
         )
+        parser.add_argument(
+            '--if-empty',
+            action='store_true',
+            dest='if_empty',
+            help=(
+                'Só semeia se a conta ainda não tiver dados (nenhuma '
+                'disciplina). Ideal para rodar no deploy sem sobrescrever.'
+            ),
+        )
 
     # ------------------------------------------------------------------ #
     # Utilidades de tempo (datetimes "aware" no fuso local do projeto)
@@ -95,6 +105,12 @@ class Command(BaseCommand):
         if aluno and options['keep']:
             self.stdout.write(self.style.WARNING(
                 f'Usuario {email} ja existe e --keep foi usado; nada a fazer.'
+            ))
+            return
+
+        if options['if_empty'] and aluno and aluno.disciplinas.exists():
+            self.stdout.write(self.style.WARNING(
+                f'Usuario {email} ja possui dados; --if-empty pulou o seed.'
             ))
             return
 
