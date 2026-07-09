@@ -1,26 +1,226 @@
-from django.core.exceptions import ValidationError as DjangoValidationError
-from django.utils import timezone
 from rest_framework import serializers
 
-from .models import BlocoPomodoro, SessaoEstudo
+from .models import BlocoPomodoro, SemanaEstudo, PlanejamentoDisciplina, HorarioEstudo, SessaoEstudo
+from django.utils import timezone
+from django.core.exceptions import ValidationError as DjangoValidationError
+# ──────────────────────────────────────────────
+# SemanaEstudo
+# ──────────────────────────────────────────────
 
+class SemanaEstudoSerializer(serializers.ModelSerializer):
+    numero_dias = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = SemanaEstudo
+        fields = [
+            'id',
+            'data_inicio',
+            'data_fim',
+            'ativa',
+            'numero_dias',
+            'criada_em',
+        ]
+        read_only_fields = fields
+
+
+# ──────────────────────────────────────────────
+# PlanejamentoDisciplina
+# ──────────────────────────────────────────────
+
+class PlanejamentoDisciplinaSerializer(serializers.ModelSerializer):
+    disciplina_nome = serializers.CharField(
+        source='disciplina.nome',
+        read_only=True
+    )
+
+    carga_horaria_horas = serializers.FloatField(read_only=True)
+    total_realizado = serializers.IntegerField(read_only=True)
+    minutos_restantes = serializers.IntegerField(read_only=True)
+    percentual_concluido = serializers.FloatField(read_only=True)
+
+    class Meta:
+        model = PlanejamentoDisciplina
+        fields = [
+            'id',
+            'semana_estudo',
+            'disciplina',
+            'disciplina_nome',
+            'carga_horaria_planejada',
+            'carga_horaria_horas',
+            'total_realizado',
+            'minutos_restantes',
+            'percentual_concluido',
+            'observacoes',
+            'criado_em',
+            'atualizado_em',
+        ]
+
+        read_only_fields = [
+            'id',
+            'semana_estudo',
+            'disciplina_nome',
+            'carga_horaria_horas',
+            'total_realizado',
+            'minutos_restantes',
+            'percentual_concluido',
+            'criado_em',
+            'atualizado_em',
+        ]
+
+    def validate(self, attrs):
+        disciplina = attrs.get(
+            'disciplina',
+            getattr(self.instance, 'disciplina', None)
+        )
+
+        request = self.context.get('request')
+
+        if disciplina and request and disciplina.aluno_id != request.user.id:
+            raise serializers.ValidationError({
+                'disciplina': 'Você não pode utilizar esta disciplina.'
+            })
+
+        carga = attrs.get(
+            'carga_horaria_planejada',
+            getattr(self.instance, 'carga_horaria_planejada', 0)
+        )
+
+        if carga <= 0:
+            raise serializers.ValidationError({
+                'carga_horaria_planejada':
+                'A carga horária deve ser maior que zero.'
+            })
+
+        return attrs
+
+
+# ──────────────────────────────────────────────
+# HorarioEstudo
+# ──────────────────────────────────────────────
+
+class HorarioEstudoSerializer(serializers.ModelSerializer):
+
+    dia_semana_label = serializers.CharField(
+        source='get_dia_semana_display',
+        read_only=True
+    )
+
+    disciplina = serializers.SerializerMethodField()
+    disciplina_nome = serializers.SerializerMethodField()
+
+    semana_estudo = serializers.SerializerMethodField()
+
+    duracao_minutos = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = HorarioEstudo
+        fields = [
+            'id',
+            'planejamento',
+            'semana_estudo',
+            'disciplina',
+            'disciplina_nome',
+            'dia_semana',
+            'dia_semana_label',
+            'hora_inicio',
+            'hora_fim',
+            'duracao_minutos',
+            'ativo',
+            'criado_em',
+        ]
+
+        read_only_fields = [
+            'id',
+            'semana_estudo',
+            'disciplina',
+            'disciplina_nome',
+            'criado_em',
+        ]
+
+    def get_disciplina(self, obj):
+        return str(obj.disciplina.id)
+
+    def get_disciplina_nome(self, obj):
+        return obj.disciplina.nome
+
+    def get_semana_estudo(self, obj):
+        return str(obj.semana_estudo.id)
+
+    def validate(self, attrs):
+
+        hora_inicio = attrs.get(
+            'hora_inicio',
+            getattr(self.instance, 'hora_inicio', None)
+        )
+
+        hora_fim = attrs.get(
+            'hora_fim',
+            getattr(self.instance, 'hora_fim', None)
+        )
+
+        if hora_inicio and hora_fim and hora_fim <= hora_inicio:
+            raise serializers.ValidationError({
+                'hora_fim':
+                'Deve ser posterior à hora de início.'
+            })
+
+        planejamento = attrs.get(
+            'planejamento',
+            getattr(self.instance, 'planejamento', None)
+        )
+
+        request = self.context.get('request')
+
+        if (
+            planejamento
+            and request
+            and planejamento.disciplina.aluno_id != request.user.id
+        ):
+            raise serializers.ValidationError({
+                'planejamento':
+                'Este planejamento pertence a outro aluno.'
+            })
+
+        return attrs
+
+
+# ──────────────────────────────────────────────
+# SessaoEstudo
+# ──────────────────────────────────────────────
 
 class SessaoEstudoSerializer(serializers.ModelSerializer):
-    """Serializer para mapear os dados da sessao de estudo para JSON."""
 
-    # Campo calculado para exibir o nome da disciplina nas listagens (somente leitura)
-    disciplina_nome = serializers.CharField(source='disciplina.nome', read_only=True)
+    disciplina_nome = serializers.CharField(
+        source='disciplina.nome',
+        read_only=True
+    )
+
+    semana_estudo_detalhes = SemanaEstudoSerializer(
+        source='semana_estudo',
+        read_only=True
+    )
+
+    duracao_planejada_minutos = serializers.IntegerField(
+        read_only=True
+    )
+
+    seguiu_planejamento = serializers.BooleanField(
+        read_only=True
+    )
+
+    # 🌟 CORREÇÃO: Declarando os campos calculados explicitamente para o DRF mapear os get_
     semana_estudo = serializers.SerializerMethodField()
     horario_estudo = serializers.SerializerMethodField()
 
     class Meta:
         model = SessaoEstudo
-        # 🔍 Alinhado perfeitamente com as propriedades reais do seu Model
+
         fields = [
-            'id', 
+            'id',
             'semana_estudo',
-            'disciplina', 
-            'disciplina_nome', 
+            'semana_estudo_detalhes',
+            'disciplina',
+            'disciplina_nome',
             'horario_estudo',
             'inicio', 
             'fim', 
@@ -30,25 +230,31 @@ class SessaoEstudoSerializer(serializers.ModelSerializer):
             'energia_inicial',
             'interrupcoes',
             'tipo_atividade',
+            'duracao_planejada_minutos',
+            'seguiu_planejamento',
         ]
       
         read_only_fields = ['id', 'semana_estudo']
         
     def get_semana_estudo(self, obj):
-        return timezone.localtime(obj.inicio).isocalendar().week
+        # 🛡️ Deixando o retorno sem o localtime conforme combinado para o Flutter não pular horas!
+        if not obj.inicio:
+            return None
+        return obj.inicio.isocalendar().week
 
     def get_horario_estudo(self, obj):
-        inicio = timezone.localtime(obj.inicio).strftime('%H:%M')
-        fim = timezone.localtime(obj.fim).strftime('%H:%M')
+        if not obj.inicio or not obj.fim:
+            return None
+        inicio = obj.inicio.strftime('%H:%M')
+        fim = obj.fim.strftime('%H:%M')
         return f'{inicio} - {fim}'
 
     def validate(self, attrs):
-        # Criamos um dicionário temporário a partir dos dados já validados/tratados pelo DRF
         contexto_validacao = {}
         
         if self.instance:
             contexto_validacao = {
-                'id': self.instance.id, # 🌟 ADICIONE ESTA LINHA AQUI! (Injeta o UUID na validação)
+                'id': self.instance.id,
                 'disciplina_id': self.instance.disciplina_id,
                 'inicio': self.instance.inicio,
                 'fim': self.instance.fim,
@@ -60,14 +266,12 @@ class SessaoEstudoSerializer(serializers.ModelSerializer):
                 'tipo_atividade': self.instance.tipo_atividade,
             }
             
-        # Mescla estritamente com os novos dados modificados vindos do payload
         for campo, valor in attrs.items():
             if campo == 'disciplina':
                 contexto_validacao['disciplina_id'] = valor.id if hasattr(valor, 'id') else valor
             else:
                 contexto_validacao[campo] = valor
 
-        # Criamos o objeto temporário de forma segura repassando o ID
         try:
             temp_instance = SessaoEstudo(**contexto_validacao)
             temp_instance.clean()
@@ -77,7 +281,6 @@ class SessaoEstudoSerializer(serializers.ModelSerializer):
             )
 
         return attrs
-
 
 class BlocoPomodoroSerializer(serializers.ModelSerializer):
 

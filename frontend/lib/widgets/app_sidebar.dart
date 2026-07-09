@@ -52,6 +52,12 @@ class AppSidebar extends StatelessWidget {
                 ),
                 _buildItem(
                   context,
+                  AppPage.metas,
+                  LucideIcons.target,
+                  'Metas Semanais',
+                ),
+                _buildItem(
+                  context,
                   AppPage.consistencia,
                   LucideIcons.barChart2,
                   'Consistência',

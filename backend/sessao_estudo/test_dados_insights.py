@@ -62,7 +62,7 @@ class SessaoEstudoDadosInsightsTests(TestCase):
                 'energia_inicial': 6,
                 'interrupcoes': 0,
             }
-        )
+        )   
 
         self.assertFalse(serializer.is_valid())
         self.assertIn('energia_inicial', serializer.errors)

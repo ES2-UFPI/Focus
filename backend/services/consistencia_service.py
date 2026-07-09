@@ -1,8 +1,11 @@
 from datetime import timedelta
 from django.utils import timezone
 from django.db.models import Sum, Count, Q
-from sessao_estudo.models import SessaoEstudo
+from sessao_estudo.models import SessaoEstudo, PlanejamentoDisciplina
+from services.semana_service import SemanaService
 from disciplinas.models import Disciplina
+from sessao_estudo.models import PlanejamentoDisciplina
+from services.semana_service import SemanaService
 
 
 class ConsistenciaService:
@@ -61,15 +64,15 @@ class ConsistenciaService:
 
     def calcular_horas_planejadas(self, aluno_id):
         """
-        [TASK 4] Calcula total de horas planejadas (fim - inicio).
-
+        Calcula horas planejadas com base na duração das sessões da semana.
+        Mantido para compatibilidade com os testes existentes.
         """
         sessoes = self.obter_sessoes_semana(aluno_id)
 
         total_minutos = 0
+
         for sessao in sessoes:
             duracao = sessao.fim - sessao.inicio
-
             minutos = round(duracao.total_seconds() / 60)
             total_minutos += minutos
 
@@ -230,39 +233,74 @@ class ConsistenciaService:
         }
 
     def calcular_meta_disciplinas(self, aluno_id, sessoes_contexto=None):
-        """Calcula metas. Aceita sessoes_contexto externa para reutilização em datas passadas."""
-        disciplinas = Disciplina.objects.filter(aluno_id=aluno_id, ativo=True)
+        """
+        Calcula metas por disciplina.
+
+        Usa PlanejamentoDisciplina quando existir.
+        Se não existir, usa disc.meta_horas_semanais para manter compatibilidade
+        com testes antigos.
+        """
         
-        # 🌟 O CORRETOR VAI AQUI: Garanta que esta linha existe e está escrita no singular
-        resultado = [] 
+
+        semana = SemanaService().obter_ou_criar_semana_atual(aluno_id)
+
+        disciplinas = Disciplina.objects.filter(
+            aluno_id=aluno_id,
+            ativo=True
+        )
+
+        resultado = []
 
         for disc in disciplinas:
             if sessoes_contexto is not None:
                 sessoes_disc = [
-                    s for s in sessoes_contexto if s.disciplina_id == disc.id]
+                    s for s in sessoes_contexto
+                    if s.disciplina_id == disc.id
+                ]
             else:
                 sessoes_semana = self.obter_sessoes_semana(aluno_id)
                 sessoes_disc = [
-                    s for s in sessoes_semana if s.disciplina_id == disc.id]
+                    s for s in sessoes_semana
+                    if s.disciplina_id == disc.id
+                ]
 
-            horas = self.calcular_horas_estudadas_disciplina(
-                aluno_id, disc.id, sessoes_pre_filtradas=sessoes_disc)
-            horas_total = horas['horas']
+            total_minutos = sum(
+                s.duracao_realizada for s in sessoes_disc
+            )
 
-            meta = float(disc.meta_horas_semanais)
-            atingiu = horas_total >= meta
+            horas_estudadas = total_minutos / 60
 
-            # Agora o append vai funcionar perfeitamente!
+            planejamento = PlanejamentoDisciplina.objects.filter(
+                semana_estudo=semana,
+                disciplina=disc
+            ).first()
+
+            if planejamento:
+                meta = planejamento.carga_horaria_planejada / 60
+            else:
+                meta = float(getattr(disc, 'meta_horas_semanais', 0) or 0)
+
+            atingiu = horas_estudadas >= meta if meta > 0 else False
+
+            percentual = (
+                horas_estudadas / meta
+                if meta > 0
+                else 0
+            )
+
             resultado.append({
                 'disciplina_id': str(disc.id),
                 'nome': disc.nome,
-                'horas_estudadas': horas_total,
-                'meta': meta,
+                'horas_estudadas': round(horas_estudadas, 2),
+                'meta': round(meta, 2),
                 'atingiu': atingiu,
-                'diferenca': round(horas_total - meta, 2)
+                'diferenca': round(horas_estudadas - meta, 2),
+                'percentual': round(min(percentual, 1), 2),
             })
 
         return resultado
+        
+    
     def calcular_semanas_consecutivas(self, aluno_id):
 
         hoje = timezone.now()
@@ -352,6 +390,19 @@ class ConsistenciaService:
             aluno_id=aluno_id
         )
 
+        semana = SemanaService().obter_ou_criar_semana_atual(aluno_id)
+
+        planejamento = PlanejamentoDisciplina.objects.filter(
+            semana_estudo=semana,
+            disciplina=disciplina
+        ).first()
+
+        meta_minutos = (
+            planejamento.carga_horaria_planejada
+            if planejamento
+            else 0
+        )
+
         horas = self.calcular_horas_estudadas_disciplina(
             aluno_id,
             disciplina_id
@@ -364,22 +415,18 @@ class ConsistenciaService:
 
         percentual = 0
 
-        if disciplina.meta_horas_semanais > 0:
-            percentual = (
-                horas['horas'] /
-                disciplina.meta_horas_semanais
-            ) * 100
+        if meta_minutos > 0:
+            percentual = (horas['minutos'] / meta_minutos) * 100
 
         return {
             'disciplina_id': str(disciplina.id),
             'disciplina': disciplina.nome,
-            'meta_horas_semanais': disciplina.meta_horas_semanais,
+            'meta_horas_semanais': round(meta_minutos / 60, 2),
             'horas_estudadas': horas['horas'],
             'sessoes_concluidas': sessoes.count(),
             'percentual_meta': round(percentual, 2),
-            'atingiu_meta': horas['horas'] >= disciplina.meta_horas_semanais
+            'atingiu_meta': horas['minutos'] >= meta_minutos
         }
-
     def obter_ranking_disciplinas(self, aluno_id):
         disciplinas = Disciplina.objects.filter(
             aluno_id=aluno_id,
@@ -407,6 +454,7 @@ class ConsistenciaService:
         )
 
     def obter_disciplina_mais_negligenciada(self, aluno_id):
+        
         metas = self.calcular_meta_disciplinas(aluno_id)
 
         atrasadas = [
