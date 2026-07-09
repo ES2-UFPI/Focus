@@ -1,8 +1,12 @@
-# Release Notes
-
-## 1.1.0 — 08/07/2026
+# Release Notes - 1.1.0
 
 Esta versão amplia o Focus de um organizador de agenda para um verdadeiro acompanhante de estudos. Além de planejar provas, trabalhos e sessões, o estudante agora consegue **executar** o estudo com o timer Pomodoro, **registrar** o que aprendeu em notas, **organizar** suas disciplinas e materiais em espaços próprios e **entender** seu próprio ritmo por meio de insights e de uma consistência semanal agora baseada em dados reais.
+
+## 📱 Acesse o app
+
+O Focus está online. Aponte a câmera do celular para o QR code abaixo ou acesse **https://es2-ufpi.github.io/Focus/**.
+
+<img src="https://raw.githubusercontent.com/ES2-UFPI/Focus/master/docs/qrcode-app.png" alt="QR code para acessar o Focus" width="240" />
 
 ## 🚀 Novidades
 
@@ -60,59 +64,3 @@ Foi corrigido um erro que quebrava o dashboard de consistência no Windows, deix
 Os insights e a consistência dependem de sessões de estudo e blocos Pomodoro registrados: quanto mais o estudante usa o Focus, mais ricas ficam as análises.
 
 As listas de tarefas criadas dentro das atividades continuam disponíveis apenas durante a sessão atual de uso.
-
----
-
-## 1.0.0
-
-Esta versão evolui o Focus para uma experiência mais completa de organização acadêmica. Agora os estudantes conseguem acessar sua conta, acompanhar eventos e sessões de estudo em uma agenda integrada e visualizar melhor suas prioridades da semana. A entrega também melhora a estabilidade do app em fluxos importantes, reduzindo erros durante login, cadastro e uso da agenda.
-
-### 🚀 Novidades
-
-#### Acesso com conta do estudante
-
-Agora é possível criar uma conta e entrar no Focus com e-mail e senha, mantendo a experiência vinculada ao estudante. Isso torna o uso mais individualizado e ajuda a separar disciplinas, eventos e sessões de estudo por usuário.
-
-#### Agenda Acadêmica Integrada
-
-Eventos acadêmicos e sessões de estudo agora aparecem em uma agenda centralizada. O estudante consegue visualizar seus compromissos em lista cronológica ou em grade semanal, facilitando o planejamento dos próximos dias.
-
-#### Cadastro de eventos e sessões
-
-O Focus passou a permitir o registro direto de provas, trabalhos, seminários e sessões de estudo. Com isso, o estudante consegue transformar compromissos e momentos de foco em uma rotina organizada dentro da plataforma.
-
-#### Atividades Acadêmicas
-
-A área de Atividades reúne os eventos acadêmicos da agenda, como provas, trabalhos, seminários e apresentações. Em cada evento, o estudante pode abrir uma to-do list própria para adicionar tarefas daquele compromisso, marcar itens como concluídos, remover tarefas e acompanhar o progresso pelo contador exibido no card.
-
-#### Consistência Semanal
-
-A nova tela de consistência apresenta uma visão do ritmo de estudos da semana. Ela ajuda o estudante a acompanhar frequência, tempo dedicado e distribuição do esforço entre disciplinas.
-
-### ✨ Melhorias
-
-#### Navegação mais simples
-
-A interface foi reorganizada em áreas principais para Atividades, Eventos, Consistência e Ajustes. Isso reduz a dispersão e deixa os caminhos mais importantes do Focus mais fáceis de encontrar.
-
-#### Agenda mais visual
-
-A grade semanal recebeu ajustes para exibir melhor horários, eventos sem horário definido e itens posicionados ao longo do dia. O resultado é uma leitura mais rápida da semana e menos esforço para entender conflitos ou lacunas na rotina.
-
-#### Experiência em português do Brasil
-
-Seletores de data e hora agora seguem o idioma pt-BR. Isso deixa o cadastro de eventos e sessões mais natural para estudantes brasileiros.
-
-#### Área de conta e preferências
-
-A tela de ajustes agora reúne dados do perfil, preferências de estudo, opções de notificação, tema, ajuda e saída da conta. Isso facilita encontrar configurações e informações básicas do aplicativo em um só lugar.
-
-### 🐛 Correções
-
-Como é a primeira versão, as correções serão feitas gradualmente.
-
-### Observações
-
-As listas de tarefas criadas dentro das atividades ficam disponíveis durante a sessão atual de uso.
-
-A tela de Consistência Semanal apresenta dados demonstrativos nesta versão. A conexão com indicadores reais de estudo é um próximo passo relevante.
