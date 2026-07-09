@@ -8,7 +8,15 @@ import '../widgets/criar_disciplina_dialog.dart';
 
 class CriarSessaoScreen extends StatefulWidget {
   final AgendaItem? sessaoExistente;
-  const CriarSessaoScreen({super.key, this.sessaoExistente});
+  final String? disciplinaIdInicial;
+  final String? horarioSugerido;
+
+  const CriarSessaoScreen({
+    super.key,
+    this.sessaoExistente,
+    this.disciplinaIdInicial,
+    this.horarioSugerido,
+  });
 
   @override
   State<CriarSessaoScreen> createState() => _CriarSessaoScreenState();
@@ -35,6 +43,10 @@ class _CriarSessaoScreenState extends State<CriarSessaoScreen> {
   bool _isSaving = false;
   String? _errorMessage;
 
+  String _statusSelecionado = 'AGENDADO';
+  String? _tipoAtividadeSelecionado;
+  final _duracaoController = TextEditingController(text: '0');
+
   @override
   void initState() {
     super.initState();
@@ -43,21 +55,49 @@ class _CriarSessaoScreenState extends State<CriarSessaoScreen> {
       _descricaoController.text = se.descricao ?? '';
       _disciplinaSelecionadaId = se.disciplinaId;
 
+      _statusSelecionado = se.status ?? 'AGENDADO';
+      _tipoAtividadeSelecionado = se.tipoAtividade;
+      _duracaoController.text = (se.duracaoRealizada ?? 0).toString();
+
       if (se.inicio != null) {
         _dataSelecionada = se.inicio;
-        _dataController.text = "${se.inicio!.day.toString().padLeft(2, '0')}/"
+        _dataController.text =
+            "${se.inicio!.day.toString().padLeft(2, '0')}/"
             "${se.inicio!.month.toString().padLeft(2, '0')}/"
             "${se.inicio!.year}";
         _horaInicio = TimeOfDay.fromDateTime(se.inicio!);
-        _horaInicioController.text = "${_horaInicio!.hour.toString().padLeft(2, '0')}:${_horaInicio!.minute.toString().padLeft(2, '0')}";
+        _horaInicioController.text =
+            "${_horaInicio!.hour.toString().padLeft(2, '0')}:${_horaInicio!.minute.toString().padLeft(2, '0')}";
       }
 
       if (se.fim != null) {
         _horaFim = TimeOfDay.fromDateTime(se.fim!);
-        _horaFimController.text = "${_horaFim!.hour.toString().padLeft(2, '0')}:${_horaFim!.minute.toString().padLeft(2, '0')}";
+        _horaFimController.text =
+            "${_horaFim!.hour.toString().padLeft(2, '0')}:${_horaFim!.minute.toString().padLeft(2, '0')}";
+      }
+    } else {
+      _disciplinaSelecionadaId = widget.disciplinaIdInicial;
+      _horaInicio = _horaInicialSugerida(widget.horarioSugerido);
+      if (_horaInicio != null) {
+        _horaInicioController.text =
+            "${_horaInicio!.hour.toString().padLeft(2, '0')}:"
+            "${_horaInicio!.minute.toString().padLeft(2, '0')}";
       }
     }
     _carregarDisciplinas();
+  }
+
+  TimeOfDay? _horaInicialSugerida(String? periodo) {
+    switch (periodo?.toLowerCase()) {
+      case 'manha':
+        return const TimeOfDay(hour: 8, minute: 0);
+      case 'tarde':
+        return const TimeOfDay(hour: 14, minute: 0);
+      case 'noite':
+        return const TimeOfDay(hour: 20, minute: 0);
+      default:
+        return null;
+    }
   }
 
   @override
@@ -81,7 +121,8 @@ class _CriarSessaoScreenState extends State<CriarSessaoScreen> {
         _disciplinas = lista;
         if (selecionarId != null && lista.any((d) => d.id == selecionarId)) {
           _disciplinaSelecionadaId = selecionarId;
-        } else if (lista.isNotEmpty && _disciplinaSelecionadaId == null) {
+        } else if (lista.isNotEmpty &&
+            !lista.any((d) => d.id == _disciplinaSelecionadaId)) {
           _disciplinaSelecionadaId = lista.first.id;
         }
         _isLoadingDisciplinas = false;
@@ -121,7 +162,8 @@ class _CriarSessaoScreenState extends State<CriarSessaoScreen> {
     if (selecionada != null) {
       setState(() {
         _dataSelecionada = selecionada;
-        _dataController.text = "${selecionada.day.toString().padLeft(2, '0')}/"
+        _dataController.text =
+            "${selecionada.day.toString().padLeft(2, '0')}/"
             "${selecionada.month.toString().padLeft(2, '0')}/"
             "${selecionada.year}";
       });
@@ -139,7 +181,8 @@ class _CriarSessaoScreenState extends State<CriarSessaoScreen> {
     if (selecionada != null) {
       setState(() {
         _horaInicio = selecionada;
-        _horaInicioController.text = "${selecionada.hour.toString().padLeft(2, '0')}:${selecionada.minute.toString().padLeft(2, '0')}";
+        _horaInicioController.text =
+            "${selecionada.hour.toString().padLeft(2, '0')}:${selecionada.minute.toString().padLeft(2, '0')}";
       });
     }
   }
@@ -155,7 +198,8 @@ class _CriarSessaoScreenState extends State<CriarSessaoScreen> {
     if (selecionada != null) {
       setState(() {
         _horaFim = selecionada;
-        _horaFimController.text = "${selecionada.hour.toString().padLeft(2, '0')}:${selecionada.minute.toString().padLeft(2, '0')}";
+        _horaFimController.text =
+            "${selecionada.hour.toString().padLeft(2, '0')}:${selecionada.minute.toString().padLeft(2, '0')}";
       });
     }
   }
@@ -167,11 +211,14 @@ class _CriarSessaoScreenState extends State<CriarSessaoScreen> {
       return;
     }
     if (_dataSelecionada == null || _horaInicio == null || _horaFim == null) {
-      setState(() => _errorMessage = 'Data e horários de início e término são obrigatórios.');
+      setState(
+        () => _errorMessage =
+            'Data e horários de início e término são obrigatórios.',
+      );
       return;
     }
 
-    // Montando objetos DateTime completos
+    // Montando objetos DateTime completos para validação local e para o envio correto ao service
     final inicio = DateTime(
       _dataSelecionada!.year,
       _dataSelecionada!.month,
@@ -190,7 +237,8 @@ class _CriarSessaoScreenState extends State<CriarSessaoScreen> {
 
     if (fim.isBefore(inicio) || fim.isAtSameMomentAs(inicio)) {
       setState(() {
-        _errorMessage = 'A hora de término deve ser posterior à hora de início.';
+        _errorMessage =
+            'A hora de término deve ser posterior à hora de início.';
       });
       return;
     }
@@ -201,37 +249,54 @@ class _CriarSessaoScreenState extends State<CriarSessaoScreen> {
     });
 
     try {
-      final String? descricaoVal = _descricaoController.text.trim().isEmpty ? null : _descricaoController.text.trim();
+      final String? descricaoVal = _descricaoController.text.trim().isEmpty
+          ? null
+          : _descricaoController.text.trim();
+
+      // Captura os minutos digitados na tela de forma segura
+      final int minutosEstudados = int.tryParse(_duracaoController.text) ?? 0;
 
       if (widget.sessaoExistente != null) {
+        // 🔥 ENVIANDO O DATETIME NOVAMENTE (O service vai injetar o fuso horário correto automaticamente)
         await _sessaoService.editarSessao(
           sessaoId: widget.sessaoExistente!.id,
           disciplinaId: _disciplinaSelecionadaId!,
-          inicio: inicio,
-          fim: fim,
+          inicio: inicio, // 🌟 Alterado para passar o objeto DateTime completo
+          fim: fim, // 🌟 Alterado para passar o objeto DateTime completo
           descricao: descricaoVal,
-          status: widget.sessaoExistente!.status ?? 'AGENDADO',
-          duracaoRealizada: widget.sessaoExistente!.duracaoRealizada ?? 0,
+          status: _statusSelecionado,
+          duracaoRealizada: minutosEstudados,
+          energiaInicial: widget.sessaoExistente!.energiaInicial,
+          interrupcoes: widget.sessaoExistente!.interrupcoes,
+          tipoAtividade: _tipoAtividadeSelecionado,
         );
       } else {
+        // 🚀 ENVIANDO O DATETIME NOVAMENTE (O service vai injetar o fuso horário correto automaticamente)
         await _sessaoService.criarSessao(
           disciplinaId: _disciplinaSelecionadaId!,
-          inicio: inicio,
-          fim: fim,
+          inicio: inicio, // 🌟 Alterado para passar o objeto DateTime completo
+          fim: fim, // 🌟 Alterado para passar o objeto DateTime completo
           descricao: descricaoVal,
+          status: _statusSelecionado,
+          duracaoRealizada: minutosEstudados,
+          energiaInicial: null,
+          interrupcoes: 0,
+          tipoAtividade: _tipoAtividadeSelecionado,
         );
       }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(widget.sessaoExistente != null
-                ? 'Sessão de estudo atualizada com sucesso! 📚'
-                : 'Sessão de estudo agendada com sucesso! 📚'),
+            content: Text(
+              widget.sessaoExistente != null
+                  ? 'Sessão de estudo atualizada com sucesso! 📚'
+                  : 'Sessão de estudo agendada com sucesso! 📚',
+            ),
             backgroundColor: Colors.green,
           ),
         );
-        Navigator.of(context).pop(true); // Retorna true para atualizar a lista
+        Navigator.of(context).pop(true);
       }
     } on AgendaServiceException catch (e) {
       setState(() {
@@ -250,7 +315,11 @@ class _CriarSessaoScreenState extends State<CriarSessaoScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.sessaoExistente != null ? 'Editar Sessão de Estudo' : 'Nova Sessão de Estudo'),
+        title: Text(
+          widget.sessaoExistente != null
+              ? 'Editar Sessão de Estudo'
+              : 'Nova Sessão de Estudo',
+        ),
         elevation: 0,
       ),
       body: _isLoadingDisciplinas
@@ -272,7 +341,10 @@ class _CriarSessaoScreenState extends State<CriarSessaoScreen> {
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.error_outline, color: Colors.red.shade700),
+                            Icon(
+                              Icons.error_outline,
+                              color: Colors.red.shade700,
+                            ),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(
@@ -304,7 +376,7 @@ class _CriarSessaoScreenState extends State<CriarSessaoScreen> {
                                       value: null,
                                       enabled: false,
                                       child: Text('Nenhuma disciplina criada'),
-                                    )
+                                    ),
                                   ]
                                 : _disciplinas.map((d) {
                                     return DropdownMenuItem<String>(
@@ -337,7 +409,9 @@ class _CriarSessaoScreenState extends State<CriarSessaoScreen> {
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(4),
                               ),
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                              ),
                             ),
                             child: const Icon(Icons.add),
                           ),
@@ -345,6 +419,103 @@ class _CriarSessaoScreenState extends State<CriarSessaoScreen> {
                       ],
                     ),
                     const SizedBox(height: 20),
+
+                    InputDecorator(
+                      decoration: const InputDecoration(
+                        labelText: 'Tipo de atividade (opcional)',
+                        helperText:
+                            'Um toque basta; toque novamente para remover.',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.category_outlined),
+                      ),
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children:
+                            const [
+                              ('LEITURA', 'Leitura', Icons.menu_book_outlined),
+                              (
+                                'EXERCICIO',
+                                'Exercício',
+                                Icons.edit_note_outlined,
+                              ),
+                              ('REVISAO', 'Revisão', Icons.replay_outlined),
+                            ].map((item) {
+                              final (value, label, icon) = item;
+                              return ChoiceChip(
+                                key: ValueKey('tipo-atividade-$value'),
+                                selected: _tipoAtividadeSelecionado == value,
+                                avatar: Icon(icon, size: 18),
+                                label: Text(label),
+                                onSelected: (selected) {
+                                  setState(() {
+                                    _tipoAtividadeSelecionado = selected
+                                        ? value
+                                        : null;
+                                  });
+                                },
+                              );
+                            }).toList(),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // 🌟 NOVO CAMPO: Seletor Dinâmico de Status
+                    DropdownButtonFormField<String>(
+                      initialValue:
+                          _statusSelecionado, // Variável que criamos no estado da tela
+                      decoration: const InputDecoration(
+                        labelText: 'Status da Sessão *',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.rule),
+                      ),
+                      items: const [
+                        DropdownMenuItem(
+                          value: 'AGENDADO',
+                          child: Text('Agendado (Planejar futuro)'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'CONCLUIDO',
+                          child: Text('Concluído (Computar na Consistência)'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'CANCELADO',
+                          child: Text('Cancelado'),
+                        ),
+                      ],
+                      onChanged: (val) {
+                        setState(() {
+                          _statusSelecionado = val ?? 'AGENDADO';
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 20),
+
+                    // 🌟 NOVO CAMPO CONDICIONAL: Tempo Realizado em Minutos
+                    // O operador 'if' do Dart renderiza o widget na árvore apenas sob essa condição
+                    if (_statusSelecionado == 'CONCLUIDO') ...[
+                      TextFormField(
+                        controller: _duracaoController, // Controlador numérico
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Tempo Real de Estudo (em minutos) *',
+                          hintText: 'Ex: 90 para 1h30min de foco',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.timer),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Informe a duração real da sessão';
+                          }
+                          final minutos = int.tryParse(value);
+                          if (minutos == null || minutos <= 0) {
+                            return 'Insira um valor numérico válido maior que zero';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 20),
+                    ],
 
                     // Campo de Data
                     TextFormField(
@@ -412,7 +583,8 @@ class _CriarSessaoScreenState extends State<CriarSessaoScreen> {
                       maxLines: 4,
                       decoration: const InputDecoration(
                         labelText: 'Descrição / Tópicos de Foco (Opcional)',
-                        hintText: 'Ex: Ler cap. 2 de Cálculo, fazer exercícios da lista.',
+                        hintText:
+                            'Ex: Ler cap. 2 de Cálculo, fazer exercícios da lista.',
                         border: OutlineInputBorder(),
                         alignLabelWithHint: true,
                         prefixIcon: Padding(
@@ -429,10 +601,19 @@ class _CriarSessaoScreenState extends State<CriarSessaoScreen> {
                       child: FilledButton(
                         onPressed: _isSaving ? null : _salvar,
                         child: _isSaving
-                            ? const CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Colors.white))
+                            ? const CircularProgressIndicator(
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.white,
+                                ),
+                              )
                             : Text(
-                                widget.sessaoExistente != null ? 'SALVAR ALTERAÇÕES' : 'AGENDAR SESSÃO',
-                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                widget.sessaoExistente != null
+                                    ? 'SALVAR ALTERAÇÕES'
+                                    : 'SALVAR SESSÃO',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                       ),
                     ),

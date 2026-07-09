@@ -15,7 +15,7 @@ class Disciplina {
     return Disciplina(
       id: json['id'] as String,
       nome: json['nome'] as String,
-      codigo: json['codigo'] as String,
+      codigo: json['codigo'] as String? ?? '',
       cor: json['cor'] as String? ?? '#6366f1',
     );
   }

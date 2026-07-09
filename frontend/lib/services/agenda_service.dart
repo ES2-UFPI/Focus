@@ -20,7 +20,7 @@ class AgendaService {
     final uri = Uri.parse('$kBaseUrl/api/agenda/');
 
     try {
-      final response = await http.get(uri, headers: defaultHeaders);
+      final response = await http.get(uri, headers: kDefaultHeaders);
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body) as Map<String, dynamic>;

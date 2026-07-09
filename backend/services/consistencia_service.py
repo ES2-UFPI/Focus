@@ -6,7 +6,6 @@ from disciplinas.models import Disciplina
 
 
 class ConsistenciaService:
-  
 
     # ==================== FASE 1: Infraestrutura Básica ====================
 
@@ -20,9 +19,9 @@ class ConsistenciaService:
             return self._cache_sessoes[aluno_id]
 
         hoje = timezone.now()
-   
+
         segunda = hoje - timedelta(days=hoje.weekday())
-  
+
         segunda_dt = segunda.replace(hour=0, minute=0, second=0, microsecond=0)
         proxima_segunda_dt = segunda_dt + timedelta(days=7)
 
@@ -70,7 +69,7 @@ class ConsistenciaService:
         total_minutos = 0
         for sessao in sessoes:
             duracao = sessao.fim - sessao.inicio
-        
+
             minutos = round(duracao.total_seconds() / 60)
             total_minutos += minutos
 
@@ -84,25 +83,23 @@ class ConsistenciaService:
         }
 
     def obter_sessoes_semana_disciplina(self, aluno_id, disciplina_id):
-        """
-        Obtém sessões concluídas de uma disciplina específica na semana.
-
-        """
+        """Obtém sessões concluídas de uma disciplina específica na semana."""
         hoje = timezone.now()
         segunda = hoje - timedelta(days=hoje.weekday())
         segunda = segunda.replace(hour=0, minute=0, second=0, microsecond=0)
 
+        if timezone.is_naive(segunda):
+            segunda = timezone.make_aware(segunda)
+
         proxima_segunda = segunda + timedelta(days=7)
 
-        sessoes = SessaoEstudo.objects.filter(
+        return SessaoEstudo.objects.filter(
             disciplina_id=disciplina_id,
             disciplina__aluno_id=aluno_id,
-            status=SessaoEstudo.StatusSessao.CONCLUIDO,
+            status='CONCLUIDO',
             inicio__gte=segunda,
             inicio__lt=proxima_segunda
         ).order_by('inicio')
-
-        return sessoes
 
     def calcular_horas_estudadas_disciplina(self, aluno_id, disciplina_id, sessoes_pre_filtradas=None):
         """Calcula horas realmente estudadas de uma disciplina."""
@@ -184,8 +181,6 @@ class ConsistenciaService:
     def calcular_frequencia_semanal(self, aluno_id):
         """
         [TASK 7] Calcula percentual de dias estudados na semana.
-
-
         """
         consistencia = self.calcular_consistencia_por_dia(aluno_id)
         dias_estudados = consistencia['dias_com_estudo']
@@ -200,7 +195,9 @@ class ConsistenciaService:
         }
 
     def calcular_streak_atual(self, aluno_id):
-        """[TASK 8] Calcula streak de dias consecutivos de estudo."""
+        """
+        Calcula a sequência atual (streak) de dias seguidos com estudo concluído.
+        """
         sessoes = self.obter_sessoes_semana(aluno_id)
         hoje_dt = timezone.now().date()
 
@@ -235,7 +232,9 @@ class ConsistenciaService:
     def calcular_meta_disciplinas(self, aluno_id, sessoes_contexto=None):
         """Calcula metas. Aceita sessoes_contexto externa para reutilização em datas passadas."""
         disciplinas = Disciplina.objects.filter(aluno_id=aluno_id, ativo=True)
-        resultado = []
+        
+        # 🌟 O CORRETOR VAI AQUI: Garanta que esta linha existe e está escrita no singular
+        resultado = [] 
 
         for disc in disciplinas:
             if sessoes_contexto is not None:
@@ -250,10 +249,10 @@ class ConsistenciaService:
                 aluno_id, disc.id, sessoes_pre_filtradas=sessoes_disc)
             horas_total = horas['horas']
 
-    
             meta = float(disc.meta_horas_semanais)
             atingiu = horas_total >= meta
 
+            # Agora o append vai funcionar perfeitamente!
             resultado.append({
                 'disciplina_id': str(disc.id),
                 'nome': disc.nome,
@@ -264,7 +263,6 @@ class ConsistenciaService:
             })
 
         return resultado
-
     def calcular_semanas_consecutivas(self, aluno_id):
 
         hoje = timezone.now()
@@ -452,7 +450,7 @@ class ConsistenciaService:
         """
         [TASK 13] Gera alertas quando consistência está abaixo do esperado.
 
-  
+
         """
         alertas = []
         severidade = 'baixa'

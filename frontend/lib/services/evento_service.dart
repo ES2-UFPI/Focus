@@ -56,7 +56,7 @@ class EventoService {
     try {
       response = await http.post(
         uri,
-        headers: defaultHeaders,
+        headers: kDefaultHeaders,
         body: json.encode(body),
       );
     } catch (e) {
@@ -103,8 +103,33 @@ class EventoService {
     try {
       response = await http.patch(
         uri,
-        headers: defaultHeaders,
+        headers: kDefaultHeaders,
         body: json.encode(body),
+      );
+    } catch (e) {
+      throw AgendaServiceException('Erro de conexão: $e');
+    }
+
+    if (response.statusCode == 200 || response.statusCode == 204) return;
+
+    throw AgendaServiceException(
+      _extrairMensagemErro(response.body),
+    );
+  }
+
+  /// Atualiza (PATCH) apenas o status de conclusão de um evento acadêmico.
+  Future<void> definirConcluido({
+    required String eventoId,
+    required bool concluido,
+  }) async {
+    final uri = Uri.parse('$kBaseUrl/api/eventos-academicos/$eventoId/');
+
+    late http.Response response;
+    try {
+      response = await http.patch(
+        uri,
+        headers: kDefaultHeaders,
+        body: json.encode({'concluido': concluido}),
       );
     } catch (e) {
       throw AgendaServiceException('Erro de conexão: $e');
@@ -123,7 +148,7 @@ class EventoService {
 
     late http.Response response;
     try {
-      response = await http.delete(uri, headers: defaultHeaders);
+      response = await http.delete(uri, headers: kDefaultHeaders);
     } catch (e) {
       throw AgendaServiceException('Erro de conexão: $e');
     }
