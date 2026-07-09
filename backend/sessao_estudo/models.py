@@ -355,6 +355,14 @@ class SessaoEstudo(models.Model):
         help_text='Bloco planejado que originou esta sessão, se houver.'
     )
 
+    evento_academico = models.ForeignKey(
+        'eventos_academicos.EventoAcademico',
+        on_delete=models.SET_NULL,
+        related_name='sessoes_estudo',
+        null=True,
+        blank=True,
+    )
+
     inicio = models.DateTimeField()
 
     fim = models.DateTimeField()
@@ -418,6 +426,13 @@ class SessaoEstudo(models.Model):
         if self.inicio and self.fim and self.fim <= self.inicio:
             raise ValidationError(
                 'A data/hora de término deve ser posterior à data/hora de início.'
+            )
+
+        # Evento acadêmico (opcional) deve pertencer à disciplina da sessão
+        if self.evento_academico_id and self.disciplina_id and \
+                self.evento_academico.disciplina_id != self.disciplina_id:
+            raise ValidationError(
+                'O evento acadêmico selecionado não pertence à disciplina desta sessão.'
             )
 
         # 2. Validações que DEPENDEM da Semana de Estudo

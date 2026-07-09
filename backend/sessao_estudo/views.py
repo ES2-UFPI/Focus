@@ -99,8 +99,7 @@ class SessaoEstudoViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def dashboard(self, request):
-        print(f"🚀 [Dashboard] Processando dados para: {request.user.email}")
-
+        # Retorna o cálculo do serviço usando o aluno_id correto
         return Response(
             self.consistencia.obter_dashboard_consistencia(self.aluno_id)
         )

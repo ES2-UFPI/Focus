@@ -244,9 +244,16 @@ class _AtividadesScreenState extends State<AtividadesScreen> {
         final temAtividades =
             pendentesFiltradas.isNotEmpty || concluidasFiltradas.isNotEmpty;
 
-        return Container(
-          color: AppColors.appBackground,
-          child: Column(
+        return Scaffold(
+          backgroundColor: AppColors.appBackground,
+          floatingActionButton: FloatingActionButton(
+            onPressed: _abrirCriarEvento,
+            backgroundColor: AppColors.brandPrimary,
+            foregroundColor: Colors.white,
+            tooltip: 'Nova atividade',
+            child: const Icon(Icons.add_rounded, size: 28),
+          ),
+          body: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (provider.isLoading)
@@ -308,49 +315,23 @@ class _AtividadesScreenState extends State<AtividadesScreen> {
   }
 
   Widget _buildHeader(BuildContext context) {
-    return Row(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Atividades Acadêmicas',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.textPrimary,
-                      letterSpacing: -0.5,
-                    ),
+        Text(
+          'Atividades Acadêmicas',
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w800,
+                color: AppColors.textPrimary,
+                letterSpacing: -0.5,
               ),
-              const SizedBox(height: 6),
-              Text(
-                'O que precisa sair do papel, organizado por urgência.',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColors.textMuted,
-                    ),
-              ),
-            ],
-          ),
         ),
-        const SizedBox(width: 12),
-        Material(
-          color: AppColors.brandPrimary,
-          borderRadius: BorderRadius.circular(12),
-          elevation: 3,
-          shadowColor: AppColors.brandPrimary.withValues(alpha: 0.4),
-          child: InkWell(
-            onTap: _abrirCriarEvento,
-            borderRadius: BorderRadius.circular(12),
-            child: const SizedBox(
-              width: 44,
-              height: 44,
-              child: Tooltip(
-                message: 'Nova atividade',
-                child: Icon(Icons.add_rounded, color: Colors.white, size: 24),
+        const SizedBox(height: 6),
+        Text(
+          'O que precisa sair do papel, organizado por urgência.',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppColors.textMuted,
               ),
-            ),
-          ),
         ),
       ],
     );

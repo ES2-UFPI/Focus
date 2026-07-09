@@ -48,15 +48,11 @@ class _LoginScreenState extends State<LoginScreen> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            reverse: true,
             padding: const EdgeInsets.symmetric(horizontal: 28),
             child: Form(
               key: _formKey,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
-                // reverse:true no SingleChildScrollView inverte o eixo de
-                // rolagem — invertemos a lista aqui também pra manter a
-                // ordem visual (logo em cima, botão embaixo).
                 children: [
                   const SizedBox(height: 24),
                   Container(
@@ -163,7 +159,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ],
                   ),
                   const SizedBox(height: 24),
-                ].reversed.toList(),
+                ],
               ),
             ),
           ),
