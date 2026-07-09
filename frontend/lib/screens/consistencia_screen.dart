@@ -14,7 +14,6 @@ abstract class _C {
   static const surfaceHigh = Color(0xFFF8F9FC);
   static const border = Color(0xFFE3E7ED);
   static const primary = Color(0xFF2563EB);
-  static const primaryDim = Color(0x337C6FFF);
   static const success = Color(0xFF2DD4A0);
   static const successDim = Color(0x332DD4A0);
   static const warning = Color(0xFFFF8C42);
@@ -52,6 +51,39 @@ class _ConsistenciaScreenState extends State<ConsistenciaScreen> {
     setState(() => _dashboardFuture = future);
   }
 
+    DateTime get _inicioSemana {
+    final hoje = DateTime.now();
+    return DateTime(
+      hoje.year,
+      hoje.month,
+      hoje.day - hoje.weekday + 1,
+    );
+  }
+
+  DateTime get _fimSemana {
+    return _inicioSemana.add(const Duration(days: 6));
+  }
+
+  String _formatarDataCurta(DateTime data) {
+    return '${data.day.toString().padLeft(2, '0')}/'
+        '${data.month.toString().padLeft(2, '0')}';
+  }
+
+  String get _intervaloSemana {
+    return '${_formatarDataCurta(_inicioSemana)} - ${_formatarDataCurta(_fimSemana)}';
+  }
+
+  int get _diasRestantesNaSemana {
+    final hoje = DateTime.now();
+    final fim = _fimSemana;
+
+    final diferenca = fim.difference(
+      DateTime(hoje.year, hoje.month, hoje.day),
+    ).inDays;
+
+    return diferenca < 0 ? 0 : diferenca + 1;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -72,26 +104,44 @@ class _ConsistenciaScreenState extends State<ConsistenciaScreen> {
           final d = snapshot.data!;
 
           return RefreshIndicator(
-            color: _C.primary,
-            backgroundColor: _C.surface,
-            onRefresh: () async => _carregarDados(),
-            child: CustomScrollView(
-              slivers: [
-                _buildAppBar(),
-                SliverToBoxAdapter(child: _buildHero(d)),
-                SliverToBoxAdapter(child: _buildMetricasRapidas(d)),
-                if (d.alertas.isNotEmpty)
-                  SliverToBoxAdapter(child: _buildAlertas(d)),
-                SliverToBoxAdapter(child: _buildFrequenciaDias(d)),
-                SliverToBoxAdapter(child: _buildMetas(d)),
-                SliverToBoxAdapter(child: _buildComponentesIndice(d)),
-                SliverToBoxAdapter(child: _buildComparacao(d)),
-                SliverToBoxAdapter(child: _buildDistribuicao(d)),
-                SliverToBoxAdapter(child: _buildEvolucao(d)),
-                const SliverToBoxAdapter(child: SizedBox(height: 32)),
-              ],
-            ),
-          );
+  color: _C.primary,
+  backgroundColor: _C.surface,
+  onRefresh: () async => _carregarDados(),
+  child: CustomScrollView(
+    slivers: [
+      _buildAppBar(),
+
+          // Índice geral da semana
+              SliverToBoxAdapter(child: _buildHero(d)),
+
+              // O que o usuário deve estudar agora
+              SliverToBoxAdapter(child: _buildSugestaoFoco(d)),
+
+              // Resumo da semana
+              SliverToBoxAdapter(child: _buildMetricasRapidas(d)),
+
+              // Metas por disciplina
+              SliverToBoxAdapter(child: _buildMetas(d)),
+
+              // Frequência diária
+              SliverToBoxAdapter(child: _buildFrequenciaDias(d)),
+
+              // Comparação com semana passada
+              SliverToBoxAdapter(child: _buildComparacao(d)),
+
+              // Distribuição do tempo estudado
+              SliverToBoxAdapter(child: _buildDistribuicao(d)),
+
+              // Alertas (caso existam)
+              if (d.alertas.isNotEmpty)
+                SliverToBoxAdapter(child: _buildAlertas(d)),
+
+              const SliverToBoxAdapter(
+                child: SizedBox(height: 32),
+              ),
+            ],
+          ),
+        );
         },
       ),
     );
@@ -100,117 +150,241 @@ class _ConsistenciaScreenState extends State<ConsistenciaScreen> {
   // ── App Bar ──────────────────────────────────
 
   Widget _buildAppBar() {
-    return SliverAppBar(
-      pinned: true,
-      backgroundColor: _C.bg,
-      surfaceTintColor: Colors.transparent,
-      title: const Text(
-        'Consistência',
-        style: TextStyle(
-          color: _C.textPrimary,
-          fontWeight: FontWeight.w700,
-          fontSize: 18,
-          letterSpacing: -0.3,
+  return SliverAppBar(
+    pinned: true,
+    backgroundColor: _C.bg,
+    surfaceTintColor: Colors.transparent,
+    title: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Consistência',
+          style: TextStyle(
+            color: _C.textPrimary,
+            fontWeight: FontWeight.w700,
+            fontSize: 18,
+            letterSpacing: -0.3,
+          ),
         ),
-      ),
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.refresh_rounded, color: _C.textSecondary),
-          onPressed: _carregarDados,
+        const SizedBox(height: 2),
+        Text(
+          'Semana $_intervaloSemana',
+          style: const TextStyle(
+            color: _C.textSecondary,
+            fontWeight: FontWeight.w500,
+            fontSize: 12,
+          ),
         ),
       ],
-      bottom: PreferredSize(
-        preferredSize: const Size.fromHeight(1),
-        child: Container(height: 1, color: _C.border),
+    ),
+    actions: [
+      IconButton(
+        icon: const Icon(Icons.refresh_rounded, color: _C.textSecondary),
+        onPressed: _carregarDados,
       ),
-    );
-  }
-
+    ],
+    bottom: PreferredSize(
+      preferredSize: const Size.fromHeight(1),
+      child: Container(height: 1, color: _C.border),
+    ),
+  );
+}
   // ── Hero — Índice de Consistência ────────────
 
-  Widget _buildHero(DashboardData d) {
-    final cor = _corIndice(d.indiceConsistencia);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
-      child: _card(
-        child: Column(
-          children: [
-            const SizedBox(height: 8),
-            Stack(
-              alignment: Alignment.center,
-              children: [
-                SizedBox(
-                  width: 160,
-                  height: 160,
-                  child: CustomPaint(
-                    painter: _ArcPainter(
-                      valor: d.indiceConsistencia / 100,
-                      cor: cor,
-                      corFundo: _C.border,
-                    ),
+Widget _buildHero(DashboardData d) {
+  final cor = _corIndice(d.indiceConsistencia);
+
+  final horasRestantes = math.max(
+    0,
+    d.horasPlanejadas - d.horasEstudadas,
+  );
+
+  final mediaPorDia = _diasRestantesNaSemana > 0
+      ? horasRestantes / _diasRestantesNaSemana
+      : 0;
+
+  return Padding(
+    padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
+    child: _card(
+      child: Column(
+        children: [
+          const SizedBox(height: 8),
+
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              SizedBox(
+                width: 160,
+                height: 160,
+                child: CustomPaint(
+                  painter: _ArcPainter(
+                    valor: d.indiceConsistencia / 100,
+                    cor: cor,
+                    corFundo: _C.border,
                   ),
                 ),
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      '${d.indiceConsistencia.toInt()}',
-                      style: TextStyle(
-                        fontSize: 48,
-                        fontWeight: FontWeight.w800,
-                        color: cor,
-                        letterSpacing: -2,
-                        height: 1,
-                      ),
+              ),
+
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '${d.indiceConsistencia.toInt()}',
+                    style: TextStyle(
+                      fontSize: 48,
+                      fontWeight: FontWeight.w800,
+                      color: cor,
+                      letterSpacing: -2,
+                      height: 1,
                     ),
-                    Text(
-                      '%',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: cor.withValues(alpha: 0.7),
-                      ),
+                  ),
+                  Text(
+                    '%',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: cor.withValues(alpha: 0.7),
                     ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              d.labelIndice,
-              style: TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-                color: cor,
-                letterSpacing: -0.3,
+                  ),
+                ],
               ),
+            ],
+          ),
+
+          const SizedBox(height: 16),
+
+          Text(
+            d.labelIndice,
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+              color: cor,
+              letterSpacing: -0.3,
             ),
-            const SizedBox(height: 6),
-            Text(
-              '${d.horasEstudadas.toStringAsFixed(1)}h estudadas de ${d.horasPlanejadas.toStringAsFixed(1)}h planejadas',
-              style: const TextStyle(
-                fontSize: 13,
-                color: _C.textSecondary,
-              ),
+          ),
+
+          const SizedBox(height: 6),
+
+          Text(
+            '${d.horasEstudadas.toStringAsFixed(1)}h estudadas de ${d.horasPlanejadas.toStringAsFixed(1)}h planejadas',
+            style: const TextStyle(
+              fontSize: 13,
+              color: _C.textSecondary,
             ),
-            const SizedBox(height: 16),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: LinearProgressIndicator(
-                value: d.horasPlanejadas > 0
-                    ? (d.horasEstudadas / d.horasPlanejadas).clamp(0, 1)
-                    : 0,
-                minHeight: 6,
-                backgroundColor: _C.border,
-                valueColor: AlwaysStoppedAnimation(cor),
-              ),
+          ),
+
+          const SizedBox(height: 6),
+
+          Text(
+            horasRestantes > 0
+                ? 'Faltam ${horasRestantes.toStringAsFixed(1)}h • cerca de ${mediaPorDia.toStringAsFixed(1)}h por dia'
+                : '🎯 Parabéns! Você concluiu sua meta semanal.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: horasRestantes > 0
+                  ? _C.textSecondary
+                  : _C.success,
             ),
-            const SizedBox(height: 8),
-          ],
+          ),
+
+          const SizedBox(height: 16),
+
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+              value: d.horasPlanejadas > 0
+                  ? (d.horasEstudadas / d.horasPlanejadas).clamp(0, 1)
+                  : 0,
+              minHeight: 6,
+              backgroundColor: _C.border,
+              valueColor: AlwaysStoppedAnimation(cor),
+            ),
+          ),
+
+          const SizedBox(height: 8),
+        ],
+      ),
+    ),
+  );
+}
+
+  // __ Sugestao foco 
+
+Widget _buildSugestaoFoco(DashboardData d) {
+  if (d.metasDisciplinas.isEmpty) {
+    return const SizedBox.shrink();
+  }
+
+  final pendentes = d.metasDisciplinas
+      .where((m) => !m.atingiu)
+      .toList();
+
+  if (pendentes.isEmpty) {
+    return _card(
+      child: const Text(
+        'Todas as metas da semana foram cumpridas. Excelente ritmo!',
+        style: TextStyle(
+          fontWeight: FontWeight.w700,
+          fontSize: 14,
+          color: _C.textPrimary,
         ),
       ),
     );
   }
+
+  pendentes.sort((a, b) => a.percentual.compareTo(b.percentual));
+
+  final foco = pendentes.first;
+  final faltam = math.max(0.0, foco.meta - foco.horasEstudadas);
+  final mediaDia = _diasRestantesNaSemana > 0
+    ? faltam / _diasRestantesNaSemana
+    : 0.0;
+
+  return _card(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Sugestão de foco',
+          style: TextStyle(
+            fontWeight: FontWeight.w800,
+            fontSize: 15,
+            color: _C.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          foco.nome,
+          style: const TextStyle(
+            fontWeight: FontWeight.w800,
+            fontSize: 18,
+            color: _C.warning,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Você estudou ${foco.horasEstudadas.toStringAsFixed(1)}h de ${foco.meta.toStringAsFixed(1)}h.',
+          style: const TextStyle(
+            fontSize: 12,
+            color: _C.textSecondary,
+            height: 1.4,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Faltam ${faltam.toStringAsFixed(1)}h. Tente estudar cerca de ${mediaDia.toStringAsFixed(1)}h por dia até o fim da semana.',
+         style: const TextStyle(
+          fontSize: 12,
+          color: _C.textSecondary,
+          height: 1.4,
+        ),
+        ),
+      ],
+    ),
+  );
+}
 
   // ── Métricas Rápidas ─────────────────────────
 
@@ -310,7 +484,7 @@ class _ConsistenciaScreenState extends State<ConsistenciaScreen> {
         decoration: BoxDecoration(
           color: corDim,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: cor.withValues(alpha: 0.4)),
+          border: Border.all(color: cor.withValues(alpha: 0.4   )),
         ),
         padding: const EdgeInsets.all(14),
         child: Column(
@@ -532,92 +706,7 @@ class _ConsistenciaScreenState extends State<ConsistenciaScreen> {
     );
   }
 
-  // ── Componentes do Índice ────────────────────
-
-  Widget _buildComponentesIndice(DashboardData d) {
-    final c = d.componentesIndice;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      child: _card(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _tituloSecao('Como o índice é calculado', null),
-            const SizedBox(height: 16),
-            _itemComponente('Frequência semanal', c.frequencia, '40%', _C.primary),
-            const SizedBox(height: 12),
-            _itemComponente('Metas atingidas', c.metas, '40%', _C.success),
-            const SizedBox(height: 12),
-            _itemComponente('Dias seguidos', c.streak, '20%', _C.warning),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _itemComponente(String label, double valor, String peso, Color cor) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                label,
-                style: const TextStyle(fontSize: 13, color: _C.textSecondary),
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: _C.surfaceHigh,
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text(
-                peso,
-                style: const TextStyle(
-                  fontSize: 10,
-                  color: _C.textMuted,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              '${valor.toInt()}%',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: cor,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        Stack(
-          children: [
-            Container(
-              height: 5,
-              decoration: BoxDecoration(
-                color: _C.border,
-                borderRadius: BorderRadius.circular(4),
-              ),
-            ),
-            FractionallySizedBox(
-              widthFactor: (valor / 100).clamp(0, 1),
-              child: Container(
-                height: 5,
-                decoration: BoxDecoration(
-                  color: cor,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
+ 
 
   // ── Comparação de Semanas ────────────────────
 
@@ -809,106 +898,7 @@ class _ConsistenciaScreenState extends State<ConsistenciaScreen> {
     );
   }
 
-  // ── Evolução 12 semanas ──────────────────────
-
-  Widget _buildEvolucao(DashboardData d) {
-    if (d.evolucao.isEmpty) return const SizedBox.shrink();
-
-    // Inverte para mostrar do mais antigo ao mais recente
-    final semanas = d.evolucao.reversed.toList();
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      child: _card(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _tituloSecao('Evolução — últimas 12 semanas', null),
-            const SizedBox(height: 20),
-            SizedBox(
-              height: 120,
-              child: LineChart(
-                LineChartData(
-                  gridData: FlGridData(
-                    show: true,
-                    drawVerticalLine: false,
-                    horizontalInterval: 25,
-                    getDrawingHorizontalLine: (_) => FlLine(
-                      color: _C.border,
-                      strokeWidth: 1,
-                    ),
-                  ),
-                  borderData: FlBorderData(show: false),
-                  titlesData: FlTitlesData(
-                    leftTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false),
-                    ),
-                    rightTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false),
-                    ),
-                    topTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false),
-                    ),
-                    bottomTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        reservedSize: 22,
-                        interval: 1,
-                        getTitlesWidget: (value, _) {
-                          final idx = value.toInt();
-                          if (idx < 0 || idx >= semanas.length) {
-                            return const SizedBox.shrink();
-                          }
-                          if (idx % 3 != 0) return const SizedBox.shrink();
-                          return Text(
-                            'S${semanas[idx].semana + 1}',
-                            style: const TextStyle(
-                              fontSize: 9,
-                              color: _C.textMuted,
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                  minY: 0,
-                  maxY: 100,
-                  lineBarsData: [
-                    LineChartBarData(
-                      spots: List.generate(
-                        semanas.length,
-                        (i) => FlSpot(i.toDouble(), semanas[i].indice),
-                      ),
-                      isCurved: true,
-                      color: _C.primary,
-                      barWidth: 2,
-                      dotData: const FlDotData(show: false),
-                      belowBarData: BarAreaData(
-                        show: true,
-                        color: _C.primaryDim,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Container(width: 8, height: 2, color: _C.primary),
-                const SizedBox(width: 4),
-                const Text(
-                  'Índice de consistência',
-                  style: TextStyle(fontSize: 10, color: _C.textMuted),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+ 
 
   // ── Estado de erro ───────────────────────────
 

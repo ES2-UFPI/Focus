@@ -403,6 +403,7 @@ class TestConsistenciaServiceTask4(BaseTestConsistencia):
 
         resultado = self.servico.calcular_horas_planejadas(self.aluno.id)
         self.assertEqual(resultado['minutos'], 300)
+        
 
     def test_retorna_valor_correto_com_uma_sessao(self):
         """Retorna valor correto com uma sessão."""

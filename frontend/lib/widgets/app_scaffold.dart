@@ -53,7 +53,7 @@ class _NavItem {
   const _NavItem(this.icon, this.selectedIcon, this.label);
 }
 
-/// Barra de navegação inferior própria. São 8 destinos — mais do que a
+/// Barra de navegação inferior própria. São 9 destinos — mais do que a
 /// `NavigationBar` do Material comporta com rótulo em telas estreitas
 /// (320–425px), onde ela quebra o texto no meio da palavra. Aqui cada rótulo
 /// fica dentro de um [FittedBox] que reduz a fonte só o necessário para caber
@@ -71,6 +71,7 @@ class _BottomNavigationBar extends StatelessWidget {
     _NavItem(Icons.assignment_outlined, Icons.assignment_rounded, 'Tarefas'),
     _NavItem(Icons.calendar_today_outlined, Icons.calendar_month_rounded, 'Eventos'),
     _NavItem(Icons.menu_book_outlined, Icons.menu_book_rounded, 'Matérias'),
+    _NavItem(Icons.flag_outlined, Icons.flag_rounded, 'Metas'),
     _NavItem(Icons.track_changes_outlined, Icons.track_changes_rounded, 'Ritmo'),
     _NavItem(Icons.auto_awesome_outlined, Icons.auto_awesome_rounded, 'Insights'),
     _NavItem(Icons.timer_outlined, Icons.timer_rounded, 'Pomodoro'),

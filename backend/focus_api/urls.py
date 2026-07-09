@@ -7,7 +7,7 @@ from disciplinas.views import DisciplinaViewSet
 from tarefas_disciplina.views import TarefaDisciplinaViewSet
 from materiais_estudo.views import MaterialEstudoViewSet
 from eventos_academicos.views import EventoAcademicoViewSet, AgendaView
-from sessao_estudo.views import BlocoPomodoroViewSet, SessaoEstudoViewSet
+from sessao_estudo.views import BlocoPomodoroViewSet, SessaoEstudoViewSet, PlanejamentoDisciplinaViewSet
 from feedback_sessao_estudo.views import FeedbackSessaoEstudoViewSet
 
 
@@ -20,6 +20,7 @@ router.register(r'tarefas-disciplina', TarefaDisciplinaViewSet)
 router.register(r'materiais-estudo', MaterialEstudoViewSet, basename='materialestudo')
 router.register(r'eventos-academicos', EventoAcademicoViewSet, basename='eventoacademico')
 router.register(r'sessoes-estudo', SessaoEstudoViewSet)
+router.register(r'planejamentos-disciplina', PlanejamentoDisciplinaViewSet, basename='planejamento-disciplina')
 router.register(r'blocos-pomodoro', BlocoPomodoroViewSet, basename='blocopomodoro')
 router.register(r'feedbacks-sessao', FeedbackSessaoEstudoViewSet)
 
