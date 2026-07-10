@@ -262,15 +262,9 @@ flutter build web
 Adicione abaixo o link do vídeo de apresentação ou demonstração do Focus:
 
 ```markdown
-[▶️ Assistir ao vídeo de demonstração](COLE_AQUI_O_LINK_DO_VIDEO)
-```
+[▶️ Assistir ao vídeo de demonstração] (https://youtu.be/kiSLTTfJfxI)
 
-Também é possível utilizar uma miniatura do YouTube:
 
-```html
-<a href="COLE_AQUI_O_LINK_DO_VIDEO">
-  <img src="COLE_AQUI_O_LINK_DA_MINIATURA" alt="Vídeo de demonstração do Focus" width="600">
-</a>
 ```
 
 ---
