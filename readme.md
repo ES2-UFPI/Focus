@@ -2,6 +2,9 @@
 
 # 🎯 Focus
 
+<img width="1802" height="820" alt="image" src="https://github.com/user-attachments/assets/5520ea80-e8cf-483a-a1dc-8212dde9d2ed" />
+
+
 ### Organize seus estudos, mantenha a consistência e acompanhe sua evolução.
 
 Aplicação acadêmica desenvolvida para ajudar estudantes universitários a planejar atividades, realizar sessões de foco e analisar o próprio desempenho.
