@@ -1,118 +1,282 @@
-# Focus
+<div align="center">
 
-Projeto com backend em Django REST Framework e frontend em Flutter.
+# 🎯 Focus
 
-## Estrutura
+### Organize seus estudos, mantenha a consistência e acompanhe sua evolução.
 
-- `backend/`: API Django, banco SQLite local e apps de alunos, disciplinas, tarefas, eventos, materiais, sessoes de estudo e feedbacks.
-- `frontend/`: aplicativo Flutter com suporte a Web, Windows, Android, iOS, Linux e macOS.
+Aplicação acadêmica desenvolvida para ajudar estudantes universitários a planejar atividades, realizar sessões de foco e analisar o próprio desempenho.
 
-## Requisitos
+[🌐 Acessar aplicação](https://es2-ufpi.github.io/Focus/) · [📦 Repositório](https://github.com/ES2-UFPI/Focus)
 
-- Python 3 instalado.
-- Flutter SDK instalado.
-- Google Chrome, Edge ou outro dispositivo Flutter disponivel para executar o frontend.
+</div>
 
-Validado neste ambiente com:
+---
 
-- Python 3.14.3.
-- Flutter 3.41.9.
-- Dart 3.11.5.
+## 📖 Introdução
 
-## Como iniciar o backend
+O **Focus** é uma aplicação de organização e acompanhamento de estudos voltada principalmente para estudantes universitários.
 
-Abra um terminal na raiz do projeto e execute:
+O projeto reúne, em um único ambiente, recursos para cadastrar disciplinas, organizar atividades acadêmicas, planejar sessões de estudo, utilizar a técnica Pomodoro, registrar notas e materiais e acompanhar a consistência semanal.
+
+Além de auxiliar no planejamento, o sistema utiliza os dados das sessões concluídas para apresentar indicadores e insights sobre a rotina de estudos do usuário.
+
+---
+
+## 🛠️ Tecnologias
+
+### Frontend
+
+- **Flutter**
+- **Dart**
+- **Provider** para gerenciamento de estado
+- **HTTP** para comunicação com a API
+- **Sqflite** e **SharedPreferences** para armazenamento local
+- **FL Chart** para gráficos e indicadores
+- **Audioplayers** para alertas sonoros do Pomodoro
+- **Shadcn UI** para componentes visuais
+
+### Backend
+
+- **Python**
+- **Django**
+- **Django REST Framework**
+- **Django CORS Headers**
+- **SQLite** no ambiente local
+- Suporte a **PostgreSQL** no ambiente de produção
+- **Gunicorn** e **WhiteNoise** para deploy
+
+### Desenvolvimento e entrega
+
+- **Git e GitHub**
+- **GitHub Issues e Projects**
+- **GitHub Actions**
+- Testes automatizados de frontend e backend
+- Deploy do frontend no **GitHub Pages**
+
+---
+
+## 🚀 Features
+
+Com o Focus, o estudante pode:
+
+- Criar uma conta e realizar login;
+- Cadastrar e organizar disciplinas;
+- Criar provas, trabalhos, eventos e outras atividades acadêmicas;
+- Visualizar compromissos em uma agenda;
+- Planejar e registrar sessões de estudo;
+- Utilizar um timer **Pomodoro** com:
+  - período de foco;
+  - pausa curta;
+  - pausa longa;
+  - associação com disciplinas e sessões;
+  - registro de interrupções;
+  - avaliação de produtividade;
+- Criar e consultar notas de estudo;
+- Organizar uma biblioteca de materiais;
+- Definir metas semanais;
+- Acompanhar a consistência dos estudos;
+- Consultar relatórios e indicadores;
+- Receber insights baseados nas sessões realizadas;
+- Utilizar uma interface responsiva em diferentes tamanhos de tela.
+
+---
+
+## ⌨️ Keyboard Shortcuts
+
+Atualmente, o Focus não possui atalhos de teclado exclusivos configurados. A navegação é realizada pelos botões, menus e campos disponíveis na interface.
+
+Como melhoria futura, podem ser adicionados atalhos como:
+
+| Atalho | Ação sugerida |
+|---|---|
+| `Ctrl + N` | Criar uma nova atividade |
+| `Ctrl + P` | Abrir o Pomodoro |
+| `Ctrl + D` | Abrir as disciplinas |
+| `Ctrl + M` | Abrir os materiais |
+| `Espaço` | Iniciar ou pausar o Pomodoro |
+| `Esc` | Fechar janelas e formulários |
+
+---
+
+## 🔄 O Processo
+
+O desenvolvimento foi organizado de forma colaborativa, utilizando práticas de Engenharia de Software:
+
+1. As necessidades do sistema foram transformadas em histórias e tarefas no GitHub Issues;
+2. As atividades foram organizadas em um quadro do GitHub Projects;
+3. Cada funcionalidade foi desenvolvida em uma branch específica;
+4. O frontend foi construído com Flutter e integrado à API criada com Django REST Framework;
+5. Foram implementados testes para validar regras de negócio, componentes e integrações;
+6. As alterações foram enviadas por Pull Requests para revisão;
+7. O GitHub Actions passou a executar automaticamente:
+   - testes do backend;
+   - análise estática do Flutter;
+   - testes do frontend;
+   - build da aplicação Web;
+8. Após a validação, o frontend foi publicado no GitHub Pages.
+
+---
+
+## 🧠 O Que Eu Aprendi
+
+Durante o desenvolvimento do Focus, aprendi e pratiquei:
+
+- Desenvolvimento de uma aplicação full stack;
+- Criação e consumo de APIs REST;
+- Integração entre Flutter e Django;
+- Gerenciamento de estado com Provider;
+- Modelagem e persistência de dados;
+- Criação de interfaces responsivas;
+- Implementação de funcionalidades baseadas em regras de negócio;
+- Escrita e execução de testes automatizados;
+- Configuração de CI/CD com GitHub Actions;
+- Trabalho colaborativo com branches, commits, Pull Requests e revisão de código;
+- Resolução de conflitos de merge;
+- Organização de tarefas utilizando Issues e Projects;
+- Transformação de dados de estudo em métricas e insights úteis para o usuário.
+
+---
+
+## 🔧 Como Ele Pode Ser Melhorado
+
+Algumas melhorias que podem ser desenvolvidas futuramente:
+
+- Adicionar atalhos de teclado e ampliar os recursos de acessibilidade;
+- Criar notificações e lembretes para sessões, provas e trabalhos;
+- Integrar o sistema ao Google Calendar;
+- Permitir funcionamento offline com sincronização posterior;
+- Tornar persistentes todas as listas de tarefas das atividades;
+- Criar testes de ponta a ponta;
+- Ampliar a cobertura dos testes automatizados;
+- Permitir exportação de relatórios em PDF ou CSV;
+- Adicionar mais opções de personalização do Pomodoro;
+- Criar recomendações de estudo mais personalizadas;
+- Melhorar o onboarding para novos usuários;
+- Adicionar gráficos comparativos por disciplina e período;
+- Disponibilizar uma versão instalável como PWA.
+
+---
+
+## ▶️ Como Iniciar o Projeto
+
+### Pré-requisitos
+
+Antes de começar, instale:
+
+- [Git](https://git-scm.com/)
+- [Python 3.11 ou superior](https://www.python.org/)
+- [Flutter SDK](https://docs.flutter.dev/get-started/install)
+- Google Chrome, Edge ou outro dispositivo compatível com Flutter
+
+### 1. Clonar o repositório
+
+```bash
+git clone https://github.com/ES2-UFPI/Focus.git
+cd Focus
+```
+
+### 2. Iniciar o backend
+
+#### Windows — PowerShell
 
 ```powershell
 cd backend
-py -3.11 -m venv venv
-.\venv\Scripts\activate
-python -m pip install --upgrade pip setuptools wheel
-python -m pip install Django==5.1.6 djangorestframework==3.17.1 django-cors-headers==4.9.0
-python -m pip install dj-database-url
-python -m pip install whitenoise
-python manage.py migrate
 
+py -3.11 -m venv venv
+.\venv\Scripts\Activate.ps1
+
+python -m pip install --upgrade pip setuptools wheel
+python -m pip install -r requirements.txt
+
+python manage.py migrate
 python manage.py runserver 127.0.0.1:8000
 ```
 
-A API fica disponivel em:
+#### Linux ou macOS
 
-- `http://127.0.0.1:8000/api/`
-- `http://127.0.0.1:8000/api/agenda/`
-- `http://127.0.0.1:8000/admin/`
+```bash
+cd backend
 
-Observacao: o arquivo `backend/requirements.txt` existe, mas contem muitas bibliotecas que nao sao necessarias para iniciar esta API. Para uma instalacao minima e validada, use o comando `pip install` acima. Se preferir instalar tudo do arquivo, substitua o comando de instalacao por:
+python3 -m venv venv
+source venv/bin/activate
 
-```powershell  (OPCIONAL )(PREFERENCIALMENTE,NÂO EXECUTE)
+python -m pip install --upgrade pip setuptools wheel
 python -m pip install -r requirements.txt
+
+python manage.py migrate
+python manage.py runserver 127.0.0.1:8000
 ```
 
-## DE
+O backend ficará disponível em:
 
-## Como iniciar o frontend
+```text
+http://127.0.0.1:8000
+```
 
-Em outro terminal, a partir da raiz do projeto, execute com atençao:
+### 3. Iniciar o frontend
 
-```powershell
+Abra outro terminal na raiz do projeto:
+
+```bash
 cd frontend
 flutter pub get
 flutter run -d chrome --web-hostname 127.0.0.1 --web-port 5173
 ```
 
-O app Web fica disponivel em:
+O frontend ficará disponível em:
 
 ```text
 http://127.0.0.1:5173
 ```
 
-O frontend esta configurado para chamar o backend em:
+> Mantenha o backend em execução enquanto estiver utilizando o frontend.
 
-```text
-http://localhost:8000
+### 4. Executar os testes
+
+#### Backend
+
+```bash
+cd backend
+python manage.py test
 ```
 
-Por isso, mantenha o backend rodando antes de abrir o frontend. Para executar em emulador Android, pode ser necessario trocar a URL base do app para `http://10.0.2.2:8000`, pois esse endereco aponta para o `localhost` da maquina host no emulador.
+#### Frontend
 
-## Ordem recomendada
-
-1. Inicie o backend.
-2. Aplique as migracoes com `python manage.py migrate`.
-3. Mantenha `python manage.py runserver 127.0.0.1:8000` rodando.
-4. Em outro terminal, inicie o frontend com `flutter run -d chrome --web-hostname 127.0.0.1 --web-port 5173`.
-5. Acesse `http://127.0.0.1:5173`.
-
-## Comandos de verificacao
-
-Com o backend rodando:
-
-```powershell
-Invoke-WebRequest -UseBasicParsing http://127.0.0.1:8000/api/
-Invoke-WebRequest -UseBasicParsing http://127.0.0.1:8000/api/agenda/
-```
-
-Com o frontend rodando:
-
-```powershell
-Invoke-WebRequest -UseBasicParsing http://127.0.0.1:5173
-```
-
-Tambem foram validados:
-
-```powershell
+```bash
 cd frontend
 flutter analyze
+flutter test
+```
+
+### 5. Gerar o build Web
+
+```bash
+cd frontend
 flutter build web
 ```
 
-## Resultado dos testes locais
+---
 
-- `python manage.py check`: passou sem erros.
-- `python manage.py migrate`: aplicou todas as migracoes em `backend/db.sqlite3`.
-- `GET /api/`: respondeu HTTP 200.
-- `GET /api/agenda/`: respondeu HTTP 200 com `{"itens":[],"recomendacoes":[]}`.
-- `flutter pub get`: concluiu.
-- `flutter analyze`: passou sem erros.
-- `flutter build web`: concluiu e gerou `frontend/build/web`.
-- `flutter run -d chrome --web-hostname 127.0.0.1 --web-port 5173`: iniciou o frontend; `GET /` em `127.0.0.1:5173` respondeu HTTP 200.
+## 🎥 Vídeo do Projeto
 
+Adicione abaixo o link do vídeo de apresentação ou demonstração do Focus:
+
+```markdown
+[▶️ Assistir ao vídeo de demonstração](COLE_AQUI_O_LINK_DO_VIDEO)
+```
+
+Também é possível utilizar uma miniatura do YouTube:
+
+```html
+<a href="COLE_AQUI_O_LINK_DO_VIDEO">
+  <img src="COLE_AQUI_O_LINK_DA_MINIATURA" alt="Vídeo de demonstração do Focus" width="600">
+</a>
+```
+
+---
+
+<div align="center">
+
+Desenvolvido durante a disciplina de **Engenharia de Software II — UFPI**.
+
+</div>
